@@ -1,0 +1,110 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String    @id @default(uuid()) @map("uuid")
+  email       String    @unique
+  name        String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  businesses  Business[]
+}
+
+model Business {
+  id              String    @id @default(uuid()) @map("uuid")
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  name            String
+  address         String
+  country         String
+  currency        String
+  vatNumber       String?
+  iban            String?
+  logoUrl         String?
+  invoicePrefix   String
+  invoiceCounter  Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  clients         Client[]   @relation("BusinessClients")
+  invoices        Invoice[]  @relation("BusinessInvoices")
+}
+
+model Client {
+  id          String    @id @default(uuid()) @map("uuid")
+  businessId  String
+  business    Business  @relation("BusinessClients", fields: [businessId], references: [id], onDelete: Cascade)
+  name        String
+  email       String
+  address     String
+  country     String
+  vatNumber   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  invoices    Invoice[]  @relation("ClientInvoices")
+}
+
+model Invoice {
+  id               String          @id @default(uuid()) @map("uuid")
+  businessId       String
+  clientId         String
+  invoiceNumber    String
+  status           InvoiceStatus
+  issueDate        DateTime
+  dueDate          DateTime
+  currency         String
+  subtotal         Float
+  taxAmount        Float
+  totalAmount      Float
+  notes            String?
+  publicToken      String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  business         Business        @relation("BusinessInvoices", fields: [businessId], references: [id], onDelete: Cascade)
+  client           Client          @relation("ClientInvoices", fields: [clientId], references: [id], onDelete: Cascade)
+  lineItems        LineItem[]      @relation("InvoiceLineItems")
+  payments         Payment[]       @relation("InvoicePayments")
+}
+
+model LineItem {
+  id          String   @id @default(uuid()) @map("uuid")
+  invoiceId   String
+  invoice     Invoice   @relation("InvoiceLineItems", fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  quantity    Int
+  unitPrice   Float
+  taxRate     Float
+  total       Float
+  createdAt   DateTime  @default(now())
+}
+
+model Payment {
+  id          String          @id @default(uuid()) @map("uuid")
+  invoiceId   String
+  invoice     Invoice         @relation("InvoicePayments", fields: [invoiceId], references: [id], onDelete: Cascade)
+  provider    PaymentProvider
+  amount      Float
+  currency    String
+  status      String
+  reference   String?
+  createdAt   DateTime  @default(now())
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+  overdue
+}
+
+enum PaymentProvider {
+  stripe
+  bank_transfer
+}
+
+
