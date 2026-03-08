@@ -7,9 +7,8 @@ const DEFAULT_STATUS = "draft";
 
 export default function InvoicesPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]); // NEW
+  const [clients, setClients] = useState<any[]>([]);
   const [clientId, setClientId] = useState("");
-  const [invoiceNumber, setInvoiceNumber] = useState("");
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [subtotal, setSubtotal] = useState("");
@@ -19,7 +18,7 @@ export default function InvoicesPage() {
     return data.user?.id;
   }
 
-  async function fetchClients() { // NEW
+  async function fetchClients() {
     const userId = await getUserId();
     if (!userId) return;
 
@@ -45,7 +44,7 @@ export default function InvoicesPage() {
     const userId = await getUserId();
     if (!userId) return;
 
-    if (!clientId || !invoiceNumber || !issueDate || !dueDate || !subtotal) {
+    if (!clientId || !issueDate || !dueDate || !subtotal) {
       alert("Please fill all fields.");
       return;
     }
@@ -60,7 +59,6 @@ export default function InvoicesPage() {
       body: JSON.stringify({
         userId,
         clientId,
-        invoiceNumber,
         issueDate,
         dueDate,
         subtotal: subtotalValue,
@@ -72,7 +70,6 @@ export default function InvoicesPage() {
     });
 
     setClientId("");
-    setInvoiceNumber("");
     setIssueDate("");
     setDueDate("");
     setSubtotal("");
@@ -81,7 +78,7 @@ export default function InvoicesPage() {
   }
 
   useEffect(() => {
-    fetchClients(); // NEW
+    fetchClients();
     fetchInvoices();
   }, []);
 
@@ -90,8 +87,6 @@ export default function InvoicesPage() {
       <h1>Invoices</h1>
 
       <form onSubmit={handleSubmit}>
-
-        {/* CLIENT DROPDOWN */}
         <select
           value={clientId}
           onChange={(e) => setClientId(e.target.value)}
@@ -104,53 +99,45 @@ export default function InvoicesPage() {
               {client.name}
             </option>
           ))}
-
         </select>
 
-        <br /><br />
-
-        <input
-          type="text"
-          value={invoiceNumber}
-          onChange={e => setInvoiceNumber(e.target.value)}
-          placeholder="Invoice Number"
-          required
-        />
-
-        <br /><br />
+        <br />
+        <br />
 
         <input
           type="date"
           value={issueDate}
-          onChange={e => setIssueDate(e.target.value)}
+          onChange={(e) => setIssueDate(e.target.value)}
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <input
           type="date"
           value={dueDate}
-          onChange={e => setDueDate(e.target.value)}
+          onChange={(e) => setDueDate(e.target.value)}
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <input
           type="number"
           value={subtotal}
-          onChange={e => setSubtotal(e.target.value)}
+          onChange={(e) => setSubtotal(e.target.value)}
           placeholder="Subtotal"
           required
         />
 
-        <br /><br />
+        <br />
+        <br />
 
         <button type="submit">
           Create Invoice
         </button>
-
       </form>
 
       <hr style={{ margin: "40px 0" }} />
