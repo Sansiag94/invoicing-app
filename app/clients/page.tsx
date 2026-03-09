@@ -1,15 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
+import Link from "next/link"; // Import Link from next/link
 import { supabase } from "../../utils/supabase";
 
 export default function ClientsPage() {
     const [clients, setClients] = useState<any[]>([]);
-    const [companyName, setCompanyName] = useState(""); // Updated state for company name
-    const [contactName, setContactName] = useState(""); // New state for contact name
-    const [email, setEmail] = useState(""); // State for email
-    const [address, setAddress] = useState(""); // State for address
-    const [country, setCountry] = useState(""); // State for country
-    const [vatNumber, setVatNumber] = useState(""); // State for VAT number
+    const [companyName, setCompanyName] = useState("");
+    const [contactName, setContactName] = useState("");
+    const [email, setEmail] = useState("");
+    const [address, setAddress] = useState("");
+    const [country, setCountry] = useState("");
+    const [vatNumber, setVatNumber] = useState("");
 
     async function fetchClients() {
         const { data } = await supabase.auth.getUser();
@@ -27,7 +28,6 @@ export default function ClientsPage() {
         const userId = data.user?.id;
         if (!userId) return;
 
-        // DEBUG: Log before creating the client
         console.log("Creating client with:", { userId, companyName, contactName, email, address, country, vatNumber });
 
         const response = await fetch("/api/clients", {
@@ -125,7 +125,9 @@ export default function ClientsPage() {
             <h3>Client List</h3>
             {clients.map((client) => (
                 <div key={client.id}>
-                    {client.companyName || client.contactName} — {client.email} — {client.country}
+                    <Link href={`/clients/${client.id}`}>
+                        {client.companyName || client.contactName}
+                    </Link>
                 </div>
             ))}
         </div>

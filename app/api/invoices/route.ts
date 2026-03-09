@@ -78,15 +78,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Fetch the client to determine the prefix name
+    const client = await prisma.client.findUnique({
+      where: { id: clientId }
+    });
+
+    if (!client) {
+      return NextResponse.json(
+        { error: "Client not found" },
+        { status: 404 }
+      );
+    }
+
+    const clientName = client.companyName || client.contactName || "INV"; // Determine prefix name
+    const prefix = clientName.substring(0, 3).toUpperCase(); // Generate prefix
+
+    const newCounter = business.invoiceCounter + 1;
+    const paddedCounter = newCounter.toString().padStart(3, "0");
+    const invoiceNumber = `${prefix}-${paddedCounter}`;
+
     const publicToken = crypto.randomUUID();
 
     const invoice = await prisma.$transaction(async (tx) => {
-      const newCounter = business.invoiceCounter + 1;
-
-      const prefix = clientId.name.substring(0, 3).toUpperCase(); // Adjust appropriately
-      const paddedCounter = newCounter.toString().padStart(3, "0");
-      const invoiceNumber = `${prefix}-${paddedCounter}`;
-
       await tx.business.update({
         where: { id: business.id },
         data: {
