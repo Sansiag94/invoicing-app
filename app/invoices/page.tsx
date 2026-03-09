@@ -2,22 +2,23 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/utils/supabase";
 
-const DEFAULT_STATUS = "draft"; // Default status for the invoice
-const DEFAULT_CURRENCY = "CHF"; // Default currency for the invoice
-
 export default function InvoicePage() {
   const [clients, setClients] = useState([]); // State for clients
-  const [invoices, setInvoices] = useState([]); // State for invoices
+  const [invoices, setInvoices] = useState<any[]>([]); // Restored state for invoices
   const [lineItems, setLineItems] = useState([]);
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [clientId, setClientId] = useState(""); // State for selected client ID
 
+  // Function to get user ID
+  const getUserId = async () => {
+    const { data } = await supabase.auth.getUser();
+    return data.user?.id;
+  };
+
   // Fetch clients for the dropdown
   async function fetchClients() {
-    const { data } = await supabase.auth.getUser();
-    const userId = data.user?.id;
-
+    const userId = await getUserId();
     if (userId) {
       const response = await fetch(`/api/clients?userId=${userId}`);
       const dataClients = await response.json();
@@ -26,16 +27,14 @@ export default function InvoicePage() {
   }
 
   // Fetch invoices
-  const fetchInvoices = async () => {
-    const { data } = await supabase.auth.getUser();
-    const userId = data.user?.id;
-
+  async function fetchInvoices() {
+    const userId = await getUserId(); 
     if (userId) {
-      const response = await fetch(`/api/invoices?userId=${userId}`);
-      const dataInvoices = await response.json();
-      setInvoices(dataInvoices);
+      const res = await fetch(`/api/invoices?userId=${userId}`);
+      const data = await res.json();
+      setInvoices(data);
     }
-  };
+  }
 
   useEffect(() => {
     fetchClients(); // Fetch clients when the component mounts
@@ -44,25 +43,8 @@ export default function InvoicePage() {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    const { data } = await supabase.auth.getUser();
-    const userId = data.user?.id;
+    const userId = await getUserId();
     if (!userId || !clientId) return; // Ensure client is selected
-
-    // Calculate totals
-    const { subtotal, taxAmount, totalAmount } = calculateTotals();
-
-    // Log the data that will be sent
-    console.log("Creating invoice:", {
-      userId,
-      clientId,
-      issueDate,
-      dueDate,
-      subtotal,
-      taxAmount,
-      totalAmount,
-      status: DEFAULT_STATUS,
-      currency: DEFAULT_CURRENCY,
-    });
 
     const response = await fetch("/api/invoices", {
       method: "POST",
@@ -74,22 +56,21 @@ export default function InvoicePage() {
         clientId,
         issueDate,
         dueDate,
-        subtotal,
-        taxAmount,
-        totalAmount,
-        status: DEFAULT_STATUS, // Use the default status
-        currency: DEFAULT_CURRENCY, // Use the default currency
+        currency: "CHF", // Assuming a default currency
         notes: "", // Assuming there might be an optional notes field
+        subtotal: 0, // Placeholder value; should be calculated based on lineItems
+        taxAmount: 0, // Placeholder value; should be calculated based on lineItems
+        totalAmount: 0, // Placeholder value; should be calculated based on lineItems
         lineItems,
       }),
     });
 
     const result = await response.json();
-    console.log("INVOICE CREATE RESPONSE:", result); // Log the server response
+    console.log("INVOICE CREATE RESPONSE:", result); // Log the response
 
     if (!response.ok) {
       alert("Invoice creation failed");
-      console.error(result); // Log the error response
+      console.error(result); // Log the error data
       return;
     }
 

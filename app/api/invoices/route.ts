@@ -39,9 +39,11 @@ export async function POST(request: Request) {
       totalAmount,
       status,
       currency,
-      lineItems,
+      notes,
+      lineItems // Added lineItems to the request destructuring
     } = await request.json();
 
+    // Validate required fields
     if (
       !userId ||
       !clientId ||
@@ -59,9 +61,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!lineItems || !Array.isArray(lineItems)) {
+    // Validate line items
+    if (!lineItems || lineItems.length === 0) {
       return NextResponse.json(
-        { error: "lineItems are required" },
+        { error: "Invoice must contain at least one line item" },
         { status: 400 }
       );
     }
@@ -78,63 +81,35 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch the client to determine the prefix name
-    const client = await prisma.client.findUnique({
-      where: { id: clientId }
-    });
-
-    if (!client) {
-      return NextResponse.json(
-        { error: "Client not found" },
-        { status: 404 }
-      );
-    }
-
-    const clientName = client.companyName || client.contactName || "INV"; // Determine prefix name
-    const prefix = clientName.substring(0, 3).toUpperCase(); // Generate prefix
-
-    const newCounter = business.invoiceCounter + 1;
-    const paddedCounter = newCounter.toString().padStart(3, "0");
-    const invoiceNumber = `${prefix}-${paddedCounter}`;
-
     const publicToken = crypto.randomUUID();
 
-    const invoice = await prisma.$transaction(async (tx) => {
-      await tx.business.update({
-        where: { id: business.id },
-        data: {
-          invoiceCounter: newCounter,
+    // Create invoice with nested line items
+    const invoice = await prisma.invoice.create({
+      data: {
+        businessId: business.id,
+        clientId,
+        invoiceNumber: `${clientId}-${new Date().getTime()}`, // Generating a basic invoice number; customize as needed
+        issueDate: new Date(issueDate),
+        dueDate: new Date(dueDate),
+        subtotal,
+        taxAmount,
+        totalAmount,
+        status,
+        currency,
+        notes,
+        lineItems: {
+          create: lineItems.map((item: any) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            taxRate: item.taxRate,
+            total: item.total,
+          })),
         },
-      });
-
-      const createdInvoice = await tx.invoice.create({
-        data: {
-          businessId: business.id,
-          clientId,
-          invoiceNumber,
-          issueDate: new Date(issueDate),
-          dueDate: new Date(dueDate),
-          subtotal,
-          taxAmount,
-          totalAmount,
-          status,
-          currency,
-          publicToken: publicToken,
-        },
-      });
-
-      await tx.lineItem.createMany({
-        data: lineItems.map(item => ({
-          invoiceId: createdInvoice.id,
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          taxRate: item.taxRate,
-          total: item.quantity * item.unitPrice,
-        })),
-      });
-
-      return createdInvoice;
+      },
+      include: {
+        lineItems: true // Include line items in the returned invoice
+      },
     });
 
     return NextResponse.json(invoice, { status: 201 });
