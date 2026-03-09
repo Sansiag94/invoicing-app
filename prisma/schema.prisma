@@ -36,17 +36,18 @@ model Business {
 }
 
 model Client {
-  id         String    @id @default(uuid()) @map("uuid")
-  businessId String
-  name       String
-  email      String
-  address    String
-  country    String
-  vatNumber  String?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  business   Business  @relation("BusinessClients", fields: [businessId], references: [id], onDelete: Cascade)
-  invoices   Invoice[] @relation("ClientInvoices")
+  id          String    @id @default(uuid()) @map("uuid")
+  businessId  String
+  business    Business  @relation("BusinessClients", fields: [businessId], references: [id], onDelete: Cascade)
+  companyName String?   // Optional: For companies
+  contactName String?   // Optional: For individual contacts
+  email       String
+  address     String
+  country     String
+  vatNumber   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  invoices    Invoice[] @relation("ClientInvoices")
 }
 
 model Invoice {

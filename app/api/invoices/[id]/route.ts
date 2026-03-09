@@ -2,29 +2,35 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const userId = searchParams.get("userId");
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const { id } = params;
 
-  if (!userId) {
-    return NextResponse.json({ error: "userId is required" }, { status: 400 });
-  }
-
-  const business = await prisma.business.findFirst({
-    where: { userId }
+  const invoice = await prisma.invoice.findUnique({
+    where: { id },
+    include: {
+      client: true,
+      lineItems: true,
+      business: true,
+    },
   });
 
-  if (!business) {
-    console.error("Business not found for user:", userId);
-    return NextResponse.json({ error: "Business not found" }, { status: 404 });
+  if (!invoice) {
+    return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
 
-  const invoices = await prisma.invoice.findMany({
-    where: { businessId: business.id },
-    orderBy: { createdAt: "desc" }
+  return NextResponse.json(invoice);
+}
+
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  const { status } = await request.json();
+
+  // Update the invoice status
+  const invoice = await prisma.invoice.update({
+    where: { id: params.id },
+    data: { status },
   });
 
-  return NextResponse.json(invoices);
+  return NextResponse.json(invoice);
 }
 
 export async function POST(request: Request) {
@@ -67,13 +73,23 @@ export async function POST(request: Request) {
     }
 
     const business = await prisma.business.findFirst({
-      where: { userId }
+      where: { userId },
     });
 
     if (!business) {
-      console.error("Business not found for user:", userId);
       return NextResponse.json(
         { error: "Business not found" },
+        { status: 404 }
+      );
+    }
+
+    const client = await prisma.client.findUnique({
+      where: { id: clientId },
+    });
+
+    if (!client) {
+      return NextResponse.json(
+        { error: "Client not found" },
         { status: 404 }
       );
     }
@@ -83,7 +99,7 @@ export async function POST(request: Request) {
     const invoice = await prisma.$transaction(async (tx) => {
       const newCounter = business.invoiceCounter + 1;
 
-      const prefix = clientId.name.substring(0, 3).toUpperCase(); // Adjust appropriately
+      const prefix = client.name.substring(0, 3).toUpperCase();
       const paddedCounter = newCounter.toString().padStart(3, "0");
       const invoiceNumber = `${prefix}-${paddedCounter}`;
 

@@ -14,7 +14,7 @@ export default function Sidebar() {
       style={{
         width: 240,
         height: "100vh",
-        background: "#111",
+        background: "#1f1f1f", // Updated to a slightly lighter dark background
         color: "white",
         padding: 20,
         boxSizing: "border-box",

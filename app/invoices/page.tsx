@@ -11,7 +11,11 @@ export default function InvoicesPage() {
   const [clientId, setClientId] = useState("");
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [subtotal, setSubtotal] = useState("");
+  // Subtotal is now calculated automatically from lineItems
+  // const [subtotal, setSubtotal] = useState("");
+  const [lineItems, setLineItems] = useState([
+    { description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 },
+  ]);
 
   async function getUserId() {
     const { data } = await supabase.auth.getUser();
@@ -38,20 +42,77 @@ export default function InvoicesPage() {
     setInvoices(dataInvoices);
   }
 
+  // Line items helpers
+  const addLineItem = () => {
+    setLineItems([
+      ...lineItems,
+      { description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 },
+    ]);
+  };
+
+  const removeLineItem = (index: number) => {
+    const updatedLineItems = lineItems.filter((_, i) => i !== index);
+    setLineItems(updatedLineItems);
+  };
+
+  const updateLineItem = (index: number, field: string, value: any) => {
+    const updatedLineItems = lineItems.map((item, i) => {
+      if (i === index) {
+        return { ...item, [field]: value };
+      }
+      return item;
+    });
+    setLineItems(updatedLineItems);
+  };
+
+  // Calculate totals before sending the POST request
+  const calculateTotals = () => {
+    const subtotal = lineItems.reduce(
+      (sum, item) => sum + item.quantity * item.unitPrice,
+      0
+    );
+    const taxAmount = lineItems.reduce(
+      (sum, item) =>
+        sum + item.quantity * item.unitPrice * (item.taxRate / 100),
+      0
+    );
+    const totalAmount = subtotal + taxAmount;
+
+    return {
+      subtotal: Number(subtotal.toFixed(2)),
+      taxAmount: Number(taxAmount.toFixed(2)),
+      totalAmount: Number(totalAmount.toFixed(2)),
+    };
+  };
+
   async function handleSubmit(e: any) {
     e.preventDefault();
 
     const userId = await getUserId();
     if (!userId) return;
 
-    if (!clientId || !issueDate || !dueDate || !subtotal) {
+    if (!clientId || !issueDate || !dueDate) {
       alert("Please fill all fields.");
       return;
     }
 
-    const subtotalValue = Number(subtotal);
-    const taxAmount = Number((subtotalValue * 0.1).toFixed(2)); // 10% tax
-    const totalAmount = Number((subtotalValue + taxAmount).toFixed(2));
+    if (
+      lineItems.length === 0 ||
+      lineItems.some(
+        (item) =>
+          !item.description ||
+          item.quantity <= 0 ||
+          item.unitPrice < 0 ||
+          item.taxRate < 0
+      )
+    ) {
+      alert(
+        "Please ensure all line items have a description, positive quantity, and non-negative prices/tax."
+      );
+      return;
+    }
+
+    const { subtotal, taxAmount, totalAmount } = calculateTotals();
 
     await fetch("/api/invoices", {
       method: "POST",
@@ -61,9 +122,10 @@ export default function InvoicesPage() {
         clientId,
         issueDate,
         dueDate,
-        subtotal: subtotalValue,
+        subtotal,
         taxAmount,
         totalAmount,
+        lineItems,
         status: DEFAULT_STATUS,
         currency: "CHF",
       }),
@@ -72,7 +134,7 @@ export default function InvoicesPage() {
     setClientId("");
     setIssueDate("");
     setDueDate("");
-    setSubtotal("");
+    setLineItems([{ description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 }]);
 
     fetchInvoices();
   }
@@ -80,7 +142,10 @@ export default function InvoicesPage() {
   useEffect(() => {
     fetchClients();
     fetchInvoices();
+    // eslint-disable-next-line
   }, []);
+
+  const { subtotal, taxAmount, totalAmount } = calculateTotals();
 
   return (
     <div style={{ padding: 40 }}>
@@ -93,7 +158,6 @@ export default function InvoicesPage() {
           required
         >
           <option value="">Select Client</option>
-
           {clients.map((client) => (
             <option key={client.id} value={client.id}>
               {client.name}
@@ -124,20 +188,95 @@ export default function InvoicesPage() {
         <br />
         <br />
 
-        <input
-          type="number"
-          value={subtotal}
-          onChange={(e) => setSubtotal(e.target.value)}
-          placeholder="Subtotal"
-          required
-        />
-
-        <br />
-        <br />
-
-        <button type="submit">
-          Create Invoice
+        {/* Render a table of line items */}
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              <th>Description</th>
+              <th>Qty</th>
+              <th>Unit Price</th>
+              <th>Tax %</th>
+              <th>Remove</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineItems.map((item, index) => (
+              <tr key={index}>
+                <td>
+                  <input
+                    type="text"
+                    value={item.description}
+                    onChange={(e) =>
+                      updateLineItem(index, "description", e.target.value)
+                    }
+                    required
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(e) =>
+                      updateLineItem(index, "quantity", Number(e.target.value))
+                    }
+                    required
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min={0}
+                    value={item.unitPrice}
+                    onChange={(e) =>
+                      updateLineItem(index, "unitPrice", Number(e.target.value))
+                    }
+                    step="0.01"
+                    required
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    min={0}
+                    value={item.taxRate}
+                    onChange={(e) =>
+                      updateLineItem(index, "taxRate", Number(e.target.value))
+                    }
+                    step="0.01"
+                    required
+                  />
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    onClick={() => removeLineItem(index)}
+                    disabled={lineItems.length === 1}
+                  >
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <button type="button" onClick={addLineItem}>
+          + Add Line Item
         </button>
+
+        <br />
+        <br />
+
+        {/* Display calculated totals */}
+        <div>
+          <strong>Subtotal:</strong> {subtotal.toFixed(2)} CHF <br />
+          <strong>Tax:</strong> {taxAmount.toFixed(2)} CHF <br />
+          <strong>Total:</strong> {totalAmount.toFixed(2)} CHF
+        </div>
+
+        <br />
+
+        <button type="submit">Create Invoice</button>
       </form>
 
       <hr style={{ margin: "40px 0" }} />
@@ -146,7 +285,8 @@ export default function InvoicesPage() {
 
       {invoices.map((invoice) => (
         <div key={invoice.id}>
-          {invoice.invoiceNumber} — {invoice.totalAmount} {invoice.currency} [{invoice.status}]
+          {invoice.invoiceNumber} — {invoice.totalAmount} {invoice.currency} [
+          {invoice.status}]
         </div>
       ))}
     </div>

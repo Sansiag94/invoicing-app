@@ -2,22 +2,23 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabase";
 
-export default function InvoicesPage() {
-    const [invoices, setInvoices] = useState<any[]>([]);
-    const [clientId, setClientId] = useState("");
-    const [invoiceNumber, setInvoiceNumber] = useState("");
-    const [issueDate, setIssueDate] = useState("");
-    const [dueDate, setDueDate] = useState("");
-    const [total, setTotal] = useState("");
+export default function ClientsPage() {
+    const [clients, setClients] = useState<any[]>([]);
+    const [companyName, setCompanyName] = useState(""); // Updated state for company name
+    const [contactName, setContactName] = useState(""); // New state for contact name
+    const [email, setEmail] = useState(""); // State for email
+    const [address, setAddress] = useState(""); // State for address
+    const [country, setCountry] = useState(""); // State for country
+    const [vatNumber, setVatNumber] = useState(""); // State for VAT number
 
-    async function fetchInvoices() {
+    async function fetchClients() {
         const { data } = await supabase.auth.getUser();
         const userId = data.user?.id;
         if (!userId) return;
 
-        const response = await fetch(`/api/invoices?userId=${userId}`);
-        const dataInvoices = await response.json();
-        setInvoices(dataInvoices);
+        const response = await fetch(`/api/clients?userId=${userId}`);
+        const dataClients = await response.json();
+        setClients(dataClients);
     }
 
     async function handleSubmit(e: any) {
@@ -26,87 +27,105 @@ export default function InvoicesPage() {
         const userId = data.user?.id;
         if (!userId) return;
 
-        await fetch("/api/invoices", {
+        // DEBUG: Log before creating the client
+        console.log("Creating client with:", { userId, companyName, contactName, email, address, country, vatNumber });
+
+        const response = await fetch("/api/clients", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
                 userId,
-                clientId,
-                invoiceNumber,
-                issueDate,
-                dueDate,
-                total: Number(total),
-                status: "Pending", // Add status
-                currency: "CHF", // Updated currency to CHF
+                companyName,
+                contactName,
+                email,
+                address,
+                country,
+                vatNumber,
             }),
         });
 
-        // Clear form fields
-        setClientId("");
-        setInvoiceNumber("");
-        setIssueDate("");
-        setDueDate("");
-        setTotal("");
+        const result = await response.json();
+        console.log("CLIENT CREATE RESPONSE:", result);
 
-        // Refresh the invoices list
-        fetchInvoices();
+        if (!response.ok) {
+            alert("Client creation failed");
+            console.error(result);
+            return;
+        }
+
+        // Clear form fields and refresh the client list on success
+        setCompanyName("");
+        setContactName("");
+        setEmail("");
+        setAddress("");
+        setCountry("");
+        setVatNumber("");
+        fetchClients();
     }
 
     useEffect(() => {
-        fetchInvoices();
+        fetchClients();
     }, []);
 
     return (
         <div style={{ padding: 40 }}>
-            <h1>Invoices</h1>
+            <h1>Clients</h1>
             <form onSubmit={handleSubmit}>
                 <input
                     type="text"
-                    value={clientId}
-                    onChange={(e) => setClientId(e.target.value)}
-                    placeholder="Client ID"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="Company Name (optional)"
+                />
+                <br /><br />
+                <input
+                    type="text"
+                    value={contactName}
+                    onChange={(e) => setContactName(e.target.value)}
+                    placeholder="Contact Name"
+                    required
+                />
+                <br /><br />
+                <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
                     required
                 />
                 <br /><br />
                 <input
                     type="text"
-                    value={invoiceNumber}
-                    onChange={(e) => setInvoiceNumber(e.target.value)}
-                    placeholder="Invoice Number"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Address"
                     required
                 />
                 <br /><br />
                 <input
-                    type="date"
-                    value={issueDate}
-                    onChange={(e) => setIssueDate(e.target.value)}
+                    type="text"
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    placeholder="Country"
                     required
                 />
                 <br /><br />
                 <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    required
+                    type="text"
+                    value={vatNumber}
+                    onChange={(e) => setVatNumber(e.target.value)}
+                    placeholder="VAT Number (optional)"
                 />
                 <br /><br />
-                <input
-                    type="number"
-                    value={total}
-                    onChange={(e) => setTotal(e.target.value)}
-                    placeholder="Total"
-                    required
-                />
-                <br /><br />
-                <button type="submit">Create Invoice</button>
+                <button type="submit">Add Client</button>
             </form>
             <hr style={{ margin: "40px 0" }} />
-            <h3>Invoice List</h3>
-            {invoices.map((invoice) => (
-                <div key={invoice.id}>
-                    {invoice.invoiceNumber} — {invoice.total} {invoice.currency}
+            <h3>Client List</h3>
+            {clients.map((client) => (
+                <div key={client.id}>
+                    {client.companyName || client.contactName} — {client.email} — {client.country}
                 </div>
             ))}
         </div>
