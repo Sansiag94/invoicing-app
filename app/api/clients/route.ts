@@ -1,27 +1,41 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
+type CreateClientBody = {
+  userId: unknown;
+  email: unknown;
+  address: unknown;
+  country: unknown;
+  companyName?: unknown;
+  contactName?: unknown;
+  vatNumber?: unknown;
+};
+
+function asString(value: unknown): string | null {
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const userId = asString(searchParams.get("userId"));
 
     if (!userId) {
       return NextResponse.json([]);
     }
 
     const business = await prisma.business.findFirst({
-      where: { userId }
+      where: { userId },
+      select: { id: true },
     });
 
     if (!business) {
-      console.error("Business not found for user:", userId);
       return NextResponse.json([]);
     }
 
     const clients = await prisma.client.findMany({
       where: { businessId: business.id },
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
     });
 
     return NextResponse.json(clients);
@@ -33,12 +47,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { userId, email, address, country, companyName, contactName, vatNumber } = body; 
+    const body = (await request.json()) as CreateClientBody;
+    const userId = asString(body.userId);
+    const email = asString(body.email);
+    const address = asString(body.address);
+    const country = asString(body.country);
+    const companyName = asString(body.companyName);
+    const contactName = asString(body.contactName);
+    const vatNumber = asString(body.vatNumber);
 
-    console.log("Incoming request body:", body);
-
-    // Updated validation without name
     if (!userId || !email || !address || !country) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -46,7 +63,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Additional validation for companyName and contactName
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+    }
+
     if (!companyName && !contactName) {
       return NextResponse.json(
         { error: "Client must have a company name or contact name" },
@@ -55,11 +76,11 @@ export async function POST(request: Request) {
     }
 
     const business = await prisma.business.findFirst({
-      where: { userId }
+      where: { userId },
+      select: { id: true },
     });
 
     if (!business) {
-      console.error("Business not found for user:", userId);
       return NextResponse.json(
         { error: "Business not found" },
         { status: 404 }
@@ -69,13 +90,13 @@ export async function POST(request: Request) {
     const client = await prisma.client.create({
       data: {
         businessId: business.id,
-        companyName, // Updated to include companyName
-        contactName, // Updated to include contactName
+        companyName,
+        contactName,
         email,
         address,
         country,
-        vatNumber // Optional field
-      }
+        vatNumber,
+      },
     });
 
     return NextResponse.json(client);

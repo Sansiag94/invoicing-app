@@ -1,9 +1,10 @@
 "use client";
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase";
+import { BusinessSettingsData } from "@/lib/types";
 
 export default function SettingsPage() {
-  const [business, setBusiness] = useState<any>(null);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [country, setCountry] = useState("");
@@ -14,31 +15,17 @@ export default function SettingsPage() {
 
   async function getUserId() {
     const { data } = await supabase.auth.getUser();
-    return data.user?.id;
-  }
-
-  async function fetchBusiness() {
-    const userId = await getUserId();
-    if (!userId) return;
-    const res = await fetch(`/api/business?userId=${userId}`);
-    const data = await res.json();
-    setBusiness(data);
-    setName(data?.name || "");
-    setAddress(data?.address || "");
-    setCountry(data?.country || "");
-    setCurrency(data?.currency || "CHF");
-    setVatNumber(data?.vatNumber || "");
-    setIban(data?.iban || "");
-    setInvoicePrefix(data?.invoicePrefix || "");
+    return data.user?.id ?? null;
   }
 
   async function handleSave() {
     const userId = await getUserId();
     if (!userId) return;
-    await fetch("/api/business", {
+
+    const response = await fetch("/api/business", {
       method: "PATCH",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         userId,
@@ -48,14 +35,43 @@ export default function SettingsPage() {
         currency,
         vatNumber,
         iban,
-        invoicePrefix
-      })
+        invoicePrefix,
+      }),
     });
+
+    if (!response.ok) {
+      const result = await response.json();
+      alert(result?.error ?? "Failed to update business settings");
+      return;
+    }
+
     alert("Business settings updated");
   }
 
   useEffect(() => {
-    fetchBusiness();
+    let mounted = true;
+
+    (async () => {
+      const userId = await getUserId();
+      if (!userId) return;
+
+      const res = await fetch(`/api/business?userId=${encodeURIComponent(userId)}`);
+      const data = (await res.json()) as BusinessSettingsData;
+
+      if (mounted) {
+        setName(data?.name || "");
+        setAddress(data?.address || "");
+        setCountry(data?.country || "");
+        setCurrency(data?.currency || "CHF");
+        setVatNumber(data?.vatNumber || "");
+        setIban(data?.iban || "");
+        setInvoicePrefix(data?.invoicePrefix || "INV");
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   return (
@@ -67,48 +83,50 @@ export default function SettingsPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-        <br /><br />
+        <br />
+        <br />
         <input
           placeholder="Address"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
         />
-        <br /><br />
+        <br />
+        <br />
         <input
           placeholder="Country"
           value={country}
           onChange={(e) => setCountry(e.target.value)}
         />
-        <br /><br />
-        <select
-          value={currency}
-          onChange={(e) => setCurrency(e.target.value)}
-        >
+        <br />
+        <br />
+        <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
           <option value="CHF">CHF</option>
           <option value="EUR">EUR</option>
         </select>
-        <br /><br />
+        <br />
+        <br />
         <input
           placeholder="VAT Number"
           value={vatNumber}
           onChange={(e) => setVatNumber(e.target.value)}
         />
-        <br /><br />
+        <br />
+        <br />
         <input
           placeholder="IBAN"
           value={iban}
           onChange={(e) => setIban(e.target.value)}
         />
-        <br /><br />
+        <br />
+        <br />
         <input
           placeholder="Invoice Prefix"
           value={invoicePrefix}
           onChange={(e) => setInvoicePrefix(e.target.value)}
         />
-        <br /><br />
-        <button onClick={handleSave}>
-          Save Settings
-        </button>
+        <br />
+        <br />
+        <button onClick={handleSave}>Save Settings</button>
       </div>
     </div>
   );

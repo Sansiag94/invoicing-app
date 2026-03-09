@@ -1,25 +1,60 @@
 "use client";
+
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation"; 
+import { useParams } from "next/navigation";
 import Link from "next/link";
+import { supabase } from "@/utils/supabase";
+import { InvoiceDetails } from "@/lib/types";
 
 export default function InvoiceDetailPage() {
-  const params = useParams(); // Use useParams to get params
-  const { id } = params; // Get invoice ID from params
-  const [invoice, setInvoice] = useState<any>(null);
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+  const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (id) {
-      fetch(`/api/invoices/${id}`)
-        .then((response) => response.json())
-        .then((data) => setInvoice(data))
-        .catch((error) => console.error("Error fetching invoice:", error));
-    }
+    if (!id) return;
+
+    let mounted = true;
+
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      const currentUserId = data.user?.id ?? null;
+      if (!mounted) return;
+      setUserId(currentUserId);
+
+      const query = currentUserId ? `?userId=${encodeURIComponent(currentUserId)}` : "";
+      const response = await fetch(`/api/invoices/${id}${query}`);
+      const dataInvoice = (await response.json()) as InvoiceDetails;
+
+      if (mounted && !dataInvoice?.id) {
+        setInvoice(null);
+        return;
+      }
+
+      if (mounted) {
+        setInvoice(dataInvoice);
+      }
+    })().catch((error) => {
+      console.error("Error fetching invoice:", error);
+      if (mounted) setInvoice(null);
+    });
+
+    return () => {
+      mounted = false;
+    };
   }, [id]);
 
   if (!invoice) return <div>Loading...</div>;
 
-  const totalRevenue = invoice.lineItems.reduce((sum: number, item: any) => sum + item.total, 0); // Adjust for total calculation
+  const totalRevenue = invoice.lineItems.reduce(
+    (sum, item) => sum + item.quantity * item.unitPrice,
+    0
+  );
+
+  const pdfUrl = userId
+    ? `/api/invoices/${invoice.id}/pdf?userId=${encodeURIComponent(userId)}`
+    : `/api/invoices/${invoice.id}/pdf`;
 
   return (
     <div>
@@ -42,8 +77,8 @@ export default function InvoiceDetailPage() {
           </tr>
         </thead>
         <tbody>
-          {invoice.lineItems.map((item: any, index: number) => (
-            <tr key={index}>
+          {invoice.lineItems.map((item, index) => (
+            <tr key={item.id ?? `${item.description}-${index}`}>
               <td>{item.description}</td>
               <td>{item.quantity}</td>
               <td>{item.unitPrice.toFixed(2)}</td>
@@ -56,8 +91,7 @@ export default function InvoiceDetailPage() {
 
       <h3>Total Revenue: CHF {totalRevenue.toFixed(2)}</h3>
 
-      {/* Optionally add a button to download the invoice PDF */}
-      <Link href={`/api/invoices/${invoice.id}/pdf`}>
+      <Link href={pdfUrl}>
         <button>Download PDF</button>
       </Link>
     </div>

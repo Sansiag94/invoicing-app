@@ -1,11 +1,19 @@
 import React from "react";
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { Prisma } from "@prisma/client";
+
+type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
+  include: {
+    client: true;
+    lineItems: true;
+    business: true;
+  };
+}>;
 
 const styles = StyleSheet.create({
   page: { padding: 30 },
   section: { marginBottom: 10 },
   table: {
-    display: "table",
     width: "auto",
     borderStyle: "solid",
     borderWidth: 1,
@@ -33,7 +41,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const InvoiceDocument = ({ invoice }: { invoice: any }) => (
+const InvoiceDocument = ({ invoice }: { invoice: InvoiceWithRelations }) => (
   <Document>
     <Page style={styles.page}>
       <View style={styles.section}>
@@ -52,7 +60,7 @@ const InvoiceDocument = ({ invoice }: { invoice: any }) => (
           <Text style={styles.tableColHeader}>Tax</Text>
           <Text style={styles.tableColHeader}>Total</Text>
         </View>
-        {invoice.lineItems.map((item: any) => (
+        {invoice.lineItems.map((item) => (
           <View key={item.id} style={styles.tableRow}>
             <Text style={styles.tableCol}>{item.description}</Text>
             <Text style={styles.tableCol}>{item.quantity}</Text>

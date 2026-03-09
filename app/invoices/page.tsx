@@ -1,50 +1,63 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabase";
+import { ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 
 export default function InvoicePage() {
-  const [clients, setClients] = useState([]); // State for clients
-  const [invoices, setInvoices] = useState<any[]>([]); // Restored state for invoices
-  const [lineItems, setLineItems] = useState([]);
+  const [clients, setClients] = useState<ClientSummary[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
+  const [lineItems, setLineItems] = useState<LineItemData[]>([]);
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [clientId, setClientId] = useState(""); // State for selected client ID
+  const [clientId, setClientId] = useState("");
 
-  // Function to get user ID
-  const getUserId = async () => {
+  const getUserId = async (): Promise<string | null> => {
     const { data } = await supabase.auth.getUser();
-    return data.user?.id;
+    return data.user?.id ?? null;
   };
 
-  // Fetch clients for the dropdown
-  async function fetchClients() {
-    const userId = await getUserId();
-    if (userId) {
-      const response = await fetch(`/api/clients?userId=${userId}`);
-      const dataClients = await response.json();
-      setClients(dataClients);
-    }
-  }
-
-  // Fetch invoices
   async function fetchInvoices() {
-    const userId = await getUserId(); 
-    if (userId) {
-      const res = await fetch(`/api/invoices?userId=${userId}`);
-      const data = await res.json();
-      setInvoices(data);
-    }
+    const userId = await getUserId();
+    if (!userId) return;
+
+    const res = await fetch(`/api/invoices?userId=${encodeURIComponent(userId)}`);
+    const data = (await res.json()) as InvoiceSummary[];
+    setInvoices(Array.isArray(data) ? data : []);
   }
 
   useEffect(() => {
-    fetchClients(); // Fetch clients when the component mounts
-    fetchInvoices(); // Fetch invoices
+    let mounted = true;
+
+    (async () => {
+      const userId = await getUserId();
+      if (!userId) return;
+
+      const [clientsResponse, invoicesResponse] = await Promise.all([
+        fetch(`/api/clients?userId=${encodeURIComponent(userId)}`),
+        fetch(`/api/invoices?userId=${encodeURIComponent(userId)}`),
+      ]);
+
+      const loadedClients = (await clientsResponse.json()) as ClientSummary[];
+      const loadedInvoices = (await invoicesResponse.json()) as InvoiceSummary[];
+
+      if (mounted) {
+        setClients(Array.isArray(loadedClients) ? loadedClients : []);
+        setInvoices(Array.isArray(loadedInvoices) ? loadedInvoices : []);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  const handleSubmit = async (e: any) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
     const userId = await getUserId();
-    if (!userId || !clientId) return; // Ensure client is selected
+    if (!userId || !clientId || !issueDate || !dueDate || lineItems.length === 0) {
+      alert("Please complete all required fields.");
+      return;
+    }
 
     const response = await fetch("/api/invoices", {
       method: "POST",
@@ -56,68 +69,81 @@ export default function InvoicePage() {
         clientId,
         issueDate,
         dueDate,
-        currency: "CHF", // Assuming a default currency
-        notes: "", // Assuming there might be an optional notes field
-        subtotal: 0, // Placeholder value; should be calculated based on lineItems
-        taxAmount: 0, // Placeholder value; should be calculated based on lineItems
-        totalAmount: 0, // Placeholder value; should be calculated based on lineItems
+        status: "draft",
+        currency: "CHF",
+        notes: "",
         lineItems,
       }),
     });
 
     const result = await response.json();
-    console.log("INVOICE CREATE RESPONSE:", result); // Log the response
 
     if (!response.ok) {
-      alert("Invoice creation failed");
-      console.error(result); // Log the error data
+      alert(result?.error ?? "Invoice creation failed");
       return;
     }
 
-    // Clear fields or redirect as needed
-    setLineItems([]); // Reset line items
-    setIssueDate(""); // Reset issue date
-    setDueDate(""); // Reset due date
-    setClientId(""); // Reset selected client
-    fetchInvoices(); // Refresh invoice list after creation
+    setLineItems([]);
+    setIssueDate("");
+    setDueDate("");
+    setClientId("");
+    await fetchInvoices();
   };
 
   const addLineItem = () => {
-    setLineItems([...lineItems, { description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 }]);
+    setLineItems((current) => [
+      ...current,
+      { description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 },
+    ]);
   };
 
   const removeLineItem = (index: number) => {
-    setLineItems(lineItems.filter((_, i) => i !== index));
+    setLineItems((current) => current.filter((_, i) => i !== index));
+  };
+
+  const updateLineItem = (
+    index: number,
+    key: keyof LineItemData,
+    value: string | number
+  ) => {
+    setLineItems((current) =>
+      current.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        return { ...item, [key]: value };
+      })
+    );
   };
 
   const calculateTotals = () => {
-    const subtotal = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-    const taxAmount = lineItems.reduce((sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate / 100), 0);
+    const subtotal = lineItems.reduce(
+      (sum, item) => sum + item.quantity * item.unitPrice,
+      0
+    );
+    const taxAmount = lineItems.reduce(
+      (sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate) / 100,
+      0
+    );
     const totalAmount = subtotal + taxAmount;
 
     return { subtotal, taxAmount, totalAmount };
   };
 
   const { subtotal, taxAmount, totalAmount } = calculateTotals();
-
   const isCreateButtonDisabled = lineItems.length === 0;
 
   return (
     <div style={{ padding: 40 }}>
       <h1>Create Invoice</h1>
-      <select
-        value={clientId}
-        onChange={(e) => setClientId(e.target.value)}
-        required
-      >
+      <select value={clientId} onChange={(e) => setClientId(e.target.value)} required>
         <option value="">Select Client</option>
         {clients.map((client) => (
           <option key={client.id} value={client.id}>
-            {client.companyName || client.contactName}
+            {client.companyName || client.contactName || client.email}
           </option>
         ))}
       </select>
-      <br /><br />
+      <br />
+      <br />
 
       <input
         type="date"
@@ -126,7 +152,8 @@ export default function InvoicePage() {
         placeholder="Issue Date"
         required
       />
-      <br /><br />
+      <br />
+      <br />
       <input
         type="date"
         value={dueDate}
@@ -134,7 +161,8 @@ export default function InvoicePage() {
         placeholder="Due Date"
         required
       />
-      <br /><br />
+      <br />
+      <br />
 
       <h3>Line Items</h3>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -156,49 +184,36 @@ export default function InvoicePage() {
                   type="text"
                   value={item.description}
                   placeholder="Description"
-                  onChange={(e) => {
-                    const updatedLineItems = [...lineItems];
-                    updatedLineItems[index].description = e.target.value;
-                    setLineItems(updatedLineItems);
-                  }}
+                  onChange={(e) => updateLineItem(index, "description", e.target.value)}
                 />
               </td>
               <td>
                 <input
                   type="number"
                   value={item.quantity}
-                  onChange={(e) => {
-                    const updatedLineItems = [...lineItems];
-                    updatedLineItems[index].quantity = Number(e.target.value);
-                    setLineItems(updatedLineItems);
-                  }}
+                  min={1}
+                  onChange={(e) => updateLineItem(index, "quantity", Number(e.target.value))}
                 />
               </td>
               <td>
                 <input
                   type="number"
                   value={item.unitPrice}
-                  onChange={(e) => {
-                    const updatedLineItems = [...lineItems];
-                    updatedLineItems[index].unitPrice = Number(e.target.value);
-                    setLineItems(updatedLineItems);
-                  }}
+                  min={0}
+                  step="0.01"
+                  onChange={(e) => updateLineItem(index, "unitPrice", Number(e.target.value))}
                 />
               </td>
               <td>
                 <input
                   type="number"
                   value={item.taxRate}
-                  onChange={(e) => {
-                    const updatedLineItems = [...lineItems];
-                    updatedLineItems[index].taxRate = Number(e.target.value);
-                    setLineItems(updatedLineItems);
-                  }}
+                  min={0}
+                  step="0.1"
+                  onChange={(e) => updateLineItem(index, "taxRate", Number(e.target.value))}
                 />
               </td>
-              <td>
-                {(item.quantity * item.unitPrice).toFixed(2)}
-              </td>
+              <td>{(item.quantity * item.unitPrice).toFixed(2)}</td>
               <td>
                 <button onClick={() => removeLineItem(index)}>Remove</button>
               </td>
@@ -214,16 +229,16 @@ export default function InvoicePage() {
       <p style={{ textAlign: "right" }}>VAT: CHF {taxAmount.toFixed(2)}</p>
       <p style={{ textAlign: "right" }}>Total: CHF {totalAmount.toFixed(2)}</p>
 
-      <button disabled={isCreateButtonDisabled} onClick={handleSubmit}>Create Invoice</button>
+      <button disabled={isCreateButtonDisabled} onClick={handleSubmit}>
+        Create Invoice
+      </button>
 
       <h3>Invoice List</h3>
-      {invoices.length === 0 && (
-        <p>No invoices yet</p>
-      )}
+      {invoices.length === 0 && <p>No invoices yet</p>}
       {invoices.map((invoice) => (
         <div key={invoice.id} style={{ marginBottom: 10 }}>
           <a href={`/invoices/${invoice.id}`}>
-            {invoice.invoiceNumber} — {invoice.totalAmount} {invoice.currency} [{invoice.status}]
+            {invoice.invoiceNumber} - {invoice.totalAmount.toFixed(2)} {invoice.currency} [{invoice.status}]
           </a>
         </div>
       ))}

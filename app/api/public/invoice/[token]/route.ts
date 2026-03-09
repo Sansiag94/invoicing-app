@@ -1,21 +1,51 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
-export async function GET(request: Request, { params }: { params: { token: string } }) {
-  const { token } = params;
+export async function GET(
+  request: Request,
+  context: { params: Promise<{ token: string }> }
+) {
+  try {
+    const { token } = await context.params;
 
-  const invoice = await prisma.invoice.findFirst({
-    where: { publicToken: token },
-    include: {
-      client: true,
-      lineItems: true,
-      business: true,
-    },
-  });
+    if (!token?.trim()) {
+      return NextResponse.json({ error: "Token is required" }, { status: 400 });
+    }
 
-  if (!invoice) {
-    return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    const invoice = await prisma.invoice.findFirst({
+      where: { publicToken: token },
+      include: {
+        client: {
+          select: {
+            companyName: true,
+            contactName: true,
+            email: true,
+            address: true,
+            country: true,
+            vatNumber: true,
+          },
+        },
+        lineItems: true,
+        business: {
+          select: {
+            name: true,
+            address: true,
+            country: true,
+            vatNumber: true,
+            currency: true,
+            iban: true,
+          },
+        },
+      },
+    });
+
+    if (!invoice) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(invoice);
+  } catch (error) {
+    console.error("Error loading public invoice:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
-
-  return NextResponse.json(invoice);
 }

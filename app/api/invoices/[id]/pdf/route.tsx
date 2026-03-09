@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
+import { Prisma } from "@prisma/client";
+
+type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
+  include: {
+    client: true;
+    lineItems: true;
+    business: true;
+  };
+}>;
 
 const formatCurrency = (value: unknown) => Number(value ?? 0).toFixed(2);
 
@@ -53,7 +62,6 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   table: {
-    display: "table",
     width: "100%",
     borderStyle: "solid",
     borderWidth: 1,
@@ -123,7 +131,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const InvoiceDocument = ({ invoice }: { invoice: any }) => (
+const InvoiceDocument = ({ invoice }: { invoice: InvoiceWithRelations }) => (
   <Document>
     <Page style={styles.page}>
       <View style={styles.header}>
@@ -162,7 +170,7 @@ const InvoiceDocument = ({ invoice }: { invoice: any }) => (
             </Text>
             <Text style={[styles.cell, styles.headerCell, styles.cellTotal]}>Total</Text>
           </View>
-          {invoice.lineItems.map((item: any, index: number) => (
+          {invoice.lineItems.map((item, index) => (
             <View key={item.id ?? `${item.description}-${index}`} style={styles.row}>
               <Text style={[styles.cell, styles.cellDescription]}>{item.description}</Text>
               <Text style={[styles.cell, styles.cellQuantity]}>{item.quantity}</Text>
@@ -206,30 +214,37 @@ export async function GET(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await context.params;
+  try {
+    const { id } = await context.params;
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get("userId")?.trim();
 
-  const invoice = await prisma.invoice.findUnique({
-    where: { id },
-    include: {
-      client: true,
-      lineItems: true,
-      business: true,
-    },
-  });
+    const invoice = await prisma.invoice.findFirst({
+      where: userId ? { id, business: { userId } } : { id },
+      include: {
+        client: true,
+        lineItems: true,
+        business: true,
+      },
+    });
 
-  if (!invoice) {
-    return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    if (!invoice) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
+
+    const doc = <InvoiceDocument invoice={invoice} />;
+    const asPdf = pdf(doc);
+    const pdfBuffer = (await asPdf.toBuffer()) as unknown as BodyInit;
+
+    return new Response(pdfBuffer, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename=invoice_${invoice.invoiceNumber}.pdf`,
+      },
+    });
+  } catch (error) {
+    console.error("Error generating invoice PDF:", error);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
-
-  const doc = <InvoiceDocument invoice={invoice} />;
-  const asPdf = pdf(doc);
-  const pdfBuffer = await asPdf.toBuffer();
-
-  return new Response(pdfBuffer, {
-    status: 200,
-    headers: {
-      "Content-Type": "application/pdf",
-      "Content-Disposition": `attachment; filename=invoice_${invoice.invoiceNumber}.pdf`,
-    },
-  });
 }

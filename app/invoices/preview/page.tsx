@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSearchParams } from "next/navigation";
+
+import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { supabase } from "@/utils/supabase";
+import { LineItemData } from "@/lib/types";
 
 export default function InvoicePreviewPage() {
   const router = useRouter();
-  const searchParams = useSearchParams(); // Get query parameters
+  const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
   const issueDate = searchParams.get("issueDate");
   const dueDate = searchParams.get("dueDate");
@@ -13,13 +15,18 @@ export default function InvoicePreviewPage() {
   const subtotal = parseFloat(searchParams.get("subtotal") || "0");
   const taxAmount = parseFloat(searchParams.get("taxAmount") || "0");
   const totalAmount = parseFloat(searchParams.get("totalAmount") || "0");
-  const [lineItems, setLineItems] = useState<any[]>([]); // consider fetching lineItems if relevant
+  const [lineItems] = useState<LineItemData[]>([]);
 
   const handleCreateInvoice = async () => {
     const { data } = await supabase.auth.getUser();
     const userId = data.user?.id;
 
-    await fetch("/api/invoices", {
+    if (!userId || !clientId || !issueDate || !dueDate || !currency) {
+      alert("Missing required invoice data");
+      return;
+    }
+
+    const response = await fetch("/api/invoices", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -32,14 +39,20 @@ export default function InvoicePreviewPage() {
         subtotal,
         taxAmount,
         totalAmount,
-        status: "draft", // Default status
+        status: "draft",
         currency,
-        lineItems, // Pass lineItems
+        lineItems,
       }),
     });
 
+    if (!response.ok) {
+      const result = await response.json();
+      alert(result?.error ?? "Invoice creation failed");
+      return;
+    }
+
     alert("Invoice created successfully!");
-    router.push("/invoices"); // Redirect to invoice list after successful creation
+    router.push("/invoices");
   };
 
   return (
@@ -60,9 +73,7 @@ export default function InvoicePreviewPage() {
             <th>Total</th>
           </tr>
         </thead>
-        <tbody>
-          {/* Map through lineItems here if they're fetched or passed */}
-        </tbody>
+        <tbody />
       </table>
 
       <h3>Totals</h3>
