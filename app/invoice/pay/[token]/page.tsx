@@ -1,13 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { InvoiceDetails } from "@/lib/types";
 
 export default function PublicInvoicePage() {
   const params = useParams<{ token: string }>();
+  const searchParams = useSearchParams();
   const token = params?.token;
   const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -37,6 +40,36 @@ export default function PublicInvoicePage() {
     };
   }, [token]);
 
+  const paymentSuccess = searchParams.get("success") === "true";
+  const paymentCancelled = searchParams.get("cancel") === "true";
+
+  const handleCheckout = async () => {
+    if (!invoice || !token) return;
+
+    try {
+      setIsCheckoutLoading(true);
+      setCheckoutError(null);
+
+      const response = await fetch(`/api/invoices/${invoice.id}/checkout`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ token }),
+      });
+
+      const data = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !data.url) {
+        throw new Error(data.error ?? "Could not start checkout");
+      }
+
+      window.location.assign(data.url);
+    } catch (error) {
+      setCheckoutError(error instanceof Error ? error.message : "Could not start checkout");
+      setIsCheckoutLoading(false);
+    }
+  };
+
   if (!invoice) return <div>Loading...</div>;
 
   const subtotal = invoice.lineItems.reduce(
@@ -52,9 +85,13 @@ export default function PublicInvoicePage() {
   return (
     <div>
       <h1>Invoice Details</h1>
+      {paymentSuccess ? <p>Payment initiated successfully. You can refresh shortly for status.</p> : null}
+      {paymentCancelled ? <p>Payment was cancelled.</p> : null}
+      {checkoutError ? <p>{checkoutError}</p> : null}
       <h2>Business: {invoice.business.name}</h2>
       <p>Client Name: {invoice.client.companyName || invoice.client.contactName}</p>
       <p>Invoice Number: {invoice.invoiceNumber}</p>
+      <p>Status: {invoice.status}</p>
       <p>Issue Date: {new Date(invoice.issueDate).toLocaleDateString()}</p>
       <p>Due Date: {new Date(invoice.dueDate).toLocaleDateString()}</p>
 
@@ -87,7 +124,18 @@ export default function PublicInvoicePage() {
       <p>Tax: {taxAmount.toFixed(2)}</p>
       <p>Total Amount: {totalAmount.toFixed(2)}</p>
 
-      <button onClick={() => window.open(`/api/invoices/${invoice.id}/pdf`, "_blank")}>
+      <button
+        onClick={handleCheckout}
+        disabled={isCheckoutLoading || invoice.status === "paid"}
+      >
+        {isCheckoutLoading
+          ? "Redirecting to Stripe..."
+          : invoice.status === "paid"
+            ? "Invoice already paid"
+            : "Pay with card"}
+      </button>
+
+      <button onClick={() => window.open(`/api/public/invoice/${token}/pdf`, "_blank")}>
         Download PDF
       </button>
     </div>

@@ -16,18 +16,22 @@ export default function Signup() {
     if (error) {
       alert(error.message);
     } else {
-      const user = data.user;
+      const accessToken = data.session?.access_token;
 
-      await fetch("/api/create-user", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          id: user?.id,
-          email: user?.email,
-        }),
-      });
+      if (accessToken) {
+        const syncResponse = await fetch("/api/create-user", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        if (!syncResponse.ok) {
+          const result = (await syncResponse.json()) as { error?: string };
+          alert(result?.error ?? "Signup succeeded, but account initialization failed.");
+          return;
+        }
+      }
 
       alert("Signup successful!");
     }

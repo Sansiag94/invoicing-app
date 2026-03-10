@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import React from "react";
 import { Document, Page, Text, View, StyleSheet, pdf } from "@react-pdf/renderer";
 import { Prisma } from "@prisma/client";
+import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 
 type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
@@ -216,11 +217,19 @@ export async function GET(
 ) {
   try {
     const { id } = await context.params;
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId")?.trim();
+    const user = await getAuthenticatedUser(request);
+
+    const business = await prisma.business.findFirst({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+
+    if (!business) {
+      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    }
 
     const invoice = await prisma.invoice.findFirst({
-      where: userId ? { id, business: { userId } } : { id },
+      where: { id, businessId: business.id },
       include: {
         client: true,
         lineItems: true,
@@ -244,6 +253,10 @@ export async function GET(
       },
     });
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Error generating invoice PDF:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

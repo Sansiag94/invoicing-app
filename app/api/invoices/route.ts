@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { InvoiceStatus } from "@prisma/client";
+import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 
 type LineItemInput = {
   description: unknown;
@@ -11,7 +12,6 @@ type LineItemInput = {
 };
 
 type CreateInvoiceBody = {
-  userId: unknown;
   clientId: unknown;
   issueDate: unknown;
   dueDate: unknown;
@@ -51,15 +51,10 @@ function normalizeStatus(value: unknown): InvoiceStatus {
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = asString(searchParams.get("userId"));
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
+    const user = await getAuthenticatedUser(request);
 
     const business = await prisma.business.findFirst({
-      where: { userId },
+      where: { userId: user.id },
       select: { id: true },
     });
 
@@ -74,6 +69,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json(invoices);
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Error loading invoices:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
@@ -81,13 +80,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthenticatedUser(request);
     const body = (await request.json()) as CreateInvoiceBody;
-    const userId = asString(body.userId);
     const clientId = asString(body.clientId);
     const issueDate = asDate(body.issueDate);
     const dueDate = asDate(body.dueDate);
 
-    if (!userId || !clientId || !issueDate || !dueDate) {
+    if (!clientId || !issueDate || !dueDate) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -141,7 +140,7 @@ export async function POST(request: Request) {
     }
 
     const business = await prisma.business.findFirst({
-      where: { userId },
+      where: { userId: user.id },
       select: {
         id: true,
         currency: true,
@@ -219,6 +218,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Error creating invoice:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

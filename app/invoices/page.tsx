@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabase";
 import { ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
+import { authenticatedFetch } from "@/utils/authenticatedFetch";
 
 export default function InvoicePage() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -12,16 +12,8 @@ export default function InvoicePage() {
   const [dueDate, setDueDate] = useState("");
   const [clientId, setClientId] = useState("");
 
-  const getUserId = async (): Promise<string | null> => {
-    const { data } = await supabase.auth.getUser();
-    return data.user?.id ?? null;
-  };
-
   async function fetchInvoices() {
-    const userId = await getUserId();
-    if (!userId) return;
-
-    const res = await fetch(`/api/invoices?userId=${encodeURIComponent(userId)}`);
+    const res = await authenticatedFetch("/api/invoices");
     const data = (await res.json()) as InvoiceSummary[];
     setInvoices(Array.isArray(data) ? data : []);
   }
@@ -30,12 +22,9 @@ export default function InvoicePage() {
     let mounted = true;
 
     (async () => {
-      const userId = await getUserId();
-      if (!userId) return;
-
       const [clientsResponse, invoicesResponse] = await Promise.all([
-        fetch(`/api/clients?userId=${encodeURIComponent(userId)}`),
-        fetch(`/api/invoices?userId=${encodeURIComponent(userId)}`),
+        authenticatedFetch("/api/clients"),
+        authenticatedFetch("/api/invoices"),
       ]);
 
       const loadedClients = (await clientsResponse.json()) as ClientSummary[];
@@ -53,19 +42,17 @@ export default function InvoicePage() {
   }, []);
 
   const handleSubmit = async () => {
-    const userId = await getUserId();
-    if (!userId || !clientId || !issueDate || !dueDate || lineItems.length === 0) {
+    if (!clientId || !issueDate || !dueDate || lineItems.length === 0) {
       alert("Please complete all required fields.");
       return;
     }
 
-    const response = await fetch("/api/invoices", {
+    const response = await authenticatedFetch("/api/invoices", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        userId,
         clientId,
         issueDate,
         dueDate,

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/utils/supabase";
 import { LineItemData } from "@/lib/types";
+import { authenticatedFetch } from "@/utils/authenticatedFetch";
 
 export default function InvoicePreviewPage() {
   const router = useRouter();
@@ -18,27 +18,20 @@ export default function InvoicePreviewPage() {
   const [lineItems] = useState<LineItemData[]>([]);
 
   const handleCreateInvoice = async () => {
-    const { data } = await supabase.auth.getUser();
-    const userId = data.user?.id;
-
-    if (!userId || !clientId || !issueDate || !dueDate || !currency) {
+    if (!clientId || !issueDate || !dueDate || !currency) {
       alert("Missing required invoice data");
       return;
     }
 
-    const response = await fetch("/api/invoices", {
+    const response = await authenticatedFetch("/api/invoices", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        userId,
         clientId,
         issueDate,
         dueDate,
-        subtotal,
-        taxAmount,
-        totalAmount,
         status: "draft",
         currency,
         lineItems,

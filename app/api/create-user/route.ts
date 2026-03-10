@@ -1,34 +1,25 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { ensureBusiness } from "@/lib/ensureBusiness";
-
-type CreateUserBody = {
-  id: unknown;
-  email: unknown;
-};
-
-function asString(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
-}
+import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as CreateUserBody;
-    const id = asString(body.id);
-    const email = asString(body.email);
+    const authUser = await getAuthenticatedUser(request);
+    const email = authUser.email?.trim() ?? null;
 
-    if (!id || !email) {
-      return NextResponse.json({ error: "id and email are required" }, { status: 400 });
+    if (!email) {
+      return NextResponse.json({ error: "Authenticated email is required" }, { status: 400 });
     }
 
     const user = await prisma.user.upsert({
-      where: { id },
+      where: { id: authUser.id },
       update: {
         email,
         name: email,
       },
       create: {
-        id,
+        id: authUser.id,
         email,
         name: email,
       },
@@ -38,6 +29,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(user);
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Error creating user:", error);
     return NextResponse.json({ error: "Server Error" }, { status: 500 });
   }

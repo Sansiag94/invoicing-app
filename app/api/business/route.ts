@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { ensureBusiness } from "@/lib/ensureBusiness";
+import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 
 type UpdateBusinessBody = {
-  userId: unknown;
   name: unknown;
   address: unknown;
   country: unknown;
@@ -20,17 +20,15 @@ function asString(value: unknown): string | null {
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = asString(searchParams.get("userId"));
-
-    if (!userId) {
-      return NextResponse.json({ error: "userId is required" }, { status: 400 });
-    }
-
-    const business = await ensureBusiness(userId);
+    const user = await getAuthenticatedUser(request);
+    const business = await ensureBusiness(user.id);
 
     return NextResponse.json(business);
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Error loading business:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
@@ -38,21 +36,21 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const user = await getAuthenticatedUser(request);
     const body = (await request.json()) as UpdateBusinessBody;
-    const userId = asString(body.userId);
     const name = asString(body.name);
     const address = asString(body.address);
     const country = asString(body.country);
     const currency = asString(body.currency);
 
-    if (!userId || !name || !address || !country || !currency) {
+    if (!name || !address || !country || !currency) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    const business = await ensureBusiness(userId);
+    const business = await ensureBusiness(user.id);
 
     const updatedBusiness = await prisma.business.update({
       where: { id: business.id },
@@ -70,6 +68,10 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json(updatedBusiness);
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Error updating business:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }

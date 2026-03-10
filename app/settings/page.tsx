@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/utils/supabase";
 import { BusinessSettingsData } from "@/lib/types";
+import { authenticatedFetch } from "@/utils/authenticatedFetch";
 
 export default function SettingsPage() {
   const [name, setName] = useState("");
@@ -13,22 +13,13 @@ export default function SettingsPage() {
   const [iban, setIban] = useState("");
   const [invoicePrefix, setInvoicePrefix] = useState("");
 
-  async function getUserId() {
-    const { data } = await supabase.auth.getUser();
-    return data.user?.id ?? null;
-  }
-
   async function handleSave() {
-    const userId = await getUserId();
-    if (!userId) return;
-
-    const response = await fetch("/api/business", {
+    const response = await authenticatedFetch("/api/business", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        userId,
         name,
         address,
         country,
@@ -52,10 +43,7 @@ export default function SettingsPage() {
     let mounted = true;
 
     (async () => {
-      const userId = await getUserId();
-      if (!userId) return;
-
-      const res = await fetch(`/api/business?userId=${encodeURIComponent(userId)}`);
+      const res = await authenticatedFetch("/api/business");
       const data = (await res.json()) as BusinessSettingsData;
 
       if (mounted) {

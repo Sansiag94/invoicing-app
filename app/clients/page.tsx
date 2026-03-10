@@ -1,8 +1,8 @@
 "use client";
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "../../utils/supabase";
 import { ClientSummary } from "@/lib/types";
+import { authenticatedFetch } from "@/utils/authenticatedFetch";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -13,32 +13,27 @@ export default function ClientsPage() {
   const [country, setCountry] = useState("");
   const [vatNumber, setVatNumber] = useState("");
 
-  async function getUserId() {
-    const { data } = await supabase.auth.getUser();
-    return data.user?.id ?? null;
-  }
-
   async function fetchClients() {
-    const userId = await getUserId();
-    if (!userId) return;
+    const response = await authenticatedFetch("/api/clients");
 
-    const response = await fetch(`/api/clients?userId=${encodeURIComponent(userId)}`);
+    if (!response.ok) {
+      const result = (await response.json()) as { error?: string };
+      throw new Error(result.error ?? "Failed to load clients");
+    }
+
     const dataClients = (await response.json()) as ClientSummary[];
     setClients(Array.isArray(dataClients) ? dataClients : []);
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const userId = await getUserId();
-    if (!userId) return;
 
-    const response = await fetch("/api/clients", {
+    const response = await authenticatedFetch("/api/clients", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        userId,
         companyName,
         contactName,
         email,
@@ -67,12 +62,17 @@ export default function ClientsPage() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const userId = await getUserId();
-      if (!userId) return;
-      const response = await fetch(`/api/clients?userId=${encodeURIComponent(userId)}`);
-      const dataClients = (await response.json()) as ClientSummary[];
-      if (mounted) {
-        setClients(Array.isArray(dataClients) ? dataClients : []);
+      try {
+        const response = await authenticatedFetch("/api/clients");
+        const dataClients = (await response.json()) as ClientSummary[];
+        if (mounted) {
+          setClients(Array.isArray(dataClients) ? dataClients : []);
+        }
+      } catch (error) {
+        console.error("Error fetching clients:", error);
+        if (mounted) {
+          setClients([]);
+        }
       }
     })();
 

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 
 type CreateClientBody = {
-  userId: unknown;
   email: unknown;
   address: unknown;
   country: unknown;
@@ -17,15 +17,10 @@ function asString(value: unknown): string | null {
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = asString(searchParams.get("userId"));
-
-    if (!userId) {
-      return NextResponse.json([]);
-    }
+    const user = await getAuthenticatedUser(request);
 
     const business = await prisma.business.findFirst({
-      where: { userId },
+      where: { userId: user.id },
       select: { id: true },
     });
 
@@ -40,6 +35,10 @@ export async function GET(request: Request) {
 
     return NextResponse.json(clients);
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Error loading clients:", error);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
@@ -47,8 +46,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthenticatedUser(request);
     const body = (await request.json()) as CreateClientBody;
-    const userId = asString(body.userId);
     const email = asString(body.email);
     const address = asString(body.address);
     const country = asString(body.country);
@@ -56,7 +55,7 @@ export async function POST(request: Request) {
     const contactName = asString(body.contactName);
     const vatNumber = asString(body.vatNumber);
 
-    if (!userId || !email || !address || !country) {
+    if (!email || !address || !country) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -76,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     const business = await prisma.business.findFirst({
-      where: { userId },
+      where: { userId: user.id },
       select: { id: true },
     });
 
@@ -101,6 +100,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(client);
   } catch (error) {
+    if (isAuthenticationError(error)) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
     console.error("Error creating client:", error);
     return NextResponse.json(
       { error: "Server error" },

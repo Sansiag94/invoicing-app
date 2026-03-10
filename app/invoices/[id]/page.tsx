@@ -2,15 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import Link from "next/link";
-import { supabase } from "@/utils/supabase";
 import { InvoiceDetails } from "@/lib/types";
+import { authenticatedFetch } from "@/utils/authenticatedFetch";
 
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id;
   const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -18,13 +17,7 @@ export default function InvoiceDetailPage() {
     let mounted = true;
 
     (async () => {
-      const { data } = await supabase.auth.getUser();
-      const currentUserId = data.user?.id ?? null;
-      if (!mounted) return;
-      setUserId(currentUserId);
-
-      const query = currentUserId ? `?userId=${encodeURIComponent(currentUserId)}` : "";
-      const response = await fetch(`/api/invoices/${id}${query}`);
+      const response = await authenticatedFetch(`/api/invoices/${id}`);
       const dataInvoice = (await response.json()) as InvoiceDetails;
 
       if (mounted && !dataInvoice?.id) {
@@ -52,9 +45,52 @@ export default function InvoiceDetailPage() {
     0
   );
 
-  const pdfUrl = userId
-    ? `/api/invoices/${invoice.id}/pdf?userId=${encodeURIComponent(userId)}`
-    : `/api/invoices/${invoice.id}/pdf`;
+  const handleDownloadPdf = async () => {
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/pdf`);
+      if (!response.ok) {
+        const result = (await response.json()) as { error?: string };
+        alert(result?.error ?? "Failed to download PDF");
+        return;
+      }
+
+      const pdfBlob = await response.blob();
+      const downloadUrl = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = `invoice_${invoice.invoiceNumber}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      alert("Failed to download PDF");
+    }
+  };
+
+  const handleSendInvoice = async () => {
+    try {
+      setIsSending(true);
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as { message?: string; error?: string };
+
+      if (!response.ok) {
+        alert(result?.error ?? "Failed to send invoice");
+        return;
+      }
+
+      setInvoice((current) => (current ? { ...current, status: "sent" } : current));
+      alert(result?.message ?? "Invoice sent");
+    } catch (error) {
+      console.error("Error sending invoice:", error);
+      alert("Failed to send invoice");
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   return (
     <div>
@@ -91,9 +127,10 @@ export default function InvoiceDetailPage() {
 
       <h3>Total Revenue: CHF {totalRevenue.toFixed(2)}</h3>
 
-      <Link href={pdfUrl}>
-        <button>Download PDF</button>
-      </Link>
+      <button onClick={handleDownloadPdf}>Download PDF</button>
+      <button onClick={handleSendInvoice} disabled={isSending}>
+        {isSending ? "Sending..." : "Send Invoice"}
+      </button>
     </div>
   );
 }
