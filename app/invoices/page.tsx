@@ -1,20 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { Eye, FilePenLine, Plus, Send, Trash2 } from "lucide-react";
 import { ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+type InvoiceRow = InvoiceSummary & {
+  client?: {
+    companyName: string | null;
+    contactName: string | null;
+    email: string;
+  };
+};
+
+function statusVariant(status: string): "default" | "success" | "warning" | "danger" {
+  if (status === "paid") return "success";
+  if (status === "overdue") return "danger";
+  if (status === "sent") return "warning";
+  return "default";
+}
+
+function parseNumber(value: string): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
 
 export default function InvoicePage() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceSummary[]>([]);
-  const [lineItems, setLineItems] = useState<LineItemData[]>([]);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [lineItems, setLineItems] = useState<LineItemData[]>([
+    { description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 },
+  ]);
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [clientId, setClientId] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isSendingId, setIsSendingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   async function fetchInvoices() {
     const res = await authenticatedFetch("/api/invoices");
-    const data = (await res.json()) as InvoiceSummary[];
+    const data = (await res.json()) as InvoiceRow[];
     setInvoices(Array.isArray(data) ? data : []);
   }
 
@@ -22,17 +58,21 @@ export default function InvoicePage() {
     let mounted = true;
 
     (async () => {
-      const [clientsResponse, invoicesResponse] = await Promise.all([
-        authenticatedFetch("/api/clients"),
-        authenticatedFetch("/api/invoices"),
-      ]);
+      try {
+        const [clientsResponse, invoicesResponse] = await Promise.all([
+          authenticatedFetch("/api/clients"),
+          authenticatedFetch("/api/invoices"),
+        ]);
 
-      const loadedClients = (await clientsResponse.json()) as ClientSummary[];
-      const loadedInvoices = (await invoicesResponse.json()) as InvoiceSummary[];
+        const loadedClients = (await clientsResponse.json()) as ClientSummary[];
+        const loadedInvoices = (await invoicesResponse.json()) as InvoiceRow[];
 
-      if (mounted) {
-        setClients(Array.isArray(loadedClients) ? loadedClients : []);
-        setInvoices(Array.isArray(loadedInvoices) ? loadedInvoices : []);
+        if (mounted) {
+          setClients(Array.isArray(loadedClients) ? loadedClients : []);
+          setInvoices(Array.isArray(loadedInvoices) ? loadedInvoices : []);
+        }
+      } catch (error) {
+        console.error("Error loading invoice page data:", error);
       }
     })();
 
@@ -41,40 +81,23 @@ export default function InvoicePage() {
     };
   }, []);
 
-  const handleSubmit = async () => {
-    if (!clientId || !issueDate || !dueDate || lineItems.length === 0) {
-      alert("Please complete all required fields.");
-      return;
-    }
+  const totals = useMemo(() => {
+    const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const taxAmount = lineItems.reduce(
+      (sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate) / 100,
+      0
+    );
 
-    const response = await authenticatedFetch("/api/invoices", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        clientId,
-        issueDate,
-        dueDate,
-        status: "draft",
-        currency: "CHF",
-        notes: "",
-        lineItems,
-      }),
-    });
+    return { subtotal, taxAmount, totalAmount: subtotal + taxAmount };
+  }, [lineItems]);
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      alert(result?.error ?? "Invoice creation failed");
-      return;
-    }
-
-    setLineItems([]);
-    setIssueDate("");
-    setDueDate("");
-    setClientId("");
-    await fetchInvoices();
+  const updateLineItem = (index: number, key: keyof LineItemData, value: string | number) => {
+    setLineItems((current) =>
+      current.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        return { ...item, [key]: value };
+      })
+    );
   };
 
   const addLineItem = () => {
@@ -88,147 +111,337 @@ export default function InvoicePage() {
     setLineItems((current) => current.filter((_, i) => i !== index));
   };
 
-  const updateLineItem = (
-    index: number,
-    key: keyof LineItemData,
-    value: string | number
-  ) => {
-    setLineItems((current) =>
-      current.map((item, itemIndex) => {
-        if (itemIndex !== index) return item;
-        return { ...item, [key]: value };
-      })
+  const handleCreateInvoice = async () => {
+    if (!clientId || !issueDate || !dueDate || lineItems.length === 0) {
+      alert("Please complete all required fields.");
+      return;
+    }
+
+    const hasInvalidLineItems = lineItems.some(
+      (item) =>
+        !item.description.trim() ||
+        !Number.isInteger(item.quantity) ||
+        item.quantity <= 0 ||
+        item.unitPrice < 0 ||
+        item.taxRate < 0
     );
+
+    if (hasInvalidLineItems) {
+      alert("Please complete valid line item values.");
+      return;
+    }
+
+    setIsCreating(true);
+
+    try {
+      const response = await authenticatedFetch("/api/invoices", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          clientId,
+          issueDate,
+          dueDate,
+          status: "draft",
+          notes: "",
+          lineItems,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        alert(result?.error ?? "Invoice creation failed");
+        return;
+      }
+
+      setLineItems([{ description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 }]);
+      setIssueDate("");
+      setDueDate("");
+      setClientId("");
+      await fetchInvoices();
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      alert("Invoice creation failed");
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const calculateTotals = () => {
-    const subtotal = lineItems.reduce(
-      (sum, item) => sum + item.quantity * item.unitPrice,
-      0
-    );
-    const taxAmount = lineItems.reduce(
-      (sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate) / 100,
-      0
-    );
-    const totalAmount = subtotal + taxAmount;
+  const handleDeleteInvoice = async () => {
+    if (!deleteTarget) return;
 
-    return { subtotal, taxAmount, totalAmount };
+    setIsDeleting(true);
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        alert(result.error ?? "Failed to delete invoice");
+        return;
+      }
+
+      setDeleteTarget(null);
+      await fetchInvoices();
+    } catch (error) {
+      console.error("Error deleting invoice:", error);
+      alert("Failed to delete invoice");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
-  const { subtotal, taxAmount, totalAmount } = calculateTotals();
-  const isCreateButtonDisabled = lineItems.length === 0;
+  const handleSendInvoice = async (invoiceId: string) => {
+    setIsSendingId(invoiceId);
+
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoiceId}/send`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        alert(result.error ?? "Failed to send invoice");
+        return;
+      }
+
+      await fetchInvoices();
+    } catch (error) {
+      console.error("Error sending invoice:", error);
+      alert("Failed to send invoice");
+    } finally {
+      setIsSendingId(null);
+    }
+  };
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1>Create Invoice</h1>
-      <select value={clientId} onChange={(e) => setClientId(e.target.value)} required>
-        <option value="">Select Client</option>
-        {clients.map((client) => (
-          <option key={client.id} value={client.id}>
-            {client.companyName || client.contactName || client.email}
-          </option>
-        ))}
-      </select>
-      <br />
-      <br />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Invoices</h1>
+        <p className="text-sm text-slate-500">Create invoices and manage their lifecycle.</p>
+      </div>
 
-      <input
-        type="date"
-        value={issueDate}
-        onChange={(e) => setIssueDate(e.target.value)}
-        placeholder="Issue Date"
-        required
-      />
-      <br />
-      <br />
-      <input
-        type="date"
-        value={dueDate}
-        onChange={(e) => setDueDate(e.target.value)}
-        placeholder="Due Date"
-        required
-      />
-      <br />
-      <br />
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Create Invoice</CardTitle>
+          <Button variant="secondary" onClick={addLineItem}>
+            <Plus className="h-4 w-4" />
+            Add Line Item
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="client">Client</Label>
+              <Select id="client" value={clientId} onChange={(event) => setClientId(event.target.value)}>
+                <option value="">Select Client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.companyName || client.contactName || client.email}
+                  </option>
+                ))}
+              </Select>
+            </div>
 
-      <h3>Line Items</h3>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th>Description</th>
-            <th>Quantity</th>
-            <th>Unit Price</th>
-            <th>VAT %</th>
-            <th>Total</th>
-            <th>Remove</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lineItems.map((item, index) => (
-            <tr key={index}>
-              <td>
-                <input
-                  type="text"
-                  value={item.description}
-                  placeholder="Description"
-                  onChange={(e) => updateLineItem(index, "description", e.target.value)}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={item.quantity}
-                  min={1}
-                  onChange={(e) => updateLineItem(index, "quantity", Number(e.target.value))}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={item.unitPrice}
-                  min={0}
-                  step="0.01"
-                  onChange={(e) => updateLineItem(index, "unitPrice", Number(e.target.value))}
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={item.taxRate}
-                  min={0}
-                  step="0.1"
-                  onChange={(e) => updateLineItem(index, "taxRate", Number(e.target.value))}
-                />
-              </td>
-              <td>{(item.quantity * item.unitPrice).toFixed(2)}</td>
-              <td>
-                <button onClick={() => removeLineItem(index)}>Remove</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+            <div className="space-y-2">
+              <Label htmlFor="issueDate">Issue Date</Label>
+              <Input
+                id="issueDate"
+                type="date"
+                value={issueDate}
+                onChange={(event) => setIssueDate(event.target.value)}
+              />
+            </div>
 
-      <button onClick={addLineItem}>+ Add Line Item</button>
+            <div className="space-y-2">
+              <Label htmlFor="dueDate">Due Date</Label>
+              <Input
+                id="dueDate"
+                type="date"
+                value={dueDate}
+                onChange={(event) => setDueDate(event.target.value)}
+              />
+            </div>
+          </div>
 
-      <h3 style={{ textAlign: "right" }}>Totals</h3>
-      <p style={{ textAlign: "right" }}>Subtotal: CHF {subtotal.toFixed(2)}</p>
-      <p style={{ textAlign: "right" }}>VAT: CHF {taxAmount.toFixed(2)}</p>
-      <p style={{ textAlign: "right" }}>Total: CHF {totalAmount.toFixed(2)}</p>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Description</TableHead>
+                <TableHead>Qty</TableHead>
+                <TableHead>Unit Price</TableHead>
+                <TableHead>Tax %</TableHead>
+                <TableHead>Line Total</TableHead>
+                <TableHead>Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lineItems.map((item, index) => (
+                <TableRow key={`${item.id ?? "new"}-${index}`}>
+                  <TableCell>
+                    <Input
+                      value={item.description}
+                      placeholder="Description"
+                      onChange={(event) => updateLineItem(index, "description", event.target.value)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={item.quantity}
+                      onChange={(event) =>
+                        updateLineItem(index, "quantity", Math.max(1, Math.trunc(parseNumber(event.target.value))))
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={item.unitPrice}
+                      onChange={(event) =>
+                        updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      value={item.taxRate}
+                      onChange={(event) =>
+                        updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
+                      }
+                    />
+                  </TableCell>
+                  <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                  <TableCell>
+                    <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
 
-      <button disabled={isCreateButtonDisabled} onClick={handleSubmit}>
-        Create Invoice
-      </button>
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="text-sm text-slate-600">
+              <p>Subtotal: CHF {totals.subtotal.toFixed(2)}</p>
+              <p>Tax: CHF {totals.taxAmount.toFixed(2)}</p>
+              <p className="font-semibold text-slate-900">Total: CHF {totals.totalAmount.toFixed(2)}</p>
+            </div>
+            <Button onClick={handleCreateInvoice} disabled={isCreating}>
+              {isCreating ? "Creating..." : "Create Invoice"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-      <h3>Invoice List</h3>
-      {invoices.length === 0 && <p>No invoices yet</p>}
-      {invoices.map((invoice) => (
-        <div key={invoice.id} style={{ marginBottom: 10 }}>
-          <a href={`/invoices/${invoice.id}`}>
-            {invoice.invoiceNumber} - {invoice.totalAmount.toFixed(2)} {invoice.currency} [{invoice.status}]
-          </a>
-        </div>
-      ))}
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice Table</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Invoice Number</TableHead>
+                <TableHead>Client</TableHead>
+                <TableHead>Total</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoices.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-slate-500">
+                    No invoices yet.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                invoices.map((invoice) => (
+                  <TableRow key={invoice.id}>
+                    <TableCell>{invoice.invoiceNumber}</TableCell>
+                    <TableCell>
+                      {invoice.client?.companyName ||
+                        invoice.client?.contactName ||
+                        invoice.client?.email ||
+                        "-"}
+                    </TableCell>
+                    <TableCell>
+                      {invoice.currency} {invoice.totalAmount.toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-2">
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/invoices/${invoice.id}`}>
+                            <Eye className="h-4 w-4" />
+                            View
+                          </Link>
+                        </Button>
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={`/invoices/${invoice.id}`}>
+                            <FilePenLine className="h-4 w-4" />
+                            Edit
+                          </Link>
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setDeleteTarget(invoice)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          disabled={invoice.status === "paid" || isSendingId === invoice.id}
+                          onClick={() => handleSendInvoice(invoice.id)}
+                        >
+                          <Send className="h-4 w-4" />
+                          {isSendingId === invoice.id ? "Sending..." : "Send"}
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Invoice</DialogTitle>
+            <DialogDescription>
+              Delete invoice <strong>{deleteTarget?.invoiceNumber}</strong>? This action cannot be
+              undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteInvoice} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

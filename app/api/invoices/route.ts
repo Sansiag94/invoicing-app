@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { InvoiceStatus } from "@prisma/client";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
+import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 
 type LineItemInput = {
   description: unknown;
@@ -62,9 +63,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Business not found" }, { status: 404 });
     }
 
+    await markOverdueInvoicesForBusiness(business.id);
+
     const invoices = await prisma.invoice.findMany({
       where: { businessId: business.id },
       orderBy: { createdAt: "desc" },
+      include: {
+        client: {
+          select: {
+            companyName: true,
+            contactName: true,
+            email: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json(invoices);
@@ -128,7 +140,7 @@ export async function POST(request: Request) {
           quantity,
           unitPrice,
           taxRate,
-          total: lineSubtotal + taxValue,
+          total: lineSubtotal,
           lineSubtotal,
           taxValue,
         };

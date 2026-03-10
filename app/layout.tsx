@@ -16,19 +16,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body style={{ margin: 0, padding: 0, background: "#fafbfc" }}>
-        <div
-          style={{
-            display: "flex",
-            backgroundColor: "#f5f5f5",
-            color: "#111",
-            minHeight: "100vh",
-          }}
-        >
-          <Sidebar />
-          <div style={{ flex: 1 }}>
-            <Navbar />
-            <main style={{ padding: 40 }}>{children}</main>
+      <body>
+        <div className="min-h-screen bg-slate-50 text-slate-900">
+          <div className="flex">
+            <Sidebar />
+            <div className="flex min-h-screen flex-1 flex-col">
+              <Navbar />
+              <main className="flex-1 p-6">
+                <div className="mx-auto w-full max-w-7xl">{children}</div>
+              </main>
+            </div>
           </div>
         </div>
       </body>

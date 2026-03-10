@@ -29,6 +29,7 @@ export async function GET(
         business: {
           select: {
             name: true,
+            logoUrl: true,
             address: true,
             country: true,
             vatNumber: true,

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import {
+  buildPublicInvoiceLink,
   isEmailConfigurationError,
   isEmailDeliveryError,
   sendInvoiceEmail,
@@ -17,6 +18,14 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
       id: true,
       invoiceNumber: true,
       publicToken: true,
+      status: true,
+      totalAmount: true,
+      currency: true,
+      business: {
+        select: {
+          name: true,
+        },
+      },
       client: {
         select: {
           email: true,
@@ -42,6 +51,10 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     return NextResponse.json({ error: "Client email is missing" }, { status: 400 });
   }
 
+  if (existingInvoice.status === "paid") {
+    return NextResponse.json({ error: "Paid invoices cannot be sent again" }, { status: 400 });
+  }
+
   let publicToken = existingInvoice.publicToken;
 
   if (!publicToken) {
@@ -59,7 +72,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     return NextResponse.json({ error: "Unable to generate invoice link" }, { status: 500 });
   }
 
-  const invoiceLink = new URL(`/invoice/pay/${publicToken}`, request.url).toString();
+  const invoiceLink = buildPublicInvoiceLink(publicToken, request.url);
   console.log("[invoice-send] Sending invoice email", {
     clientEmail,
     invoiceNumber,
@@ -68,14 +81,19 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
 
   await sendInvoiceEmail({
     to: clientEmail,
+    businessName: existingInvoice.business.name,
     invoiceNumber,
+    totalAmount: existingInvoice.totalAmount,
+    currency: existingInvoice.currency,
     invoiceLink,
   });
 
-  await prisma.invoice.update({
-    where: { id: existingInvoice.id },
-    data: { status: "sent" },
-  });
+  if (existingInvoice.status === "draft") {
+    await prisma.invoice.update({
+      where: { id: existingInvoice.id },
+      data: { status: "sent" },
+    });
+  }
 
   console.log("[invoice-send] Invoice email sent and status updated", {
     invoiceId: existingInvoice.id,

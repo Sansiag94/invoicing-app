@@ -1,20 +1,19 @@
-import React from "react";
+import { Bell, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 export default function Navbar() {
   return (
-    <header
-      style={{
-        height: 60,
-        borderBottom: "1px solid #eaeaea",
-        paddingLeft: 20,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        background: "#fff",
-      }}
-    >
-      <span style={{ fontWeight: 700, fontSize: 20 }}>Invoice SaaS</span>
-      <span style={{ paddingRight: 20 }}>Logged in</span>
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+      <div className="flex h-16 items-center justify-between gap-4 px-6">
+        <div className="relative hidden w-full max-w-sm md:block">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <Input placeholder="Search clients or invoices..." className="pl-9" />
+        </div>
+        <div className="ml-auto flex items-center gap-3 text-sm text-slate-600">
+          <Bell className="h-4 w-4" />
+          <span>Logged in</span>
+        </div>
+      </div>
     </header>
   );
 }

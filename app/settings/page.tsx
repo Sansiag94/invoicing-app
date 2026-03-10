@@ -1,10 +1,19 @@
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
+import { Upload, Trash2, Save } from "lucide-react";
 import { BusinessSettingsData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { supabase } from "@/utils/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 
 export default function SettingsPage() {
+  const [businessId, setBusinessId] = useState("");
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [country, setCountry] = useState("");
@@ -12,8 +21,20 @@ export default function SettingsPage() {
   const [vatNumber, setVatNumber] = useState("");
   const [iban, setIban] = useState("");
   const [invoicePrefix, setInvoicePrefix] = useState("");
+  const [logoUrl, setLogoUrl] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
-  async function handleSave() {
+  const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
+
+  async function saveBusinessSettings(
+    options?: {
+      logoUrlOverride?: string | null;
+      successMessage?: string;
+    }
+  ) {
+    setIsSaving(true);
+
     const response = await authenticatedFetch("/api/business", {
       method: "PATCH",
       headers: {
@@ -27,16 +48,101 @@ export default function SettingsPage() {
         vatNumber,
         iban,
         invoicePrefix,
+        logoUrl: options?.logoUrlOverride ?? logoUrl,
       }),
     });
 
     if (!response.ok) {
       const result = await response.json();
+      setIsSaving(false);
       alert(result?.error ?? "Failed to update business settings");
+      return null;
+    }
+
+    const updatedBusiness = (await response.json()) as BusinessSettingsData;
+    setBusinessId(updatedBusiness.id);
+    setName(updatedBusiness.name || "");
+    setAddress(updatedBusiness.address || "");
+    setCountry(updatedBusiness.country || "");
+    setCurrency(updatedBusiness.currency || "CHF");
+    setVatNumber(updatedBusiness.vatNumber || "");
+    setIban(updatedBusiness.iban || "");
+    setInvoicePrefix(updatedBusiness.invoicePrefix || "INV");
+    setLogoUrl(updatedBusiness.logoUrl || "");
+    setIsSaving(false);
+
+    if (options?.successMessage) {
+      alert(options.successMessage);
+    }
+
+    return updatedBusiness;
+  }
+
+  async function handleSave() {
+    await saveBusinessSettings({ successMessage: "Business settings updated" });
+  }
+
+  async function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (!businessId) {
+      alert("Load business settings first.");
       return;
     }
 
-    alert("Business settings updated");
+    if (!file.type.startsWith("image/")) {
+      alert("Please upload an image file.");
+      return;
+    }
+
+    setIsUploadingLogo(true);
+
+    try {
+      const extension = file.name.includes(".") ? file.name.split(".").pop() : "png";
+      const safeExtension = extension?.toLowerCase() || "png";
+      const logoPath = `${businessId}/${Date.now()}-logo.${safeExtension}`;
+
+      const uploadResult = await supabase.storage
+        .from(logosBucket)
+        .upload(logoPath, file, { upsert: true, cacheControl: "3600" });
+
+      if (uploadResult.error) {
+        console.error("Error uploading logo:", uploadResult.error);
+        alert(`Failed to upload logo to Supabase Storage bucket "${logosBucket}".`);
+        return;
+      }
+
+      const publicUrlResult = supabase.storage.from(logosBucket).getPublicUrl(logoPath);
+      const uploadedLogoUrl = publicUrlResult.data.publicUrl;
+
+      if (!uploadedLogoUrl) {
+        alert("Logo uploaded but no public URL was returned.");
+        return;
+      }
+
+      const updatedBusiness = await saveBusinessSettings({
+        logoUrlOverride: uploadedLogoUrl,
+      });
+
+      if (updatedBusiness) {
+        alert("Logo uploaded and saved.");
+      }
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  }
+
+  async function handleRemoveLogo() {
+    const updatedBusiness = await saveBusinessSettings({
+      logoUrlOverride: null,
+    });
+
+    if (updatedBusiness) {
+      alert("Logo removed.");
+    }
   }
 
   useEffect(() => {
@@ -47,6 +153,7 @@ export default function SettingsPage() {
       const data = (await res.json()) as BusinessSettingsData;
 
       if (mounted) {
+        setBusinessId(data?.id || "");
         setName(data?.name || "");
         setAddress(data?.address || "");
         setCountry(data?.country || "");
@@ -54,6 +161,7 @@ export default function SettingsPage() {
         setVatNumber(data?.vatNumber || "");
         setIban(data?.iban || "");
         setInvoicePrefix(data?.invoicePrefix || "INV");
+        setLogoUrl(data?.logoUrl || "");
       }
     })();
 
@@ -63,59 +171,101 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1>Business Settings</h1>
+    <div className="space-y-6">
       <div>
-        <input
-          placeholder="Business Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <br />
-        <br />
-        <input
-          placeholder="Address"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-        />
-        <br />
-        <br />
-        <input
-          placeholder="Country"
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-        />
-        <br />
-        <br />
-        <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
-          <option value="CHF">CHF</option>
-          <option value="EUR">EUR</option>
-        </select>
-        <br />
-        <br />
-        <input
-          placeholder="VAT Number"
-          value={vatNumber}
-          onChange={(e) => setVatNumber(e.target.value)}
-        />
-        <br />
-        <br />
-        <input
-          placeholder="IBAN"
-          value={iban}
-          onChange={(e) => setIban(e.target.value)}
-        />
-        <br />
-        <br />
-        <input
-          placeholder="Invoice Prefix"
-          value={invoicePrefix}
-          onChange={(e) => setInvoicePrefix(e.target.value)}
-        />
-        <br />
-        <br />
-        <button onClick={handleSave}>Save Settings</button>
+        <h1 className="text-3xl font-bold">Business Settings</h1>
+        <p className="text-sm text-slate-500">Branding and invoice defaults</p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Logo</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {logoUrl ? (
+            <img
+              src={logoUrl}
+              alt="Business logo"
+              className="h-40 w-40 rounded-md border border-slate-200 object-contain"
+            />
+          ) : (
+            <p className="text-sm text-slate-500">No logo uploaded.</p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="secondary" disabled={isUploadingLogo}>
+              <label>
+                <Upload className="h-4 w-4" />
+                {isUploadingLogo ? "Uploading..." : "Upload Logo"}
+                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+              </label>
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={handleRemoveLogo}
+              disabled={isSaving || isUploadingLogo || !logoUrl}
+            >
+              <Trash2 className="h-4 w-4" />
+              Remove Logo
+            </Button>
+          </div>
+
+          <p className="text-xs text-slate-500">
+            Bucket: <strong>{logosBucket}</strong>. Configure it as public for invoice rendering.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Business Profile</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="name">Business Name</Label>
+            <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="address">Address</Label>
+            <Input id="address" value={address} onChange={(event) => setAddress(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="country">Country</Label>
+            <Input id="country" value={country} onChange={(event) => setCountry(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="currency">Currency</Label>
+            <Select id="currency" value={currency} onChange={(event) => setCurrency(event.target.value)}>
+              <option value="CHF">CHF</option>
+              <option value="EUR">EUR</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="vatNumber">VAT Number</Label>
+            <Input id="vatNumber" value={vatNumber} onChange={(event) => setVatNumber(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="iban">IBAN</Label>
+            <Input id="iban" value={iban} onChange={(event) => setIban(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
+            <Input
+              id="invoicePrefix"
+              value={invoicePrefix}
+              onChange={(event) => setInvoicePrefix(event.target.value)}
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <Button onClick={handleSave} disabled={isSaving || isUploadingLogo}>
+              <Save className="h-4 w-4" />
+              {isSaving ? "Saving..." : "Save Settings"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

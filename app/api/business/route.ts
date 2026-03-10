@@ -62,7 +62,7 @@ export async function PATCH(request: Request) {
         vatNumber: asString(body.vatNumber),
         iban: asString(body.iban),
         invoicePrefix: asString(body.invoicePrefix) ?? business.invoicePrefix,
-        logoUrl: asString(body.logoUrl),
+        logoUrl: body.logoUrl === undefined ? business.logoUrl : asString(body.logoUrl),
       },
     });
 

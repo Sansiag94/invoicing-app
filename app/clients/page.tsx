@@ -1,8 +1,16 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
+
 import Link from "next/link";
+import { FormEvent, useEffect, useState } from "react";
+import { Eye, Trash2, UserPlus } from "lucide-react";
 import { ClientSummary } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ClientsPage() {
   const [clients, setClients] = useState<ClientSummary[]>([]);
@@ -12,6 +20,9 @@ export default function ClientsPage() {
   const [address, setAddress] = useState("");
   const [country, setCountry] = useState("");
   const [vatNumber, setVatNumber] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ClientSummary | null>(null);
 
   async function fetchClients() {
     const response = await authenticatedFetch("/api/clients");
@@ -27,36 +38,69 @@ export default function ClientsPage() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setIsCreating(true);
 
-    const response = await authenticatedFetch("/api/clients", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        companyName,
-        contactName,
-        email,
-        address,
-        country,
-        vatNumber,
-      }),
-    });
+    try {
+      const response = await authenticatedFetch("/api/clients", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          companyName,
+          contactName,
+          email,
+          address,
+          country,
+          vatNumber,
+        }),
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (!response.ok) {
-      alert(result?.error ?? "Client creation failed");
-      return;
+      if (!response.ok) {
+        alert(result?.error ?? "Client creation failed");
+        return;
+      }
+
+      setCompanyName("");
+      setContactName("");
+      setEmail("");
+      setAddress("");
+      setCountry("");
+      setVatNumber("");
+      await fetchClients();
+    } catch (error) {
+      console.error("Client creation failed:", error);
+      alert("Client creation failed");
+    } finally {
+      setIsCreating(false);
     }
+  }
 
-    setCompanyName("");
-    setContactName("");
-    setEmail("");
-    setAddress("");
-    setCountry("");
-    setVatNumber("");
-    await fetchClients();
+  async function handleDeleteClient() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+
+    try {
+      const response = await authenticatedFetch(`/api/clients/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+
+      const result = (await response.json()) as { error?: string };
+      if (!response.ok) {
+        alert(result?.error ?? "Failed to delete client");
+        return;
+      }
+
+      setDeleteTarget(null);
+      await fetchClients();
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      alert("Failed to delete client");
+    } finally {
+      setIsDeleting(false);
+    }
   }
 
   useEffect(() => {
@@ -82,71 +126,155 @@ export default function ClientsPage() {
   }, []);
 
   return (
-    <div style={{ padding: 40 }}>
-      <h1>Clients</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={companyName}
-          onChange={(e) => setCompanyName(e.target.value)}
-          placeholder="Company Name (optional)"
-        />
-        <br />
-        <br />
-        <input
-          type="text"
-          value={contactName}
-          onChange={(e) => setContactName(e.target.value)}
-          placeholder="Contact Name"
-        />
-        <br />
-        <br />
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          required
-        />
-        <br />
-        <br />
-        <input
-          type="text"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          placeholder="Address"
-          required
-        />
-        <br />
-        <br />
-        <input
-          type="text"
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          placeholder="Country"
-          required
-        />
-        <br />
-        <br />
-        <input
-          type="text"
-          value={vatNumber}
-          onChange={(e) => setVatNumber(e.target.value)}
-          placeholder="VAT Number (optional)"
-        />
-        <br />
-        <br />
-        <button type="submit">Add Client</button>
-      </form>
-      <hr style={{ margin: "40px 0" }} />
-      <h3>Client List</h3>
-      {clients.map((client) => (
-        <div key={client.id}>
-          <Link href={`/clients/${client.id}`}>
-            {client.companyName || client.contactName || client.email}
-          </Link>
-        </div>
-      ))}
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold">Clients</h1>
+        <p className="text-sm text-slate-500">Manage your customers and billing contacts.</p>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Add Client</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="companyName">Company Name</Label>
+              <Input
+                id="companyName"
+                value={companyName}
+                onChange={(event) => setCompanyName(event.target.value)}
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contactName">Contact Name</Label>
+              <Input
+                id="contactName"
+                value={contactName}
+                onChange={(event) => setContactName(event.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="address">Address</Label>
+              <Input
+                id="address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="country">Country</Label>
+              <Input
+                id="country"
+                value={country}
+                onChange={(event) => setCountry(event.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vatNumber">VAT Number</Label>
+              <Input
+                id="vatNumber"
+                value={vatNumber}
+                onChange={(event) => setVatNumber(event.target.value)}
+                placeholder="Optional"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <Button type="submit" disabled={isCreating}>
+                <UserPlus className="h-4 w-4" />
+                {isCreating ? "Saving..." : "Add Client"}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Client Table</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Country</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clients.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-slate-500">
+                    No clients yet.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                clients.map((client) => (
+                  <TableRow key={client.id}>
+                    <TableCell>{client.companyName || client.contactName || "-"}</TableCell>
+                    <TableCell>{client.email}</TableCell>
+                    <TableCell>{client.country}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/clients/${client.id}`}>
+                            <Eye className="h-4 w-4" />
+                            View
+                          </Link>
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => setDeleteTarget(client)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Client</DialogTitle>
+            <DialogDescription>
+              Delete <strong>{deleteTarget?.companyName || deleteTarget?.contactName || deleteTarget?.email}</strong>?
+              This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteClient} disabled={isDeleting}>
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -54,3 +54,22 @@ export interface InvoiceDetails extends InvoiceSummary {
 export interface ClientDetails extends ClientSummary {
   invoices: InvoiceSummary[];
 }
+
+export interface DashboardRecentInvoice {
+  id: string;
+  invoiceNumber: string;
+  clientName: string;
+  totalAmount: number;
+  status: InvoiceStatus;
+  currency: string;
+}
+
+export interface DashboardOverview {
+  currency: string;
+  revenueThisMonth: number;
+  totalRevenue: number;
+  openInvoices: number;
+  paidInvoices: number;
+  overdueInvoices: number;
+  recentInvoices: DashboardRecentInvoice[];
+}
