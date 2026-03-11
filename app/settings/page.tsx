@@ -5,7 +5,6 @@ import { useEffect, useState } from "react";
 import { Upload, Trash2, Save } from "lucide-react";
 import { BusinessSettingsData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
-import { supabase } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,35 +100,27 @@ export default function SettingsPage() {
     setIsUploadingLogo(true);
 
     try {
-      const extension = file.name.includes(".") ? file.name.split(".").pop() : "png";
-      const safeExtension = extension?.toLowerCase() || "png";
-      const logoPath = `${businessId}/${Date.now()}-logo.${safeExtension}`;
+      const uploadBody = new FormData();
+      uploadBody.append("file", file);
 
-      const uploadResult = await supabase.storage
-        .from(logosBucket)
-        .upload(logoPath, file, { upsert: true, cacheControl: "3600" });
-
-      if (uploadResult.error) {
-        console.error("Error uploading logo:", uploadResult.error);
-        alert(`Failed to upload logo to Supabase Storage bucket "${logosBucket}".`);
-        return;
-      }
-
-      const publicUrlResult = supabase.storage.from(logosBucket).getPublicUrl(logoPath);
-      const uploadedLogoUrl = publicUrlResult.data.publicUrl;
-
-      if (!uploadedLogoUrl) {
-        alert("Logo uploaded but no public URL was returned.");
-        return;
-      }
-
-      const updatedBusiness = await saveBusinessSettings({
-        logoUrlOverride: uploadedLogoUrl,
+      const uploadResponse = await authenticatedFetch("/api/business/logo", {
+        method: "POST",
+        body: uploadBody,
       });
 
-      if (updatedBusiness) {
-        alert("Logo uploaded and saved.");
+      const uploadResult = (await uploadResponse.json()) as {
+        success?: boolean;
+        logoUrl?: string;
+        error?: string;
+      };
+
+      if (!uploadResponse.ok || !uploadResult.logoUrl) {
+        alert(uploadResult.error ?? `Failed to upload logo to bucket "${logosBucket}".`);
+        return;
       }
+
+      setLogoUrl(uploadResult.logoUrl);
+      alert("Logo uploaded and saved.");
     } finally {
       setIsUploadingLogo(false);
     }

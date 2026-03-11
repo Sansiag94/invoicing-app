@@ -37,7 +37,7 @@ export async function GET(request: Request) {
       clientCount,
       invoiceCount,
       recentInvoicesRaw,
-    ] = await Promise.all([
+    ] = await prisma.$transaction([
       prisma.invoice.aggregate({
         where: {
           businessId: business.id,

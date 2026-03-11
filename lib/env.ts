@@ -68,6 +68,10 @@ export function getResendApiKey(): string {
   return value;
 }
 
+export function getSupabaseServiceRoleKey(): string | null {
+  return readEnv("SUPABASE_SERVICE_ROLE_KEY") ?? null;
+}
+
 export function validateRequiredEnv() {
   if (validated) {
     return;
