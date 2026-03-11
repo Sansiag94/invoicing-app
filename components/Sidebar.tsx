@@ -12,24 +12,18 @@ const sidebarLinks = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar() {
-  const pathname = usePathname();
-  const hideSidebar =
-    pathname === "/" ||
-    pathname === "/login" ||
-    pathname === "/signup" ||
-    pathname.startsWith("/i/") ||
-    pathname.startsWith("/invoice/pay/");
+type SidebarProps = {
+  onNavigate?: () => void;
+};
 
-  if (hideSidebar) {
-    return null;
-  }
+export default function Sidebar({ onNavigate }: SidebarProps) {
+  const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 h-screen w-64 border-r border-slate-200 bg-white">
-      <div className="px-5 py-6">
-        <h1 className="text-lg font-bold tracking-tight text-slate-900">Invoice SaaS</h1>
-        <p className="mt-1 text-xs text-slate-500">Business operations panel</p>
+    <div className="h-full overflow-y-auto bg-white">
+      <div className="border-b border-slate-200 px-5 py-6">
+        <h1 className="text-lg font-bold tracking-tight text-slate-900">Sierra Invoice</h1>
+        <p className="mt-1 text-xs text-slate-500">Invoicing solutions for freelancers</p>
       </div>
 
       <nav className="px-3">
@@ -42,6 +36,7 @@ export default function Sidebar() {
               <li key={link.href}>
                 <Link
                   href={link.href}
+                  onClick={onNavigate}
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     active
@@ -57,6 +52,6 @@ export default function Sidebar() {
           })}
         </ul>
       </nav>
-    </aside>
+    </div>
   );
 }

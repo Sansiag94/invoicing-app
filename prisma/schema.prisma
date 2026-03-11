@@ -70,6 +70,7 @@ model Invoice {
   client        Client        @relation("ClientInvoices", fields: [clientId], references: [id], onDelete: Cascade)
   lineItems     LineItem[]    @relation("InvoiceLineItems")
   payments      Payment[]     @relation("InvoicePayments")
+  reminders     InvoiceReminder[] @relation("InvoiceReminders")
 }
 
 model LineItem {
@@ -96,6 +97,17 @@ model Payment {
   invoice   Invoice         @relation("InvoicePayments", fields: [invoiceId], references: [id], onDelete: Cascade)
 }
 
+model InvoiceReminder {
+  id        String              @id @default(uuid()) @map("uuid")
+  invoiceId String
+  type      InvoiceReminderType
+  sentAt    DateTime            @default(now())
+  invoice   Invoice             @relation("InvoiceReminders", fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@unique([invoiceId, type])
+  @@index([type, sentAt])
+}
+
 enum InvoiceStatus {
   draft
   sent
@@ -106,4 +118,9 @@ enum InvoiceStatus {
 enum PaymentProvider {
   stripe
   bank_transfer
+}
+
+enum InvoiceReminderType {
+  before_due_3_days
+  after_due_7_days
 }
