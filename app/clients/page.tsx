@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Eye, Trash2, UserPlus } from "lucide-react";
 import { ClientSummary } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -12,7 +13,12 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-export default function ClientsPage() {
+function getClientDisplayName(client: ClientSummary): string {
+  return client.companyName || client.contactName || client.email;
+}
+
+function ClientsPageContent() {
+  const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
@@ -25,6 +31,29 @@ export default function ClientsPage() {
   const [deleteTarget, setDeleteTarget] = useState<ClientSummary | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const createClientRef = useRef<HTMLDivElement | null>(null);
+  const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
+
+  const filteredClients = useMemo(() => {
+    if (!searchQuery) return clients;
+
+    return clients
+      .filter((client) => {
+        const searchable = [
+          client.companyName ?? "",
+          client.contactName ?? "",
+          client.email,
+          client.country,
+          client.vatNumber ?? "",
+        ].join(" ");
+
+        return searchable.toLowerCase().includes(searchQuery);
+      })
+      .sort((left, right) =>
+        getClientDisplayName(left).localeCompare(getClientDisplayName(right), undefined, {
+          sensitivity: "base",
+        })
+      );
+  }, [clients, searchQuery]);
 
   async function fetchClients() {
     const response = await authenticatedFetch("/api/clients");
@@ -237,6 +266,13 @@ export default function ClientsPage() {
                 Create Client
               </Button>
             </div>
+          ) : filteredClients.length === 0 ? (
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+              <p className="text-base font-medium text-slate-900">No clients match your search</p>
+              <p className="text-sm text-slate-600">
+                Try a different search term for name, email, country, or VAT number.
+              </p>
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -248,9 +284,9 @@ export default function ClientsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clients.map((client) => (
+                {filteredClients.map((client) => (
                   <TableRow key={client.id}>
-                    <TableCell>{client.companyName || client.contactName || "-"}</TableCell>
+                    <TableCell>{getClientDisplayName(client) || "-"}</TableCell>
                     <TableCell>{client.email}</TableCell>
                     <TableCell>{client.country}</TableCell>
                     <TableCell>
@@ -299,5 +335,13 @@ export default function ClientsPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function ClientsPage() {
+  return (
+    <Suspense fallback={<div>Loading clients...</div>}>
+      <ClientsPageContent />
+    </Suspense>
   );
 }

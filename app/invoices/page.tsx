@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Eye, FilePenLine, Plus, Send, Trash2 } from "lucide-react";
-import { ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
+import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -34,21 +36,71 @@ function parseNumber(value: string): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export default function InvoicePage() {
+const MIN_QUANTITY = 0.01;
+
+function handleNumberInputFocus(event: FocusEvent<HTMLInputElement>) {
+  event.target.select();
+}
+
+function getInvoiceClientName(invoice: InvoiceRow): string {
+  return invoice.client?.companyName || invoice.client?.contactName || invoice.client?.email || "-";
+}
+
+function getClientFirstName(client: ClientSummary | null): string {
+  if (!client) return "client_first_name";
+
+  const fallbackFromEmail = client.email.split("@")[0]?.trim();
+  const rawName = (client.contactName || client.companyName || fallbackFromEmail || "").trim();
+  if (!rawName) return "client_first_name";
+
+  return rawName.split(/\s+/)[0] || "client_first_name";
+}
+
+function buildInvoiceNotesTemplate(clientFirstName: string, senderName: string): string {
+  return `Hello ${clientFirstName},
+please find below the invoice details.
+
+Best regards,
+${senderName}`;
+}
+
+function InvoicePageContent() {
+  const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
+  const [businessName, setBusinessName] = useState("User_name");
   const [lineItems, setLineItems] = useState<LineItemData[]>([
-    { description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 },
+    { description: "", quantity: 1, unitPrice: 0, taxRate: 0 },
   ]);
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [clientId, setClientId] = useState("");
+  const [notes, setNotes] = useState(buildInvoiceNotesTemplate("client_first_name", "User_name"));
+  const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const createInvoiceRef = useRef<HTMLDivElement | null>(null);
+  const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
+
+  const filteredInvoices = useMemo(() => {
+    if (!searchQuery) return invoices;
+
+    return invoices
+      .filter((invoice) => {
+        const searchable = [
+          invoice.invoiceNumber,
+          invoice.status,
+          getInvoiceClientName(invoice),
+          invoice.currency,
+        ].join(" ");
+
+        return searchable.toLowerCase().includes(searchQuery);
+      })
+      .sort((left, right) => new Date(left.dueDate).getTime() - new Date(right.dueDate).getTime());
+  }, [invoices, searchQuery]);
 
   async function fetchInvoices() {
     const res = await authenticatedFetch("/api/invoices");
@@ -61,17 +113,20 @@ export default function InvoicePage() {
 
     (async () => {
       try {
-        const [clientsResponse, invoicesResponse] = await Promise.all([
+        const [clientsResponse, invoicesResponse, businessResponse] = await Promise.all([
           authenticatedFetch("/api/clients"),
           authenticatedFetch("/api/invoices"),
+          authenticatedFetch("/api/business"),
         ]);
 
         const loadedClients = (await clientsResponse.json()) as ClientSummary[];
         const loadedInvoices = (await invoicesResponse.json()) as InvoiceRow[];
+        const loadedBusiness = (await businessResponse.json()) as BusinessSettingsData;
 
         if (mounted) {
           setClients(Array.isArray(loadedClients) ? loadedClients : []);
           setInvoices(Array.isArray(loadedInvoices) ? loadedInvoices : []);
+          setBusinessName(loadedBusiness?.name?.trim() || "User_name");
         }
       } catch (error) {
         console.error("Error loading invoice page data:", error);
@@ -82,6 +137,17 @@ export default function InvoicePage() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (notesManuallyEdited && notes.trim().length > 0) return;
+
+    const selectedClient = clients.find((client) => client.id === clientId) ?? null;
+    const nextTemplate = buildInvoiceNotesTemplate(
+      getClientFirstName(selectedClient),
+      businessName || "User_name"
+    );
+    setNotes(nextTemplate);
+  }, [businessName, clientId, clients, notes, notesManuallyEdited]);
 
   const totals = useMemo(() => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -105,7 +171,7 @@ export default function InvoicePage() {
   const addLineItem = () => {
     setLineItems((current) => [
       ...current,
-      { description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 },
+      { description: "", quantity: 1, unitPrice: 0, taxRate: 0 },
     ]);
   };
 
@@ -119,10 +185,22 @@ export default function InvoicePage() {
       return;
     }
 
-    const hasInvalidLineItems = lineItems.some(
+    const normalizedLineItems = lineItems.map((item) => ({
+      ...item,
+      quantity: item.quantity > 0 ? item.quantity : MIN_QUANTITY,
+    }));
+
+    const hasAdjustedQuantities = normalizedLineItems.some(
+      (item, index) => item.quantity !== lineItems[index]?.quantity
+    );
+
+    if (hasAdjustedQuantities) {
+      setLineItems(normalizedLineItems);
+    }
+
+    const hasInvalidLineItems = normalizedLineItems.some(
       (item) =>
         !item.description.trim() ||
-        !Number.isInteger(item.quantity) ||
         item.quantity <= 0 ||
         item.unitPrice < 0 ||
         item.taxRate < 0
@@ -146,8 +224,8 @@ export default function InvoicePage() {
           issueDate,
           dueDate,
           status: "draft",
-          notes: "",
-          lineItems,
+          notes,
+          lineItems: normalizedLineItems,
         }),
       });
 
@@ -158,10 +236,12 @@ export default function InvoicePage() {
         return;
       }
 
-      setLineItems([{ description: "", quantity: 1, unitPrice: 0, taxRate: 7.7 }]);
+      setLineItems([{ description: "", quantity: 1, unitPrice: 0, taxRate: 0 }]);
       setIssueDate("");
       setDueDate("");
       setClientId("");
+      setNotesManuallyEdited(false);
+      setNotes(buildInvoiceNotesTemplate("client_first_name", businessName || "User_name"));
       setSuccessMessage("Invoice created successfully.");
       await fetchInvoices();
     } catch (error) {
@@ -245,12 +325,8 @@ export default function InvoicePage() {
       ) : null}
 
       <Card ref={createInvoiceRef}>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Create Invoice</CardTitle>
-          <Button variant="secondary" onClick={addLineItem}>
-            <Plus className="h-4 w-4" />
-            Add Line Item
-          </Button>
         </CardHeader>
         <CardContent className="space-y-5">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
@@ -287,6 +363,39 @@ export default function InvoicePage() {
             </div>
           </div>
 
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  const selectedClient = clients.find((client) => client.id === clientId) ?? null;
+                  setNotes(
+                    buildInvoiceNotesTemplate(
+                      getClientFirstName(selectedClient),
+                      businessName || "User_name"
+                    )
+                  );
+                  setNotesManuallyEdited(false);
+                }}
+              >
+                Use Template
+              </Button>
+            </div>
+            <Textarea
+              id="notes"
+              rows={4}
+              value={notes}
+              onChange={(event) => {
+                setNotes(event.target.value);
+                setNotesManuallyEdited(true);
+              }}
+              placeholder="Add payment instructions or a custom message"
+            />
+          </div>
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -311,10 +420,17 @@ export default function InvoicePage() {
                   <TableCell>
                     <Input
                       type="number"
-                      min={1}
+                      min={0.01}
+                      step="0.01"
                       value={item.quantity}
+                      onFocus={handleNumberInputFocus}
+                      onBlur={(event) => {
+                        if (parseNumber(event.target.value) <= 0) {
+                          updateLineItem(index, "quantity", MIN_QUANTITY);
+                        }
+                      }}
                       onChange={(event) =>
-                        updateLineItem(index, "quantity", Math.max(1, Math.trunc(parseNumber(event.target.value))))
+                        updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
                       }
                     />
                   </TableCell>
@@ -324,6 +440,7 @@ export default function InvoicePage() {
                       min={0}
                       step="0.01"
                       value={item.unitPrice}
+                      onFocus={handleNumberInputFocus}
                       onChange={(event) =>
                         updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
                       }
@@ -335,6 +452,7 @@ export default function InvoicePage() {
                       min={0}
                       step="0.1"
                       value={item.taxRate}
+                      onFocus={handleNumberInputFocus}
                       onChange={(event) =>
                         updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
                       }
@@ -348,6 +466,15 @@ export default function InvoicePage() {
                   </TableCell>
                 </TableRow>
               ))}
+              <TableRow>
+                <TableCell>
+                  <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
+                    <Plus className="h-4 w-4" />
+                    Add Line Item
+                  </Button>
+                </TableCell>
+                <TableCell colSpan={5} />
+              </TableRow>
             </TableBody>
           </Table>
 
@@ -379,6 +506,13 @@ export default function InvoicePage() {
                 Create Invoice
               </Button>
             </div>
+          ) : filteredInvoices.length === 0 ? (
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+              <p className="text-base font-medium text-slate-900">No invoices match your search</p>
+              <p className="text-sm text-slate-600">
+                Try a different term for invoice number, client, status, or currency.
+              </p>
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -391,15 +525,10 @@ export default function InvoicePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invoices.map((invoice) => (
+                {filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell>{invoice.invoiceNumber}</TableCell>
-                    <TableCell>
-                      {invoice.client?.companyName ||
-                        invoice.client?.contactName ||
-                        invoice.client?.email ||
-                        "-"}
-                    </TableCell>
+                    <TableCell>{getInvoiceClientName(invoice)}</TableCell>
                     <TableCell>
                       {invoice.currency} {invoice.totalAmount.toFixed(2)}
                     </TableCell>
@@ -467,5 +596,13 @@ export default function InvoicePage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+export default function InvoicePage() {
+  return (
+    <Suspense fallback={<div>Loading invoices...</div>}>
+      <InvoicePageContent />
+    </Suspense>
   );
 }

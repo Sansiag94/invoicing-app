@@ -123,7 +123,7 @@ export async function POST(request: Request) {
           return null;
         }
 
-        if (!Number.isInteger(quantity) || quantity <= 0 || unitPrice < 0 || taxRate < 0) {
+        if (quantity <= 0 || unitPrice < 0 || taxRate < 0) {
           return null;
         }
 

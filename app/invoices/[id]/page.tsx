@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Download, PencilLine, Plus, Send, Trash2 } from "lucide-react";
 import { InvoiceDetails, LineItemData } from "@/lib/types";
@@ -30,6 +30,12 @@ function toDateInputValue(value: string): string {
 function parseNumberInput(value: string): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+const MIN_QUANTITY = 0.01;
+
+function handleNumberInputFocus(event: FocusEvent<HTMLInputElement>) {
+  event.target.select();
 }
 
 function calculateTotals(lineItems: LineItemData[]) {
@@ -198,7 +204,7 @@ export default function InvoiceDetailPage() {
         description: "",
         quantity: 1,
         unitPrice: 0,
-        taxRate: 7.7,
+        taxRate: 0,
       },
     ]);
   };
@@ -233,10 +239,22 @@ export default function InvoiceDetailPage() {
       return;
     }
 
-    const hasInvalidLineItems = lineItems.some(
+    const normalizedLineItems = lineItems.map((item) => ({
+      ...item,
+      quantity: item.quantity > 0 ? item.quantity : MIN_QUANTITY,
+    }));
+
+    const hasAdjustedQuantities = normalizedLineItems.some(
+      (item, index) => item.quantity !== lineItems[index]?.quantity
+    );
+
+    if (hasAdjustedQuantities) {
+      setLineItems(normalizedLineItems);
+    }
+
+    const hasInvalidLineItems = normalizedLineItems.some(
       (item) =>
         !item.description.trim() ||
-        !Number.isInteger(item.quantity) ||
         item.quantity <= 0 ||
         item.unitPrice < 0 ||
         item.taxRate < 0
@@ -274,7 +292,7 @@ export default function InvoiceDetailPage() {
           issueDate,
           dueDate,
           notes,
-          lineItems: lineItems.map((item) => ({
+          lineItems: normalizedLineItems.map((item) => ({
             id: item.id,
             description: item.description,
             quantity: item.quantity,
@@ -470,14 +488,8 @@ export default function InvoiceDetailPage() {
       </Card>
 
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader>
           <CardTitle>Line Items</CardTitle>
-          {isEditing ? (
-            <Button variant="secondary" size="sm" onClick={handleAddLineItem}>
-              <Plus className="h-4 w-4" />
-              Add Line Item
-            </Button>
-          ) : null}
         </CardHeader>
         <CardContent>
           <Table>
@@ -492,8 +504,9 @@ export default function InvoiceDetailPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {isEditing
-                ? lineItems.map((item, index) => (
+              {isEditing ? (
+                <>
+                  {lineItems.map((item, index) => (
                     <TableRow key={item.id ?? `editable-${index}`}>
                       <TableCell>
                         <Input
@@ -507,13 +520,20 @@ export default function InvoiceDetailPage() {
                       <TableCell>
                         <Input
                           type="number"
-                          min={1}
+                          min={0.01}
+                          step="0.01"
                           value={item.quantity}
+                          onFocus={handleNumberInputFocus}
+                          onBlur={(event) => {
+                            if (parseNumberInput(event.target.value) <= 0) {
+                              handleLineItemChange(index, "quantity", MIN_QUANTITY);
+                            }
+                          }}
                           onChange={(event) =>
                             handleLineItemChange(
                               index,
                               "quantity",
-                              Math.max(1, Math.trunc(parseNumberInput(event.target.value)))
+                              Math.max(0, parseNumberInput(event.target.value))
                             )
                           }
                         />
@@ -524,6 +544,7 @@ export default function InvoiceDetailPage() {
                           min={0}
                           step="0.01"
                           value={item.unitPrice}
+                          onFocus={handleNumberInputFocus}
                           onChange={(event) =>
                             handleLineItemChange(
                               index,
@@ -539,6 +560,7 @@ export default function InvoiceDetailPage() {
                           min={0}
                           step="0.1"
                           value={item.taxRate}
+                          onFocus={handleNumberInputFocus}
                           onChange={(event) =>
                             handleLineItemChange(
                               index,
@@ -560,16 +582,34 @@ export default function InvoiceDetailPage() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))
-                : invoice.lineItems.map((item, index) => (
-                    <TableRow key={item.id ?? `${item.description}-${index}`}>
-                      <TableCell>{item.description}</TableCell>
-                      <TableCell>{item.quantity}</TableCell>
-                      <TableCell>{item.unitPrice.toFixed(2)}</TableCell>
-                      <TableCell>{item.taxRate}</TableCell>
-                      <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                    </TableRow>
                   ))}
+                  <TableRow>
+                    <TableCell>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        onClick={handleAddLineItem}
+                        className="justify-start"
+                      >
+                        <Plus className="h-4 w-4" />
+                        Add Line Item
+                      </Button>
+                    </TableCell>
+                    <TableCell colSpan={5} />
+                  </TableRow>
+                </>
+              ) : (
+                invoice.lineItems.map((item, index) => (
+                  <TableRow key={item.id ?? `${item.description}-${index}`}>
+                    <TableCell>{item.description}</TableCell>
+                    <TableCell>{item.quantity}</TableCell>
+                    <TableCell>{item.unitPrice.toFixed(2)}</TableCell>
+                    <TableCell>{item.taxRate}</TableCell>
+                    <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
 

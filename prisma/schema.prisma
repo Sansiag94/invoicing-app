@@ -77,7 +77,7 @@ model LineItem {
   id          String   @id @default(uuid()) @map("uuid")
   invoiceId   String
   description String
-  quantity    Int
+  quantity    Float
   unitPrice   Float
   taxRate     Float
   total       Float
