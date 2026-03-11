@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { Eye, Trash2, UserPlus } from "lucide-react";
 import { ClientSummary } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -23,6 +23,8 @@ export default function ClientsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ClientSummary | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const createClientRef = useRef<HTMLDivElement | null>(null);
 
   async function fetchClients() {
     const response = await authenticatedFetch("/api/clients");
@@ -69,6 +71,7 @@ export default function ClientsPage() {
       setAddress("");
       setCountry("");
       setVatNumber("");
+      setSuccessMessage("Client created successfully.");
       await fetchClients();
     } catch (error) {
       console.error("Client creation failed:", error);
@@ -125,6 +128,16 @@ export default function ClientsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!successMessage) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessMessage(null);
+    }, 3500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [successMessage]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -132,7 +145,13 @@ export default function ClientsPage() {
         <p className="text-sm text-slate-500">Manage your customers and billing contacts.</p>
       </div>
 
-      <Card>
+      {successMessage ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {successMessage}
+        </div>
+      ) : null}
+
+      <Card ref={createClientRef}>
         <CardHeader>
           <CardTitle>Add Client</CardTitle>
         </CardHeader>
@@ -208,24 +227,28 @@ export default function ClientsPage() {
           <CardTitle>Client Table</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Country</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {clients.length === 0 ? (
+          {clients.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+              <p className="text-base font-medium text-slate-900">No clients yet</p>
+              <p className="text-sm text-slate-600">Create your first client to start invoicing.</p>
+              <Button
+                onClick={() => createClientRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              >
+                Create Client
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={4} className="text-slate-500">
-                    No clients yet.
-                  </TableCell>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Country</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                clients.map((client) => (
+              </TableHeader>
+              <TableBody>
+                {clients.map((client) => (
                   <TableRow key={client.id}>
                     <TableCell>{client.companyName || client.contactName || "-"}</TableCell>
                     <TableCell>{client.email}</TableCell>
@@ -249,10 +272,10 @@ export default function ClientsPage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 
-export default function InvoicePreviewPage() {
+function InvoicePreviewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const clientId = searchParams.get("clientId");
@@ -77,5 +77,13 @@ export default function InvoicePreviewPage() {
       <button onClick={handleCreateInvoice}>Create Invoice</button>
       <button onClick={() => router.back()}>Cancel</button>
     </div>
+  );
+}
+
+export default function InvoicePreviewPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40 }}>Loading preview...</div>}>
+      <InvoicePreviewContent />
+    </Suspense>
   );
 }

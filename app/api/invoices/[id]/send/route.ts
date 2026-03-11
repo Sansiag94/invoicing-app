@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import {
@@ -36,23 +37,23 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
 
   if (!existingInvoice) {
     console.warn("[invoice-send] Invoice not found", { invoiceId: id, businessId });
-    return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+    return apiError("Invoice not found", 404);
   }
 
   const invoiceNumber = existingInvoice.invoiceNumber?.trim();
   if (!invoiceNumber) {
     console.error("[invoice-send] Missing invoice number", { invoiceId: existingInvoice.id });
-    return NextResponse.json({ error: "Invoice number is missing" }, { status: 500 });
+    return apiError("Invoice number is missing", 500);
   }
 
   const clientEmail = existingInvoice.client.email?.trim();
   if (!clientEmail) {
     console.warn("[invoice-send] Client email missing", { invoiceId: existingInvoice.id });
-    return NextResponse.json({ error: "Client email is missing" }, { status: 400 });
+    return apiError("Client email is missing", 400);
   }
 
   if (existingInvoice.status === "paid") {
-    return NextResponse.json({ error: "Paid invoices cannot be sent again" }, { status: 400 });
+    return apiError("Paid invoices cannot be sent again", 400);
   }
 
   let publicToken = existingInvoice.publicToken;
@@ -69,10 +70,10 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
 
   if (!publicToken) {
     console.error("[invoice-send] Public token generation failed", { invoiceId: existingInvoice.id });
-    return NextResponse.json({ error: "Unable to generate invoice link" }, { status: 500 });
+    return apiError("Unable to generate invoice link", 500);
   }
 
-  const invoiceLink = buildPublicInvoiceLink(publicToken, request.url);
+  const invoiceLink = buildPublicInvoiceLink(invoiceNumber, request.url);
   console.log("[invoice-send] Sending invoice email", {
     clientEmail,
     invoiceNumber,
@@ -105,7 +106,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
 }
 
 export async function GET() {
-  return NextResponse.json({ error: "Method not allowed" }, { status: 405 });
+  return apiError("Method not allowed", 405);
 }
 
 export async function POST(
@@ -121,29 +122,26 @@ export async function POST(
     });
 
     if (!business) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     return await sendInvoice(id, business.id, request);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     if (isEmailConfigurationError(error)) {
       console.error("Error sending invoice: email configuration missing", error);
-      return NextResponse.json(
-        { error: "Email provider not configured. Set RESEND_API_KEY." },
-        { status: 500 }
-      );
+      return apiError("Email provider not configured. Set RESEND_API_KEY.", 500);
     }
 
     if (isEmailDeliveryError(error)) {
       console.error("Error sending invoice: email delivery failed", error);
-      return NextResponse.json({ error: error.message }, { status: 502 });
+      return apiError(error.message, 502);
     }
 
     console.error("Error sending invoice:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }

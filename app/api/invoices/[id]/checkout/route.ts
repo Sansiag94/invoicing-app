@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
 
@@ -22,7 +23,7 @@ export async function POST(
     const token = asString(body.token);
 
     if (!token) {
-      return NextResponse.json({ error: "Token is required" }, { status: 400 });
+      return apiError("Token is required", 400);
     }
 
     const invoice = await prisma.invoice.findFirst({
@@ -41,20 +42,20 @@ export async function POST(
     });
 
     if (!invoice) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     if (!invoice.publicToken) {
-      return NextResponse.json({ error: "Invoice is missing payment token" }, { status: 400 });
+      return apiError("Invoice is missing payment token", 400);
     }
 
     if (invoice.status === "paid") {
-      return NextResponse.json({ error: "Invoice is already paid" }, { status: 400 });
+      return apiError("Invoice is already paid", 400);
     }
 
     const amountInMinorUnit = Math.round(invoice.totalAmount * 100);
     if (amountInMinorUnit <= 0) {
-      return NextResponse.json({ error: "Invoice total must be greater than 0" }, { status: 400 });
+      return apiError("Invoice total must be greater than 0", 400);
     }
 
     const successUrl = new URL(`/invoice/pay/${invoice.publicToken}?success=true`, request.url).toString();
@@ -86,15 +87,12 @@ export async function POST(
     });
 
     if (!session.url) {
-      return NextResponse.json(
-        { error: "Could not create Stripe checkout session" },
-        { status: 500 }
-      );
+      return apiError("Could not create Stripe checkout session", 500);
     }
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error("Error creating checkout session:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }

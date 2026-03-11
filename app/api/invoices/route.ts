@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { InvoiceStatus } from "@prisma/client";
@@ -60,7 +61,7 @@ export async function GET(request: Request) {
     });
 
     if (!business) {
-      return NextResponse.json({ error: "Business not found" }, { status: 404 });
+      return apiError("Business not found", 404);
     }
 
     await markOverdueInvoicesForBusiness(business.id);
@@ -82,11 +83,11 @@ export async function GET(request: Request) {
     return NextResponse.json(invoices);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error loading invoices:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }
 
@@ -99,21 +100,15 @@ export async function POST(request: Request) {
     const dueDate = asDate(body.dueDate);
 
     if (!clientId || !issueDate || !dueDate) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+      return apiError("Missing required fields", 400);
     }
 
     if (dueDate < issueDate) {
-      return NextResponse.json(
-        { error: "dueDate must be on or after issueDate" },
-        { status: 400 }
-      );
+      return apiError("dueDate must be on or after issueDate", 400);
     }
 
     if (!Array.isArray(body.lineItems) || body.lineItems.length === 0) {
-      return NextResponse.json(
-        { error: "Invoice must contain at least one line item" },
-        { status: 400 }
-      );
+      return apiError("Invoice must contain at least one line item", 400);
     }
 
     const parsedLineItems = body.lineItems
@@ -148,7 +143,7 @@ export async function POST(request: Request) {
       .filter((item): item is NonNullable<typeof item> => item !== null);
 
     if (parsedLineItems.length !== body.lineItems.length) {
-      return NextResponse.json({ error: "Invalid lineItems payload" }, { status: 400 });
+      return apiError("Invalid lineItems payload", 400);
     }
 
     const business = await prisma.business.findFirst({
@@ -161,7 +156,7 @@ export async function POST(request: Request) {
     });
 
     if (!business) {
-      return NextResponse.json({ error: "Business not found" }, { status: 404 });
+      return apiError("Business not found", 404);
     }
 
     const client = await prisma.client.findFirst({
@@ -173,10 +168,7 @@ export async function POST(request: Request) {
     });
 
     if (!client) {
-      return NextResponse.json(
-        { error: "Client not found for this business" },
-        { status: 404 }
-      );
+      return apiError("Client not found for this business", 404);
     }
 
     const subtotal = parsedLineItems.reduce((sum, item) => sum + item.lineSubtotal, 0);
@@ -231,10 +223,10 @@ export async function POST(request: Request) {
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error creating invoice:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }

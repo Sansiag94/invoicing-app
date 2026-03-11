@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import React from "react";
 import { pdf } from "@react-pdf/renderer";
@@ -12,7 +12,7 @@ export async function GET(
     const { token } = await context.params;
 
     if (!token?.trim()) {
-      return NextResponse.json({ error: "Token is required" }, { status: 400 });
+      return apiError("Token is required", 400);
     }
 
     const invoice = await prisma.invoice.findFirst({
@@ -25,7 +25,7 @@ export async function GET(
     });
 
     if (!invoice) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     const doc = <InvoiceDocument invoice={invoice} />;
@@ -41,6 +41,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error generating public invoice PDF:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }

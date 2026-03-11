@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 
@@ -36,11 +37,11 @@ export async function GET(request: Request) {
     return NextResponse.json(clients);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error loading clients:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }
 
@@ -56,22 +57,16 @@ export async function POST(request: Request) {
     const vatNumber = asString(body.vatNumber);
 
     if (!email || !address || !country) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+      return apiError("Missing required fields", 400);
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+      return apiError("Invalid email address", 400);
     }
 
     if (!companyName && !contactName) {
-      return NextResponse.json(
-        { error: "Client must have a company name or contact name" },
-        { status: 400 }
-      );
+      return apiError("Client must have a company name or contact name", 400);
     }
 
     const business = await prisma.business.findFirst({
@@ -80,10 +75,7 @@ export async function POST(request: Request) {
     });
 
     if (!business) {
-      return NextResponse.json(
-        { error: "Business not found" },
-        { status: 404 }
-      );
+      return apiError("Business not found", 404);
     }
 
     const client = await prisma.client.create({
@@ -101,13 +93,10 @@ export async function POST(request: Request) {
     return NextResponse.json(client);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error creating client:", error);
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return apiError("Server error", 500);
   }
 }

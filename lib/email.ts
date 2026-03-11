@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { getResendApiKey } from "@/lib/env";
 
 type SendInvoiceEmailInput = {
   to: string;
@@ -33,21 +34,22 @@ export function isEmailDeliveryError(error: unknown): error is EmailDeliveryErro
   return error instanceof EmailDeliveryError;
 }
 
-export function buildPublicInvoiceLink(publicToken: string, requestUrl?: string): string {
-  const token = publicToken.trim();
-  if (!token) {
-    throw new EmailConfigurationError("Missing invoice public token");
+export function buildPublicInvoiceLink(invoiceNumber: string, requestUrl?: string): string {
+  const normalizedInvoiceNumber = invoiceNumber.trim();
+  if (!normalizedInvoiceNumber) {
+    throw new EmailConfigurationError("Missing invoice number");
   }
+  const encodedInvoiceNumber = encodeURIComponent(normalizedInvoiceNumber);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
   if (appUrl) {
-    return new URL(`/invoice/pay/${token}`, appUrl).toString();
+    return new URL(`/i/${encodedInvoiceNumber}`, appUrl).toString();
   }
 
   if (requestUrl) {
     const origin = new URL(requestUrl).origin;
-    return new URL(`/invoice/pay/${token}`, origin).toString();
+    return new URL(`/i/${encodedInvoiceNumber}`, origin).toString();
   }
 
   throw new EmailConfigurationError("Missing NEXT_PUBLIC_APP_URL for public invoice links");
@@ -58,12 +60,14 @@ function getResendClient(): Resend {
     return resendClient;
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  try {
+    resendClient = new Resend(getResendApiKey());
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new EmailConfigurationError(error.message);
+    }
     throw new EmailConfigurationError("Missing RESEND_API_KEY");
   }
-
-  resendClient = new Resend(apiKey);
   return resendClient;
 }
 

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 
 export async function GET(
@@ -9,7 +10,7 @@ export async function GET(
     const { token } = await context.params;
 
     if (!token?.trim()) {
-      return NextResponse.json({ error: "Token is required" }, { status: 400 });
+      return apiError("Token is required", 400);
     }
 
     const invoice = await prisma.invoice.findFirst({
@@ -41,12 +42,12 @@ export async function GET(
     });
 
     if (!invoice) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     return NextResponse.json(invoice);
   } catch (error) {
     console.error("Error loading public invoice:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }

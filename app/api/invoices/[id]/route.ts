@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
@@ -76,7 +77,7 @@ export async function GET(
     const businessId = await getBusinessId(request);
 
     if (!businessId) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     await markOverdueInvoicesForBusiness(businessId, id);
@@ -91,17 +92,17 @@ export async function GET(
     });
 
     if (!invoice) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     return NextResponse.json(invoice);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error loading invoice:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }
 
@@ -114,7 +115,7 @@ export async function PATCH(
     const businessId = await getBusinessId(request);
 
     if (!businessId) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     const existingInvoice = await prisma.invoice.findFirst({
@@ -131,7 +132,7 @@ export async function PATCH(
     });
 
     if (!existingInvoice) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     const body = (await request.json()) as UpdateInvoiceBody;
@@ -141,21 +142,15 @@ export async function PATCH(
       body.dueDate === undefined ? existingInvoice.dueDate : asDate(body.dueDate);
 
     if (!issueDate || !dueDate) {
-      return NextResponse.json({ error: "Invalid issueDate or dueDate" }, { status: 400 });
+      return apiError("Invalid issueDate or dueDate", 400);
     }
 
     if (dueDate < issueDate) {
-      return NextResponse.json(
-        { error: "dueDate must be on or after issueDate" },
-        { status: 400 }
-      );
+      return apiError("dueDate must be on or after issueDate", 400);
     }
 
     if (!Array.isArray(body.lineItems) || body.lineItems.length === 0) {
-      return NextResponse.json(
-        { error: "Invoice must contain at least one line item" },
-        { status: 400 }
-      );
+      return apiError("Invoice must contain at least one line item", 400);
     }
 
     const existingLineItemIds = new Set(existingInvoice.lineItems.map((item) => item.id));
@@ -203,7 +198,7 @@ export async function PATCH(
       .filter((item): item is NonNullable<typeof item> => item !== null);
 
     if (parsedLineItems.length !== body.lineItems.length) {
-      return NextResponse.json({ error: "Invalid lineItems payload" }, { status: 400 });
+      return apiError("Invalid lineItems payload", 400);
     }
 
     const subtotal = parsedLineItems.reduce((sum, item) => sum + item.lineSubtotal, 0);
@@ -281,17 +276,17 @@ export async function PATCH(
     });
 
     if (!updatedInvoice) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     return NextResponse.json(updatedInvoice);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error updating invoice:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }
 
@@ -304,7 +299,7 @@ export async function DELETE(
     const businessId = await getBusinessId(request);
 
     if (!businessId) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     const deleted = await prisma.invoice.deleteMany({
@@ -315,16 +310,16 @@ export async function DELETE(
     });
 
     if (deleted.count === 0) {
-      return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
+      return apiError("Invoice not found", 404);
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error deleting invoice:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }

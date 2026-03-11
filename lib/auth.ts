@@ -1,17 +1,14 @@
 import { createClient, type User } from "@supabase/supabase-js";
+import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/env";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = getSupabaseUrl();
+const supabaseAnonKey = getSupabaseAnonKey();
 
 let supabaseClient: ReturnType<typeof createClient> | null = null;
 
 function getSupabaseClient() {
   if (supabaseClient) {
     return supabaseClient;
-  }
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase configuration for auth verification.");
   }
 
   supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {

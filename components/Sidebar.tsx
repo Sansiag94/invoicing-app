@@ -14,6 +14,16 @@ const sidebarLinks = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const hideSidebar =
+    pathname === "/" ||
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname.startsWith("/i/") ||
+    pathname.startsWith("/invoice/pay/");
+
+  if (hideSidebar) {
+    return null;
+  }
 
   return (
     <aside className="sticky top-0 h-screen w-64 border-r border-slate-200 bg-white">

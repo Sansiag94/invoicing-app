@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { ensureBusiness } from "@/lib/ensureBusiness";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
@@ -26,11 +27,11 @@ export async function GET(request: Request) {
     return NextResponse.json(business);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error loading business:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }
 
@@ -44,10 +45,7 @@ export async function PATCH(request: Request) {
     const currency = asString(body.currency);
 
     if (!name || !address || !country || !currency) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+      return apiError("Missing required fields", 400);
     }
 
     const business = await ensureBusiness(user.id);
@@ -69,10 +67,10 @@ export async function PATCH(request: Request) {
     return NextResponse.json(updatedBusiness);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error updating business:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }

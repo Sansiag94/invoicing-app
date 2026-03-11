@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { ensureBusiness } from "@/lib/ensureBusiness";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
@@ -9,7 +10,7 @@ export async function POST(request: Request) {
     const email = authUser.email?.trim() ?? null;
 
     if (!email) {
-      return NextResponse.json({ error: "Authenticated email is required" }, { status: 400 });
+      return apiError("Authenticated email is required", 400);
     }
 
     const user = await prisma.user.upsert({
@@ -30,10 +31,10 @@ export async function POST(request: Request) {
     return NextResponse.json(user);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error creating user:", error);
-    return NextResponse.json({ error: "Server Error" }, { status: 500 });
+    return apiError("Server Error", 500);
   }
 }

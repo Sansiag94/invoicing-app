@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
     });
 
     if (!business) {
-      return NextResponse.json({ error: "Business not found" }, { status: 404 });
+      return apiError("Business not found", 404);
     }
 
     await markOverdueInvoicesForBusiness(business.id);
@@ -33,6 +34,8 @@ export async function GET(request: Request) {
       openInvoices,
       paidInvoices,
       overdueInvoices,
+      clientCount,
+      invoiceCount,
       recentInvoicesRaw,
     ] = await Promise.all([
       prisma.invoice.aggregate({
@@ -71,6 +74,16 @@ export async function GET(request: Request) {
         where: {
           businessId: business.id,
           status: "overdue",
+        },
+      }),
+      prisma.client.count({
+        where: {
+          businessId: business.id,
+        },
+      }),
+      prisma.invoice.count({
+        where: {
+          businessId: business.id,
         },
       }),
       prisma.invoice.findMany({
@@ -113,14 +126,16 @@ export async function GET(request: Request) {
       openInvoices,
       paidInvoices,
       overdueInvoices,
+      clientCount,
+      invoiceCount,
       recentInvoices,
     });
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error loading dashboard:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }

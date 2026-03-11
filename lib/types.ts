@@ -71,5 +71,7 @@ export interface DashboardOverview {
   openInvoices: number;
   paidInvoices: number;
   overdueInvoices: number;
+  clientCount: number;
+  invoiceCount: number;
   recentInvoices: DashboardRecentInvoice[];
 }

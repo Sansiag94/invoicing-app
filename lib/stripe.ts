@@ -1,7 +1,8 @@
 import Stripe from "stripe";
+import { getStripeSecretKey } from "@/lib/env";
 
 let stripeClient: Stripe | null = null;
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+const stripeSecretKey = getStripeSecretKey();
 const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
 console.log(
@@ -9,10 +10,6 @@ console.log(
 );
 
 export function getStripeClient(): Stripe {
-  if (!stripeSecretKey) {
-    throw new Error("Missing STRIPE_SECRET_KEY");
-  }
-
   if (!stripeClient) {
     stripeClient = new Stripe(stripeSecretKey);
     console.log("[stripe] Stripe client initialized.");

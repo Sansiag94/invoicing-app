@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Eye, FilePenLine, Plus, Send, Trash2 } from "lucide-react";
 import { ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -47,6 +47,8 @@ export default function InvoicePage() {
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const createInvoiceRef = useRef<HTMLDivElement | null>(null);
 
   async function fetchInvoices() {
     const res = await authenticatedFetch("/api/invoices");
@@ -160,6 +162,7 @@ export default function InvoicePage() {
       setIssueDate("");
       setDueDate("");
       setClientId("");
+      setSuccessMessage("Invoice created successfully.");
       await fetchInvoices();
     } catch (error) {
       console.error("Error creating invoice:", error);
@@ -208,6 +211,7 @@ export default function InvoicePage() {
         return;
       }
 
+      setSuccessMessage("Invoice sent successfully.");
       await fetchInvoices();
     } catch (error) {
       console.error("Error sending invoice:", error);
@@ -217,6 +221,16 @@ export default function InvoicePage() {
     }
   };
 
+  useEffect(() => {
+    if (!successMessage) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setSuccessMessage(null);
+    }, 3500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [successMessage]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -224,7 +238,13 @@ export default function InvoicePage() {
         <p className="text-sm text-slate-500">Create invoices and manage their lifecycle.</p>
       </div>
 
-      <Card>
+      {successMessage ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {successMessage}
+        </div>
+      ) : null}
+
+      <Card ref={createInvoiceRef}>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Create Invoice</CardTitle>
           <Button variant="secondary" onClick={addLineItem}>
@@ -349,25 +369,29 @@ export default function InvoicePage() {
           <CardTitle>Invoice Table</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice Number</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoices.length === 0 ? (
+          {invoices.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+              <p className="text-base font-medium text-slate-900">No invoices yet</p>
+              <p className="text-sm text-slate-600">Create your first invoice to start billing clients.</p>
+              <Button
+                onClick={() => createInvoiceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+              >
+                Create Invoice
+              </Button>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-slate-500">
-                    No invoices yet.
-                  </TableCell>
+                  <TableHead>Invoice Number</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                invoices.map((invoice) => (
+              </TableHeader>
+              <TableBody>
+                {invoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell>{invoice.invoiceNumber}</TableCell>
                     <TableCell>
@@ -416,10 +440,10 @@ export default function InvoicePage() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 

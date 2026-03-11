@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 
@@ -49,7 +50,7 @@ export async function GET(
     });
 
     if (!business) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+      return apiError("Client not found", 404);
     }
 
     const client = await prisma.client.findFirst({
@@ -62,17 +63,17 @@ export async function GET(
     });
 
     if (!client) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+      return apiError("Client not found", 404);
     }
 
     return NextResponse.json(client);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error loading client:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }
 
@@ -85,7 +86,7 @@ export async function PATCH(
     const clientId = await getOwnedClientId(request, id);
 
     if (!clientId) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+      return apiError("Client not found", 404);
     }
 
     const body = (await request.json()) as UpdateClientBody;
@@ -97,22 +98,16 @@ export async function PATCH(
     const vatNumber = asString(body.vatNumber);
 
     if (!email || !address || !country) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
+      return apiError("Missing required fields", 400);
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      return NextResponse.json({ error: "Invalid email address" }, { status: 400 });
+      return apiError("Invalid email address", 400);
     }
 
     if (!companyName && !contactName) {
-      return NextResponse.json(
-        { error: "Client must have a company name or contact name" },
-        { status: 400 }
-      );
+      return apiError("Client must have a company name or contact name", 400);
     }
 
     const updatedClient = await prisma.client.update({
@@ -135,11 +130,11 @@ export async function PATCH(
     return NextResponse.json(updatedClient);
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error updating client:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }
 
@@ -152,7 +147,7 @@ export async function DELETE(
     const clientId = await getOwnedClientId(request, id);
 
     if (!clientId) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+      return apiError("Client not found", 404);
     }
 
     await prisma.client.delete({ where: { id: clientId } });
@@ -160,10 +155,10 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     if (isAuthenticationError(error)) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return apiError(error.message, 401);
     }
 
     console.error("Error deleting client:", error);
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+    return apiError("Server error", 500);
   }
 }
