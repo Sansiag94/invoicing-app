@@ -29,6 +29,11 @@ type ParsedAddress = {
   city: string;
 };
 
+export type SwissQRBillMetadata = {
+  account: string;
+  reference: string;
+};
+
 export type QRRect = {
   x: number;
   y: number;
@@ -113,8 +118,78 @@ function parseAddress(addressRaw: string, countryCode: string): ParsedAddress {
   };
 }
 
-function makeReference(invoiceNumber: string): string {
-  return normalizeWhitespace(invoiceNumber).slice(0, 25);
+function mod97(value: string): number {
+  let remainder = 0;
+
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    const chunk =
+      code >= 65 && code <= 90
+        ? String(code - 55)
+        : code >= 48 && code <= 57
+          ? char
+          : "";
+
+    for (const digit of chunk) {
+      remainder = (remainder * 10 + Number(digit)) % 97;
+    }
+  }
+
+  return remainder;
+}
+
+function isQRIBAN(account: string): boolean {
+  const iid = Number.parseInt(account.slice(4, 9), 10);
+  return Number.isFinite(iid) && iid >= 30000 && iid <= 31999;
+}
+
+function buildScorReference(invoiceNumber: string): string {
+  const cleaned = normalizeWhitespace(invoiceNumber).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  const body = (cleaned || "INVOICE").slice(0, 21);
+  const checksum = String(98 - mod97(`${body}RF00`)).padStart(2, "0");
+  return `RF${checksum}${body}`;
+}
+
+function buildQRReference(invoiceNumber: string): string {
+  const alphanumeric = normalizeWhitespace(invoiceNumber).toUpperCase();
+  const digitPayload = alphanumeric
+    .replace(/[^A-Z0-9]/g, "")
+    .split("")
+    .map((char) => {
+      if (/\d/.test(char)) return char;
+      return String(char.charCodeAt(0) - 55);
+    })
+    .join("");
+
+  const body = (digitPayload || "0").slice(-26).padStart(26, "0");
+  const table = [0, 9, 4, 6, 8, 2, 7, 1, 3, 5];
+  let carry = 0;
+
+  for (const digit of body) {
+    carry = table[(carry + Number(digit)) % 10];
+  }
+
+  const checksum = String((10 - carry) % 10);
+  return `${body}${checksum}`;
+}
+
+function buildReference(invoiceNumber: string, account: string): string {
+  return isQRIBAN(account) ? buildQRReference(invoiceNumber) : buildScorReference(invoiceNumber);
+}
+
+export function getSwissQRBillMetadata(
+  invoice: InvoiceForQRBill,
+  business: Pick<BusinessForQRBill, "iban">
+): SwissQRBillMetadata {
+  const account = normalizeWhitespace(business.iban ?? "").replace(/\s/g, "").toUpperCase();
+  if (!account) {
+    throw new Error("Missing business IBAN for Swiss QR-bill.");
+  }
+
+  return {
+    account,
+    reference: buildReference(invoice.invoiceNumber, account),
+  };
 }
 
 function buildQRBillData(
@@ -122,10 +197,7 @@ function buildQRBillData(
   business: BusinessForQRBill,
   client: ClientForQRBill
 ): Data {
-  const account = normalizeWhitespace(business.iban ?? "").replace(/\s/g, "");
-  if (!account) {
-    throw new Error("Missing business IBAN for Swiss QR-bill.");
-  }
+  const { account, reference } = getSwissQRBillMetadata(invoice, business);
 
   const creditorCountry = toCountryCode(business.country, "CH");
   const debtorCountry = toCountryCode(client.country, "CH");
@@ -138,12 +210,13 @@ function buildQRBillData(
     ) || "Customer";
 
   const currency: "CHF" | "EUR" = invoice.currency === "EUR" ? "EUR" : "CHF";
+  const normalizedInvoiceNumber = normalizeWhitespace(invoice.invoiceNumber) || "Invoice";
 
   return {
     amount: Number(invoice.totalAmount.toFixed(2)),
     currency,
-    reference: makeReference(invoice.invoiceNumber),
-    message: `Invoice ${makeReference(invoice.invoiceNumber)}`.slice(0, 140),
+    reference,
+    message: `Invoice ${normalizedInvoiceNumber}`.slice(0, 140),
     creditor: {
       account,
       name: normalizeWhitespace(business.name).slice(0, 70),

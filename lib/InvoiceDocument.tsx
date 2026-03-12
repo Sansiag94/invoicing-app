@@ -2,7 +2,7 @@ import React from "react";
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Image, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { Prisma } from "@prisma/client";
-import { generateSwissQRCodeRects } from "@/lib/qrbill";
+import { generateSwissQRCodeRects, getSwissQRBillMetadata, type SwissQRBillMetadata } from "@/lib/qrbill";
 
 type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
@@ -57,15 +57,24 @@ const styles = StyleSheet.create({
     marginTop: 8,
     marginBottom: 14,
   },
-  invoiceMetaTitle: {
-    fontSize: 12,
+  invoiceMetaRow: {
+    flexDirection: "row",
+    marginTop: 2,
+  },
+  invoiceMetaLabel: {
+    fontSize: 10,
     color: "#4b5563",
-    marginBottom: 4,
+    width: 68,
+  },
+  invoiceMetaValue: {
+    fontSize: 10,
+    color: "#111827",
   },
   invoiceNo: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#111827",
+    marginBottom: 4,
   },
   tableWrap: {
     marginTop: 8,
@@ -243,6 +252,27 @@ function formatMoney(value: number): string {
   }).format(value);
 }
 
+function formatIban(value: string): string {
+  const compact = value.replace(/\s+/g, "").toUpperCase();
+  return compact.match(/.{1,4}/g)?.join(" ") ?? value;
+}
+
+function formatReference(value: string): string {
+  const compact = value.replace(/\s+/g, "").toUpperCase();
+
+  if (/^RF[A-Z0-9]{3,23}$/.test(compact)) {
+    return compact.match(/.{1,4}/g)?.join(" ") ?? compact;
+  }
+
+  if (/^\d{27}$/.test(compact)) {
+    const head = compact.slice(0, 2);
+    const tail = compact.slice(2).match(/.{1,5}/g)?.join(" ") ?? compact.slice(2);
+    return `${head} ${tail}`.trim();
+  }
+
+  return value;
+}
+
 function splitAddress(address: string | null | undefined): string[] {
   if (!address) return [];
   return address
@@ -316,15 +346,21 @@ const InvoiceDocument = ({ invoice }: { invoice: InvoiceWithRelations }) => {
   const totalPages = pages.length;
 
   let qrRects: Array<{ x: number; y: number; width: number; height: number; fill: string }> = [];
+  let qrMetadata: SwissQRBillMetadata | null = null;
 
   if (shouldRenderQRSection) {
     try {
+      qrMetadata = getSwissQRBillMetadata(invoice, invoice.business);
       qrRects = generateSwissQRCodeRects(invoice, invoice.business, invoice.client);
     } catch (error) {
       console.error("Failed to generate Swiss QR code:", error);
+      qrMetadata = null;
       qrRects = [];
     }
   }
+
+  const paymentAccount = qrMetadata ? formatIban(qrMetadata.account) : invoice.business.iban || "-";
+  const paymentReference = qrMetadata ? formatReference(qrMetadata.reference) : null;
 
   return (
     <Document>
@@ -368,8 +404,15 @@ const InvoiceDocument = ({ invoice }: { invoice: InvoiceWithRelations }) => {
                 </View>
 
                 <View style={styles.invoiceMeta}>
-                  <Text style={styles.invoiceMetaTitle}>{formatDate(invoice.issueDate)}</Text>
                   <Text style={styles.invoiceNo}>Invoice: {invoice.invoiceNumber}</Text>
+                  <View style={styles.invoiceMetaRow}>
+                    <Text style={styles.invoiceMetaLabel}>Issue date:</Text>
+                    <Text style={styles.invoiceMetaValue}>{formatDate(invoice.issueDate)}</Text>
+                  </View>
+                  <View style={styles.invoiceMetaRow}>
+                    <Text style={styles.invoiceMetaLabel}>Due date:</Text>
+                    <Text style={styles.invoiceMetaValue}>{formatDate(invoice.dueDate)}</Text>
+                  </View>
                 </View>
               </>
             ) : null}
@@ -402,13 +445,20 @@ const InvoiceDocument = ({ invoice }: { invoice: InvoiceWithRelations }) => {
                         <Text style={styles.paymentTitle}>Receipt</Text>
 
                         <Text style={styles.paymentSubtitle}>Account / Payable to</Text>
-                        <Text style={styles.paymentLine}>{invoice.business.iban || "-"}</Text>
+                        <Text style={styles.paymentLine}>{paymentAccount}</Text>
                         <Text style={styles.paymentLine}>{invoice.business.name}</Text>
                         {businessAddressLines.map((line, index) => (
                           <Text key={`receipt-business-${index}`} style={styles.paymentLine}>
                             {line}
                           </Text>
                         ))}
+
+                        {paymentReference ? (
+                          <View style={styles.receiptBottom}>
+                            <Text style={styles.paymentSubtitle}>Reference</Text>
+                            <Text style={styles.paymentLine}>{paymentReference}</Text>
+                          </View>
+                        ) : null}
 
                         <View style={styles.receiptBottom}>
                           <Text style={styles.paymentSubtitle}>Payable by</Text>
@@ -456,13 +506,20 @@ const InvoiceDocument = ({ invoice }: { invoice: InvoiceWithRelations }) => {
 
                           <View style={styles.detailsCol}>
                             <Text style={styles.paymentSubtitle}>Account / Payable to</Text>
-                            <Text style={styles.paymentLine}>{invoice.business.iban || "-"}</Text>
+                            <Text style={styles.paymentLine}>{paymentAccount}</Text>
                             <Text style={styles.paymentLine}>{invoice.business.name}</Text>
                             {businessAddressLines.map((line, index) => (
                               <Text key={`payment-business-${index}`} style={styles.paymentLine}>
                                 {line}
                               </Text>
                             ))}
+
+                            {paymentReference ? (
+                              <View style={{ marginTop: 6 }}>
+                                <Text style={styles.paymentSubtitle}>Reference</Text>
+                                <Text style={styles.paymentLine}>{paymentReference}</Text>
+                              </View>
+                            ) : null}
 
                             <View style={{ marginTop: 6 }}>
                               <Text style={styles.paymentSubtitle}>Additional information</Text>
