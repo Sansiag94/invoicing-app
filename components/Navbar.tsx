@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, ChevronDown, LogOut, Menu, Search } from "lucide-react";
+import { Bell, LogOut, Menu, Search, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { supabase } from "@/utils/supabase";
@@ -13,7 +13,6 @@ const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
   { href: "/invoices", label: "Invoices" },
-  { href: "/settings", label: "Settings" },
 ];
 
 type NavbarProps = {
@@ -548,17 +547,25 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
           <div ref={accountRef} className="relative">
             <button
               type="button"
-              className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-200 px-3 text-slate-700 transition-colors hover:bg-slate-100"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100"
+              aria-label="Open account menu"
               onClick={() => setIsAccountOpen((current) => !current)}
             >
-              <span className="hidden sm:inline">Logged in</span>
-              <ChevronDown className="h-4 w-4" />
+              <Settings className="h-4 w-4" />
             </button>
 
             {isAccountOpen ? (
               <div className="absolute right-0 z-30 mt-2 w-56 rounded-md border border-slate-200 bg-white p-2 shadow-lg">
                 <p className="px-2 py-1 text-xs uppercase tracking-wide text-slate-500">Account</p>
                 <p className="truncate px-2 py-1 text-sm font-medium text-slate-900">{userEmail || "Unknown user"}</p>
+                <button
+                  type="button"
+                  className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                  onClick={() => handleNavigate("/settings")}
+                >
+                  <Settings className="h-4 w-4" />
+                  Settings
+                </button>
                 <button
                   type="button"
                   className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"

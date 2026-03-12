@@ -1,0 +1,5 @@
+ALTER TABLE "Business"
+ADD COLUMN "phone" TEXT;
+
+ALTER TABLE "Client"
+ADD COLUMN "phone" TEXT;

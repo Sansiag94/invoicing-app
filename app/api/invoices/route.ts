@@ -5,6 +5,12 @@ import crypto from "crypto";
 import { InvoiceStatus } from "@prisma/client";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
+import {
+  calculateInvoiceTotals,
+  formatSequentialInvoiceNumber,
+  isSupportedInvoiceCurrency,
+  normalizeInvoiceCurrency,
+} from "@/lib/invoice";
 
 type LineItemInput = {
   description: unknown;
@@ -17,6 +23,8 @@ type CreateInvoiceBody = {
   clientId: unknown;
   issueDate: unknown;
   dueDate: unknown;
+  subject?: unknown;
+  reference?: unknown;
   status?: unknown;
   currency?: unknown;
   notes?: unknown;
@@ -77,10 +85,29 @@ export async function GET(request: Request) {
             email: true,
           },
         },
+        lineItems: {
+          select: {
+            quantity: true,
+            unitPrice: true,
+            taxRate: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(invoices);
+    const invoicesWithComputedTotals = invoices.map((invoice) => {
+      const { lineItems, ...invoiceData } = invoice;
+      const totals = calculateInvoiceTotals(lineItems);
+
+      return {
+        ...invoiceData,
+        subtotal: totals.subtotal,
+        taxAmount: totals.taxAmount,
+        totalAmount: totals.totalAmount,
+      };
+    });
+
+    return NextResponse.json(invoicesWithComputedTotals);
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
@@ -98,6 +125,8 @@ export async function POST(request: Request) {
     const clientId = asString(body.clientId);
     const issueDate = asDate(body.issueDate);
     const dueDate = asDate(body.dueDate);
+    const subject = asString(body.subject);
+    const reference = asString(body.reference);
 
     if (!clientId || !issueDate || !dueDate) {
       return apiError("Missing required fields", 400);
@@ -117,9 +146,10 @@ export async function POST(request: Request) {
         const description = asString(item.description);
         const quantity = asNumber(item.quantity);
         const unitPrice = asNumber(item.unitPrice);
-        const taxRate = asNumber(item.taxRate);
+        const taxRateRaw = asNumber(item.taxRate);
+        const taxRate = taxRateRaw === null ? 0 : taxRateRaw;
 
-        if (!description || quantity === null || unitPrice === null || taxRate === null) {
+        if (!description || quantity === null || unitPrice === null) {
           return null;
         }
 
@@ -128,8 +158,6 @@ export async function POST(request: Request) {
         }
 
         const lineSubtotal = quantity * unitPrice;
-        const taxValue = lineSubtotal * (taxRate / 100);
-
         return {
           description,
           quantity,
@@ -137,7 +165,7 @@ export async function POST(request: Request) {
           taxRate,
           total: lineSubtotal,
           lineSubtotal,
-          taxValue,
+          taxValue: (lineSubtotal * taxRate) / 100,
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -151,7 +179,6 @@ export async function POST(request: Request) {
       select: {
         id: true,
         currency: true,
-        invoicePrefix: true,
       },
     });
 
@@ -171,10 +198,21 @@ export async function POST(request: Request) {
       return apiError("Client not found for this business", 404);
     }
 
-    const subtotal = parsedLineItems.reduce((sum, item) => sum + item.lineSubtotal, 0);
-    const taxAmount = parsedLineItems.reduce((sum, item) => sum + item.taxValue, 0);
-    const totalAmount = subtotal + taxAmount;
-    const selectedCurrency = asString(body.currency) ?? business.currency;
+    const computedTotals = calculateInvoiceTotals(parsedLineItems);
+    const subtotal = computedTotals.subtotal;
+    const taxAmount = computedTotals.taxAmount;
+    const totalAmount = computedTotals.totalAmount;
+    const requestedCurrency = asString(body.currency);
+    if (requestedCurrency && !isSupportedInvoiceCurrency(requestedCurrency.toUpperCase())) {
+      return apiError("currency must be CHF or EUR", 400);
+    }
+
+    const fallbackBusinessCurrency = normalizeInvoiceCurrency(business.currency, "CHF");
+    const selectedCurrency = normalizeInvoiceCurrency(
+      requestedCurrency ? requestedCurrency.toUpperCase() : fallbackBusinessCurrency,
+      "CHF"
+    );
+
     const normalizedStatus = normalizeStatus(body.status);
 
     const invoice = await prisma.$transaction(async (tx) => {
@@ -183,12 +221,10 @@ export async function POST(request: Request) {
         data: { invoiceCounter: { increment: 1 } },
         select: {
           invoiceCounter: true,
-          invoicePrefix: true,
         },
       });
 
-      const prefix = updatedBusiness.invoicePrefix || "INV";
-      const invoiceNumber = `${prefix}-${String(updatedBusiness.invoiceCounter).padStart(6, "0")}`;
+      const invoiceNumber = formatSequentialInvoiceNumber(issueDate, updatedBusiness.invoiceCounter);
 
       return tx.invoice.create({
         data: {
@@ -197,6 +233,8 @@ export async function POST(request: Request) {
           invoiceNumber,
           issueDate,
           dueDate,
+          subject,
+          reference,
           subtotal,
           taxAmount,
           totalAmount,

@@ -3,6 +3,7 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
+import { calculateInvoiceTotals } from "@/lib/invoice";
 
 type UpdateLineItemInput = {
   id?: unknown;
@@ -15,6 +16,8 @@ type UpdateLineItemInput = {
 type UpdateInvoiceBody = {
   issueDate?: unknown;
   dueDate?: unknown;
+  subject?: unknown;
+  reference?: unknown;
   notes?: unknown;
   lineItems?: unknown;
 };
@@ -95,7 +98,14 @@ export async function GET(
       return apiError("Invoice not found", 404);
     }
 
-    return NextResponse.json(invoice);
+    const computedTotals = calculateInvoiceTotals(invoice.lineItems);
+
+    return NextResponse.json({
+      ...invoice,
+      subtotal: computedTotals.subtotal,
+      taxAmount: computedTotals.taxAmount,
+      totalAmount: computedTotals.totalAmount,
+    });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
@@ -124,6 +134,8 @@ export async function PATCH(
         id: true,
         issueDate: true,
         dueDate: true,
+        subject: true,
+        reference: true,
         notes: true,
         lineItems: {
           select: { id: true },
@@ -171,9 +183,10 @@ export async function PATCH(
         const description = asString(item.description);
         const quantity = asNumber(item.quantity);
         const unitPrice = asNumber(item.unitPrice);
-        const taxRate = asNumber(item.taxRate);
+        const taxRateRaw = asNumber(item.taxRate);
+        const taxRate = taxRateRaw === null ? 0 : taxRateRaw;
 
-        if (!description || quantity === null || unitPrice === null || taxRate === null) {
+        if (!description || quantity === null || unitPrice === null) {
           return null;
         }
 
@@ -182,8 +195,6 @@ export async function PATCH(
         }
 
         const lineSubtotal = quantity * unitPrice;
-        const lineTaxAmount = lineSubtotal * (taxRate / 100);
-
         return {
           id: lineItemId,
           description,
@@ -192,7 +203,7 @@ export async function PATCH(
           taxRate,
           total: lineSubtotal,
           lineSubtotal,
-          lineTaxAmount,
+          lineTaxAmount: (lineSubtotal * taxRate) / 100,
         };
       })
       .filter((item): item is NonNullable<typeof item> => item !== null);
@@ -201,9 +212,14 @@ export async function PATCH(
       return apiError("Invalid lineItems payload", 400);
     }
 
-    const subtotal = parsedLineItems.reduce((sum, item) => sum + item.lineSubtotal, 0);
-    const taxAmount = parsedLineItems.reduce((sum, item) => sum + item.lineTaxAmount, 0);
-    const totalAmount = subtotal + taxAmount;
+    const computedTotals = calculateInvoiceTotals(parsedLineItems);
+    const subtotal = computedTotals.subtotal;
+    const taxAmount = computedTotals.taxAmount;
+    const totalAmount = computedTotals.totalAmount;
+    const subject =
+      body.subject === undefined ? existingInvoice.subject : asNullableString(body.subject);
+    const reference =
+      body.reference === undefined ? existingInvoice.reference : asNullableString(body.reference);
     const notes =
       body.notes === undefined ? existingInvoice.notes : asNullableString(body.notes);
 
@@ -213,6 +229,8 @@ export async function PATCH(
         data: {
           issueDate,
           dueDate,
+          subject,
+          reference,
           notes,
           subtotal,
           taxAmount,
@@ -279,7 +297,14 @@ export async function PATCH(
       return apiError("Invoice not found", 404);
     }
 
-    return NextResponse.json(updatedInvoice);
+    const updatedTotals = calculateInvoiceTotals(updatedInvoice.lineItems);
+
+    return NextResponse.json({
+      ...updatedInvoice,
+      subtotal: updatedTotals.subtotal,
+      taxAmount: updatedTotals.taxAmount,
+      totalAmount: updatedTotals.totalAmount,
+    });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);

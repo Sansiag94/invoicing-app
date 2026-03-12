@@ -3,12 +3,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { buildAddressString } from "@/lib/address";
+import { parsePostalAddress } from "@/lib/invoice";
+import { isSupportedCountry } from "@/lib/countries";
 import { ClientDetails } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { ArrowLeft, Building2, PencilLine, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CountryCombobox } from "@/components/ui/country-combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +41,10 @@ export default function ClientDetailPage() {
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
   const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [street, setStreet] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [vatNumber, setVatNumber] = useState("");
 
@@ -63,10 +70,14 @@ export default function ClientDetailPage() {
           setClient(safeClient);
 
           if (safeClient) {
+            const parsedAddress = parsePostalAddress(safeClient.address ?? "", safeClient.country ?? "");
             setCompanyName(safeClient.companyName ?? "");
             setContactName(safeClient.contactName ?? "");
             setEmail(safeClient.email ?? "");
-            setAddress(safeClient.address ?? "");
+            setPhone(safeClient.phone ?? "");
+            setStreet(safeClient.street ?? parsedAddress.street ?? "");
+            setPostalCode(safeClient.postalCode ?? parsedAddress.postalCode ?? "");
+            setCity(safeClient.city ?? parsedAddress.city ?? "");
             setCountry(safeClient.country ?? "");
             setVatNumber(safeClient.vatNumber ?? "");
           }
@@ -96,6 +107,11 @@ export default function ClientDetailPage() {
       return;
     }
 
+    if (!isSupportedCountry(country)) {
+      alert("Please select a valid country from the list.");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -108,7 +124,11 @@ export default function ClientDetailPage() {
           companyName,
           contactName,
           email,
-          address,
+          phone,
+          address: buildAddressString({ street, postalCode, city }),
+          street,
+          postalCode,
+          city,
           country,
           vatNumber,
         }),
@@ -140,7 +160,11 @@ export default function ClientDetailPage() {
     setCompanyName(client.companyName ?? "");
     setContactName(client.contactName ?? "");
     setEmail(client.email ?? "");
-    setAddress(client.address ?? "");
+    setPhone(client.phone ?? "");
+    const parsedAddress = parsePostalAddress(client.address ?? "", client.country ?? "");
+    setStreet(client.street ?? parsedAddress.street ?? "");
+    setPostalCode(client.postalCode ?? parsedAddress.postalCode ?? "");
+    setCity(client.city ?? parsedAddress.city ?? "");
     setCountry(client.country ?? "");
     setVatNumber(client.vatNumber ?? "");
   }
@@ -268,12 +292,22 @@ export default function ClientDetailPage() {
               <p className="font-medium text-slate-900">{client.email}</p>
             </div>
             <div>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Phone</p>
+              <p className="font-medium text-slate-900">{client.phone || "-"}</p>
+            </div>
+            <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Country</p>
               <p className="font-medium text-slate-900">{client.country}</p>
             </div>
             <div className="md:col-span-2">
               <p className="text-xs uppercase tracking-wide text-slate-500">Address</p>
-              <p className="font-medium text-slate-900">{client.address}</p>
+              <p className="font-medium text-slate-900">
+                {client.street || parsePostalAddress(client.address, client.country).street}
+                <br />
+                {(client.postalCode || parsePostalAddress(client.address, client.country).postalCode) +
+                  " " +
+                  (client.city || parsePostalAddress(client.address, client.country).city)}
+              </p>
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">VAT Number</p>
@@ -343,24 +377,41 @@ export default function ClientDetailPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="country">Country</Label>
+                <Label htmlFor="phone">Phone</Label>
                 <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <CountryCombobox
                   id="country"
-                  type="text"
                   value={country}
-                  onChange={(event) => setCountry(event.target.value)}
+                  onChange={setCountry}
                   required
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="address">Address</Label>
+              <div className="space-y-2">
+                <Label htmlFor="street">Street</Label>
+                <Input id="street" type="text" value={street} onChange={(event) => setStreet(event.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postalCode">Postal Code</Label>
                 <Input
-                  id="address"
+                  id="postalCode"
                   type="text"
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
+                  value={postalCode}
+                  onChange={(event) => setPostalCode(event.target.value)}
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input id="city" type="text" value={city} onChange={(event) => setCity(event.target.value)} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vatNumber">VAT Number</Label>

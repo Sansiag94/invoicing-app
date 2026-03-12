@@ -3,7 +3,10 @@
 
 import { useEffect, useState } from "react";
 import { Upload, Trash2, Save } from "lucide-react";
-import { BusinessSettingsData } from "@/lib/types";
+import { buildAddressString } from "@/lib/address";
+import { parsePostalAddress } from "@/lib/invoice";
+import { getInvoiceSenderName } from "@/lib/business";
+import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +17,15 @@ import { Select } from "@/components/ui/select";
 export default function SettingsPage() {
   const [businessId, setBusinessId] = useState("");
   const [name, setName] = useState("");
-  const [address, setAddress] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [invoiceSenderType, setInvoiceSenderType] = useState<InvoiceSenderType>("company");
+  const [street, setStreet] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [website, setWebsite] = useState("");
+  const [bankName, setBankName] = useState("");
   const [country, setCountry] = useState("");
   const [currency, setCurrency] = useState("CHF");
   const [vatNumber, setVatNumber] = useState("");
@@ -25,6 +36,16 @@ export default function SettingsPage() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
 
   const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
+  const previewAddressLines = [
+    street.trim(),
+    [postalCode.trim(), city.trim()].filter(Boolean).join(" "),
+    country.trim(),
+  ].filter(Boolean);
+  const previewDisplayName = getInvoiceSenderName({
+    name,
+    ownerName,
+    invoiceSenderType,
+  });
 
   async function saveBusinessSettings(
     options?: {
@@ -41,7 +62,16 @@ export default function SettingsPage() {
       },
       body: JSON.stringify({
         name,
-        address,
+        ownerName,
+        invoiceSenderType,
+        address: buildAddressString({ street, postalCode, city }),
+        street,
+        postalCode,
+        city,
+        phone,
+        email,
+        website,
+        bankName,
         country,
         currency,
         vatNumber,
@@ -61,7 +91,15 @@ export default function SettingsPage() {
     const updatedBusiness = (await response.json()) as BusinessSettingsData;
     setBusinessId(updatedBusiness.id);
     setName(updatedBusiness.name || "");
-    setAddress(updatedBusiness.address || "");
+    setOwnerName(updatedBusiness.ownerName || "");
+    setInvoiceSenderType(updatedBusiness.invoiceSenderType || "company");
+    setStreet(updatedBusiness.street || "");
+    setPostalCode(updatedBusiness.postalCode || "");
+    setCity(updatedBusiness.city || "");
+    setPhone(updatedBusiness.phone || "");
+    setEmail(updatedBusiness.email || "");
+    setWebsite(updatedBusiness.website || "");
+    setBankName(updatedBusiness.bankName || "");
     setCountry(updatedBusiness.country || "");
     setCurrency(updatedBusiness.currency || "CHF");
     setVatNumber(updatedBusiness.vatNumber || "");
@@ -142,11 +180,20 @@ export default function SettingsPage() {
     (async () => {
       const res = await authenticatedFetch("/api/business");
       const data = (await res.json()) as BusinessSettingsData;
+      const parsedAddress = parsePostalAddress(data?.address, data?.country);
 
       if (mounted) {
         setBusinessId(data?.id || "");
         setName(data?.name || "");
-        setAddress(data?.address || "");
+        setOwnerName(data?.ownerName || "");
+        setInvoiceSenderType(data?.invoiceSenderType || "company");
+        setStreet(data?.street || parsedAddress.street || "");
+        setPostalCode(data?.postalCode || parsedAddress.postalCode || "");
+        setCity(data?.city || parsedAddress.city || "");
+        setPhone(data?.phone || "");
+        setEmail(data?.email || "");
+        setWebsite(data?.website || "");
+        setBankName(data?.bankName || "");
         setCountry(data?.country || "");
         setCurrency(data?.currency || "CHF");
         setVatNumber(data?.vatNumber || "");
@@ -218,8 +265,70 @@ export default function SettingsPage() {
             <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="address">Address</Label>
-            <Input id="address" value={address} onChange={(event) => setAddress(event.target.value)} />
+            <Label htmlFor="ownerName">Person Name</Label>
+            <Input
+              id="ownerName"
+              value={ownerName}
+              onChange={(event) => setOwnerName(event.target.value)}
+              placeholder="Your full name"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="invoiceSenderType">Invoice Sender</Label>
+            <Select
+              id="invoiceSenderType"
+              value={invoiceSenderType}
+              onChange={(event) => setInvoiceSenderType(event.target.value as InvoiceSenderType)}
+            >
+              <option value="company">Company name</option>
+              <option value="owner">Owner name</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="street">Street</Label>
+            <Input id="street" value={street} onChange={(event) => setStreet(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="postalCode">Postal Code</Label>
+            <Input
+              id="postalCode"
+              value={postalCode}
+              onChange={(event) => setPostalCode(event.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">City</Label>
+            <Input id="city" value={city} onChange={(event) => setCity(event.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Business Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="website">Website</Label>
+            <Input
+              id="website"
+              type="url"
+              value={website}
+              onChange={(event) => setWebsite(event.target.value)}
+              placeholder="Optional"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="country">Country</Label>
@@ -241,6 +350,15 @@ export default function SettingsPage() {
             <Input id="iban" value={iban} onChange={(event) => setIban(event.target.value)} />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="bankName">Bank Name</Label>
+            <Input
+              id="bankName"
+              value={bankName}
+              onChange={(event) => setBankName(event.target.value)}
+              placeholder="Optional"
+            />
+          </div>
+          <div className="space-y-2">
             <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
             <Input
               id="invoicePrefix"
@@ -254,6 +372,39 @@ export default function SettingsPage() {
               <Save className="h-4 w-4" />
               {isSaving ? "Saving..." : "Save Settings"}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice Sender Preview</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Header sender</p>
+            <p className="font-semibold text-slate-900">{name || "Business name"}</p>
+            {ownerName && ownerName !== name ? <p className="text-sm text-slate-600">{ownerName}</p> : null}
+            {previewAddressLines.map((line) => (
+              <p key={`header-${line}`} className="text-sm text-slate-700">
+                {line}
+              </p>
+            ))}
+            {email ? <p className="mt-2 text-sm text-slate-700">{email}</p> : null}
+            {phone ? <p className="text-sm text-slate-700">{phone}</p> : null}
+            {website ? <p className="text-sm text-slate-700">{website}</p> : null}
+          </div>
+
+          <div className="rounded-lg border border-slate-200 p-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment recipient</p>
+            <p className="font-semibold text-slate-900">{previewDisplayName || "Recipient name"}</p>
+            {previewAddressLines.map((line) => (
+              <p key={`recipient-${line}`} className="text-sm text-slate-700">
+                {line}
+              </p>
+            ))}
+            {iban ? <p className="mt-2 text-sm text-slate-700">{iban}</p> : null}
+            {bankName ? <p className="text-sm text-slate-700">{bankName}</p> : null}
           </div>
         </CardContent>
       </Card>

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Eye, FilePenLine, Plus, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { getInvoiceSenderName } from "@/lib/business";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,10 +58,11 @@ function getClientFirstName(client: ClientSummary | null): string {
 }
 
 function buildInvoiceNotesTemplate(clientFirstName: string, senderName: string): string {
-  return `Hello ${clientFirstName},
-please find below the invoice details.
+  return `Dear ${clientFirstName},
 
-Best regards,
+Please find below the details of your invoice.
+
+Kind regards,
 ${senderName}`;
 }
 
@@ -68,13 +70,15 @@ function InvoicePageContent() {
   const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
-  const [businessName, setBusinessName] = useState("User_name");
+  const [invoiceSenderName, setInvoiceSenderName] = useState("User_name");
+  const [businessCurrency, setBusinessCurrency] = useState<"CHF" | "EUR">("CHF");
   const [lineItems, setLineItems] = useState<LineItemData[]>([
     { description: "", quantity: 1, unitPrice: 0, taxRate: 0 },
   ]);
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [clientId, setClientId] = useState("");
+  const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate("client_first_name", "User_name"));
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -92,6 +96,7 @@ function InvoicePageContent() {
       .filter((invoice) => {
         const searchable = [
           invoice.invoiceNumber,
+          invoice.subject ?? "",
           invoice.status,
           getInvoiceClientName(invoice),
           invoice.currency,
@@ -126,7 +131,8 @@ function InvoicePageContent() {
         if (mounted) {
           setClients(Array.isArray(loadedClients) ? loadedClients : []);
           setInvoices(Array.isArray(loadedInvoices) ? loadedInvoices : []);
-          setBusinessName(loadedBusiness?.name?.trim() || "User_name");
+          setInvoiceSenderName(getInvoiceSenderName(loadedBusiness || { name: "User_name" }));
+          setBusinessCurrency(loadedBusiness?.currency === "EUR" ? "EUR" : "CHF");
         }
       } catch (error) {
         console.error("Error loading invoice page data:", error);
@@ -144,10 +150,10 @@ function InvoicePageContent() {
     const selectedClient = clients.find((client) => client.id === clientId) ?? null;
     const nextTemplate = buildInvoiceNotesTemplate(
       getClientFirstName(selectedClient),
-      businessName || "User_name"
+      invoiceSenderName || "User_name"
     );
     setNotes(nextTemplate);
-  }, [businessName, clientId, clients, notes, notesManuallyEdited]);
+  }, [invoiceSenderName, clientId, clients, notes, notesManuallyEdited]);
 
   const totals = useMemo(() => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -223,6 +229,7 @@ function InvoicePageContent() {
           clientId,
           issueDate,
           dueDate,
+          subject,
           status: "draft",
           notes,
           lineItems: normalizedLineItems,
@@ -240,8 +247,9 @@ function InvoicePageContent() {
       setIssueDate("");
       setDueDate("");
       setClientId("");
+      setSubject("");
       setNotesManuallyEdited(false);
-      setNotes(buildInvoiceNotesTemplate("client_first_name", businessName || "User_name"));
+      setNotes(buildInvoiceNotesTemplate("client_first_name", invoiceSenderName || "User_name"));
       setSuccessMessage("Invoice created successfully.");
       await fetchInvoices();
     } catch (error) {
@@ -363,27 +371,20 @@ function InvoicePageContent() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <div className="flex items-center justify-between gap-2">
-              <Label htmlFor="notes">Notes</Label>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  const selectedClient = clients.find((client) => client.id === clientId) ?? null;
-                  setNotes(
-                    buildInvoiceNotesTemplate(
-                      getClientFirstName(selectedClient),
-                      businessName || "User_name"
-                    )
-                  );
-                  setNotesManuallyEdited(false);
-                }}
-              >
-                Use Template
-              </Button>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
+            <div className="space-y-2">
+              <Label htmlFor="subject">Subject</Label>
+              <Input
+                id="subject"
+                value={subject}
+                onChange={(event) => setSubject(event.target.value)}
+                placeholder="Optional project or invoice subject"
+              />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="notes">Message</Label>
             <Textarea
               id="notes"
               rows={4}
@@ -392,7 +393,7 @@ function InvoicePageContent() {
                 setNotes(event.target.value);
                 setNotesManuallyEdited(true);
               }}
-              placeholder="Add payment instructions or a custom message"
+              placeholder="Add the greeting or message shown on the invoice"
             />
           </div>
 
@@ -480,9 +481,15 @@ function InvoicePageContent() {
 
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="text-sm text-slate-600">
-              <p>Subtotal: CHF {totals.subtotal.toFixed(2)}</p>
-              <p>Tax: CHF {totals.taxAmount.toFixed(2)}</p>
-              <p className="font-semibold text-slate-900">Total: CHF {totals.totalAmount.toFixed(2)}</p>
+              <p>
+                Subtotal: {businessCurrency} {totals.subtotal.toFixed(2)}
+              </p>
+              <p>
+                Tax: {businessCurrency} {totals.taxAmount.toFixed(2)}
+              </p>
+              <p className="font-semibold text-slate-900">
+                Total: {businessCurrency} {totals.totalAmount.toFixed(2)}
+              </p>
             </div>
             <Button onClick={handleCreateInvoice} disabled={isCreating}>
               {isCreating ? "Creating..." : "Create Invoice"}
@@ -538,13 +545,13 @@ function InvoicePageContent() {
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         <Button asChild variant="outline" size="sm">
-                          <Link href={`/invoices/${invoice.id}`}>
+                          <Link href={`/invoices/${invoice.id}/preview`}>
                             <Eye className="h-4 w-4" />
                             View
                           </Link>
                         </Button>
                         <Button asChild variant="outline" size="sm">
-                          <Link href={`/invoices/${invoice.id}`}>
+                          <Link href={`/invoices/${invoice.id}?mode=edit`}>
                             <FilePenLine className="h-4 w-4" />
                             Edit
                           </Link>

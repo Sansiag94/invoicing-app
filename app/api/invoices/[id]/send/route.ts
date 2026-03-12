@@ -9,6 +9,8 @@ import {
   sendInvoiceEmail,
 } from "@/lib/email";
 import crypto from "crypto";
+import { getInvoiceSenderName } from "@/lib/business";
+import { calculateInvoiceTotals } from "@/lib/invoice";
 
 export const runtime = "nodejs";
 
@@ -22,13 +24,24 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
       status: true,
       totalAmount: true,
       currency: true,
+      dueDate: true,
+      lineItems: {
+        select: {
+          quantity: true,
+          unitPrice: true,
+          taxRate: true,
+        },
+      },
       business: {
         select: {
+          id: true,
           name: true,
         },
       },
       client: {
         select: {
+          companyName: true,
+          contactName: true,
           email: true,
         },
       },
@@ -73,19 +86,52 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     return apiError("Unable to generate invoice link", 500);
   }
 
-  const invoiceLink = buildPublicInvoiceLink(invoiceNumber, request.url);
+  const invoiceLink = buildPublicInvoiceLink(publicToken, request.url);
   console.log("[invoice-send] Sending invoice email", {
     clientEmail,
     invoiceNumber,
     invoiceLink,
   });
 
+  let senderPreferences: { ownerName: string | null; invoiceSenderType: "company" | "owner" } = {
+    ownerName: null,
+    invoiceSenderType: "company",
+  };
+
+  try {
+    const rows = await prisma.$queryRaw<Array<{ ownerName: string | null; invoiceSenderType: string | null }>>`
+      SELECT "ownerName", "invoiceSenderType"
+      FROM "Business"
+      WHERE "uuid" = ${existingInvoice.business.id}
+      LIMIT 1
+    `;
+
+    const row = rows[0];
+    senderPreferences = {
+      ownerName: row?.ownerName ?? null,
+      invoiceSenderType: row?.invoiceSenderType?.toLowerCase() === "owner" ? "owner" : "company",
+    };
+  } catch (error) {
+    console.warn("Unable to load sender preferences (columns may not exist yet):", error);
+  }
+
+  const computedTotals = calculateInvoiceTotals(existingInvoice.lineItems);
+  const totalAmountForEmail =
+    computedTotals.totalAmount > 0 ? computedTotals.totalAmount : existingInvoice.totalAmount;
+  const clientDisplayName =
+    existingInvoice.client.contactName || existingInvoice.client.companyName || clientEmail;
+
   await sendInvoiceEmail({
     to: clientEmail,
-    businessName: existingInvoice.business.name,
+    businessName: getInvoiceSenderName({
+      ...existingInvoice.business,
+      ...senderPreferences,
+    }),
+    recipientName: clientDisplayName,
     invoiceNumber,
-    totalAmount: existingInvoice.totalAmount,
+    totalAmount: totalAmountForEmail,
     currency: existingInvoice.currency,
+    dueDate: existingInvoice.dueDate,
     invoiceLink,
   });
 

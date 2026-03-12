@@ -4,9 +4,11 @@ import { getResendApiKey } from "@/lib/env";
 type SendInvoiceEmailInput = {
   to: string;
   businessName: string;
+  recipientName?: string | null;
   invoiceNumber: string;
   totalAmount: number;
   currency: string;
+  dueDate?: Date | string | null;
   invoiceLink: string;
 };
 
@@ -15,6 +17,7 @@ export type InvoiceReminderKind = "before_due_3_days" | "after_due_7_days";
 type SendInvoiceReminderEmailInput = {
   to: string;
   businessName: string;
+  recipientName?: string | null;
   invoiceNumber: string;
   totalAmount: number;
   currency: string;
@@ -47,22 +50,22 @@ export function isEmailDeliveryError(error: unknown): error is EmailDeliveryErro
   return error instanceof EmailDeliveryError;
 }
 
-export function buildPublicInvoiceLink(invoiceNumber: string, requestUrl?: string): string {
-  const normalizedInvoiceNumber = invoiceNumber.trim();
-  if (!normalizedInvoiceNumber) {
-    throw new EmailConfigurationError("Missing invoice number");
+export function buildPublicInvoiceLink(publicToken: string, requestUrl?: string): string {
+  const normalizedToken = publicToken.trim();
+  if (!normalizedToken) {
+    throw new EmailConfigurationError("Missing public invoice token");
   }
-  const encodedInvoiceNumber = encodeURIComponent(normalizedInvoiceNumber);
+  const encodedToken = encodeURIComponent(normalizedToken);
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
   if (appUrl) {
-    return new URL(`/i/${encodedInvoiceNumber}`, appUrl).toString();
+    return new URL(`/invoice/pay/${encodedToken}`, appUrl).toString();
   }
 
   if (requestUrl) {
     const origin = new URL(requestUrl).origin;
-    return new URL(`/i/${encodedInvoiceNumber}`, origin).toString();
+    return new URL(`/invoice/pay/${encodedToken}`, origin).toString();
   }
 
   throw new EmailConfigurationError("Missing NEXT_PUBLIC_APP_URL for public invoice links");
@@ -104,26 +107,37 @@ function formatDueDate(value: Date): string {
 export async function sendInvoiceEmail({
   to,
   businessName,
+  recipientName,
   invoiceNumber,
   totalAmount,
   currency,
+  dueDate,
   invoiceLink,
 }: SendInvoiceEmailInput) {
   const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
+  const parsedDueDate =
+    dueDate instanceof Date ? dueDate : dueDate ? new Date(dueDate) : null;
+  const dueDateLabel =
+    parsedDueDate && !Number.isNaN(parsedDueDate.getTime()) ? formatDueDate(parsedDueDate) : null;
+  const normalizedRecipientName = recipientName?.trim();
+  const greetingLine = normalizedRecipientName ? `Hello ${normalizedRecipientName},` : "Hello,";
   const safeBusinessName = escapeHtml(businessName);
+  const safeGreetingLine = escapeHtml(greetingLine);
   const safeInvoiceNumber = escapeHtml(invoiceNumber);
   const safeFormattedTotal = escapeHtml(formattedTotal);
+  const safeDueDateLabel = dueDateLabel ? escapeHtml(dueDateLabel) : null;
   const safeInvoiceLink = escapeHtml(invoiceLink);
 
   const result = await getResendClient().emails.send({
     from,
     to,
     subject: `${businessName} - Invoice ${invoiceNumber}`,
-    text: `Hello,
+    text: `${greetingLine}
 
 ${businessName} sent you invoice ${invoiceNumber}.
 Total amount: ${formattedTotal}
+${dueDateLabel ? `Due date: ${dueDateLabel}\n` : ""}
 
 Please view your invoice here:
 
@@ -131,9 +145,15 @@ ${invoiceLink}`,
     html: `
       <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 24px;">
         <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px;">
+          <p style="margin: 0 0 12px; color: #333333;">${safeGreetingLine}</p>
           <h2 style="margin: 0 0 12px; color: #111111;">${safeBusinessName}</h2>
           <p style="margin: 0 0 8px; color: #333333;">Invoice <strong>${safeInvoiceNumber}</strong></p>
           <p style="margin: 0 0 20px; color: #333333;">Total amount: <strong>${safeFormattedTotal}</strong></p>
+          ${
+            safeDueDateLabel
+              ? `<p style="margin: 0 0 20px; color: #333333;">Due date: <strong>${safeDueDateLabel}</strong></p>`
+              : ""
+          }
           <a href="${safeInvoiceLink}" style="display: inline-block; padding: 12px 16px; background: #111111; color: #ffffff; text-decoration: none; border-radius: 6px;">
             View Invoice
           </a>
@@ -175,6 +195,7 @@ ${invoiceLink}`,
 export async function sendInvoiceReminderEmail({
   to,
   businessName,
+  recipientName,
   invoiceNumber,
   totalAmount,
   currency,
@@ -185,6 +206,8 @@ export async function sendInvoiceReminderEmail({
   const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const dueDateLabel = formatDueDate(dueDate);
+  const normalizedRecipientName = recipientName?.trim();
+  const greetingLine = normalizedRecipientName ? `Hello ${normalizedRecipientName},` : "Hello,";
   const isBeforeDue = reminderKind === "before_due_3_days";
   const timingLine = isBeforeDue
     ? `This invoice is due on ${dueDateLabel} (in 3 days).`
@@ -194,6 +217,7 @@ export async function sendInvoiceReminderEmail({
     : `${businessName} - Reminder: Invoice ${invoiceNumber} is overdue`;
 
   const safeBusinessName = escapeHtml(businessName);
+  const safeGreetingLine = escapeHtml(greetingLine);
   const safeInvoiceNumber = escapeHtml(invoiceNumber);
   const safeFormattedTotal = escapeHtml(formattedTotal);
   const safeTimingLine = escapeHtml(timingLine);
@@ -203,7 +227,7 @@ export async function sendInvoiceReminderEmail({
     from,
     to,
     subject,
-    text: `Hello,
+    text: `${greetingLine}
 
 Reminder for invoice ${invoiceNumber}.
 Amount: ${formattedTotal}
@@ -214,6 +238,7 @@ ${invoiceLink}`,
     html: `
       <div style="font-family: Arial, sans-serif; background: #f7f7f7; padding: 24px;">
         <div style="max-width: 560px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e5e5; border-radius: 8px; padding: 24px;">
+          <p style="margin: 0 0 12px; color: #333333;">${safeGreetingLine}</p>
           <h2 style="margin: 0 0 12px; color: #111111;">${safeBusinessName}</h2>
           <p style="margin: 0 0 8px; color: #333333;">Reminder for invoice <strong>${safeInvoiceNumber}</strong></p>
           <p style="margin: 0 0 8px; color: #333333;">Amount: <strong>${safeFormattedTotal}</strong></p>

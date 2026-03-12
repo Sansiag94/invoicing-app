@@ -4,10 +4,13 @@ import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Eye, Trash2, UserPlus } from "lucide-react";
+import { buildAddressString } from "@/lib/address";
+import { isSupportedCountry } from "@/lib/countries";
 import { ClientSummary } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CountryCombobox } from "@/components/ui/country-combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -23,7 +26,10 @@ function ClientsPageContent() {
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
   const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [street, setStreet] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [vatNumber, setVatNumber] = useState("");
   const [isCreating, setIsCreating] = useState(false);
@@ -42,6 +48,7 @@ function ClientsPageContent() {
           client.companyName ?? "",
           client.contactName ?? "",
           client.email,
+          client.phone ?? "",
           client.country,
           client.vatNumber ?? "",
         ].join(" ");
@@ -69,6 +76,12 @@ function ClientsPageContent() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (!isSupportedCountry(country)) {
+      alert("Please select a valid country from the list.");
+      return;
+    }
+
     setIsCreating(true);
 
     try {
@@ -81,7 +94,11 @@ function ClientsPageContent() {
           companyName,
           contactName,
           email,
-          address,
+          phone,
+          address: buildAddressString({ street, postalCode, city }),
+          street,
+          postalCode,
+          city,
           country,
           vatNumber,
         }),
@@ -97,7 +114,10 @@ function ClientsPageContent() {
       setCompanyName("");
       setContactName("");
       setEmail("");
-      setAddress("");
+      setPhone("");
+      setStreet("");
+      setPostalCode("");
+      setCity("");
       setCountry("");
       setVatNumber("");
       setSuccessMessage("Client created successfully.");
@@ -214,20 +234,38 @@ function ClientsPageContent() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="phone">Phone</Label>
               <Input
-                id="address"
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(event) => setPhone(event.target.value)}
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="street">Street</Label>
+              <Input id="street" value={street} onChange={(event) => setStreet(event.target.value)} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="postalCode">Postal Code</Label>
+              <Input
+                id="postalCode"
+                value={postalCode}
+                onChange={(event) => setPostalCode(event.target.value)}
                 required
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="city">City</Label>
+              <Input id="city" value={city} onChange={(event) => setCity(event.target.value)} required />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="country">Country</Label>
-              <Input
+              <CountryCombobox
                 id="country"
                 value={country}
-                onChange={(event) => setCountry(event.target.value)}
+                onChange={setCountry}
                 required
               />
             </div>
@@ -270,7 +308,7 @@ function ClientsPageContent() {
             <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
               <p className="text-base font-medium text-slate-900">No clients match your search</p>
               <p className="text-sm text-slate-600">
-                Try a different search term for name, email, country, or VAT number.
+                Try a different search term for name, email, phone, country, or VAT number.
               </p>
             </div>
           ) : (
@@ -279,6 +317,7 @@ function ClientsPageContent() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Phone</TableHead>
                   <TableHead>Country</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -288,6 +327,7 @@ function ClientsPageContent() {
                   <TableRow key={client.id}>
                     <TableCell>{getClientDisplayName(client) || "-"}</TableCell>
                     <TableCell>{client.email}</TableCell>
+                    <TableCell>{client.phone || "-"}</TableCell>
                     <TableCell>{client.country}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">

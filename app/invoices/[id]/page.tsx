@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Download, PencilLine, Plus, Send, Trash2 } from "lucide-react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, Download, Eye, PencilLine, Plus, Send, Trash2 } from "lucide-react";
+import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { InvoiceDetails, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +63,9 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const id = params?.id;
+  const shouldStartEditing = searchParams.get("mode") === "edit";
   const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -75,6 +78,7 @@ export default function InvoiceDetailPage() {
 
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
   const [lineItems, setLineItems] = useState<LineItemData[]>([]);
 
@@ -83,6 +87,7 @@ export default function InvoiceDetailPage() {
   function loadInvoiceIntoForm(dataInvoice: InvoiceDetails) {
     setIssueDate(toDateInputValue(dataInvoice.issueDate));
     setDueDate(toDateInputValue(dataInvoice.dueDate));
+    setSubject(dataInvoice.subject ?? "");
     setNotes(dataInvoice.notes ?? "");
     setLineItems(
       dataInvoice.lineItems.map((item) => ({
@@ -142,6 +147,10 @@ export default function InvoiceDetailPage() {
     return () => window.clearTimeout(timeoutId);
   }, [successMessage]);
 
+  useEffect(() => {
+    setIsEditing(shouldStartEditing);
+  }, [shouldStartEditing]);
+
   const handleDownloadPdf = async () => {
     if (!invoice) {
       return;
@@ -159,7 +168,10 @@ export default function InvoiceDetailPage() {
       const downloadUrl = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = `invoice_${invoice.invoiceNumber}.pdf`;
+      link.download = buildInvoicePdfFilename(
+        invoice.invoiceNumber,
+        invoice.client.companyName || invoice.client.contactName || invoice.client.email
+      );
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -231,7 +243,7 @@ export default function InvoiceDetailPage() {
     }
 
     loadInvoiceIntoForm(invoice);
-    setIsEditing(false);
+    router.replace(`/invoices/${invoice.id}`);
   };
 
   const handleSaveInvoice = async () => {
@@ -291,6 +303,7 @@ export default function InvoiceDetailPage() {
         body: JSON.stringify({
           issueDate,
           dueDate,
+          subject,
           notes,
           lineItems: normalizedLineItems.map((item) => ({
             id: item.id,
@@ -312,6 +325,7 @@ export default function InvoiceDetailPage() {
       setInvoice(result);
       loadInvoiceIntoForm(result);
       setIsEditing(false);
+      router.replace(`/invoices/${id}`);
       setSuccessMessage("Invoice updated successfully.");
     } catch (error) {
       console.error("Error updating invoice:", error);
@@ -386,7 +400,15 @@ export default function InvoiceDetailPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {!isEditing ? (
-            <Button onClick={() => setIsEditing(true)}>
+            <Button asChild variant="outline">
+              <Link href={`/invoices/${invoice.id}/preview`}>
+                <Eye className="h-4 w-4" />
+                Preview Invoice
+              </Link>
+            </Button>
+          ) : null}
+          {!isEditing ? (
+            <Button onClick={() => router.push(`/invoices/${invoice.id}?mode=edit`)}>
               <PencilLine className="h-4 w-4" />
               Edit Invoice
             </Button>
@@ -447,6 +469,10 @@ export default function InvoiceDetailPage() {
             <p className="text-xs uppercase tracking-wide text-slate-500">Currency</p>
             <p className="font-medium text-slate-900">{invoice.currency}</p>
           </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Subject</p>
+            <p className="font-medium text-slate-900">{invoice.subject || "-"}</p>
+          </div>
           {isEditing ? (
             <>
               <div className="space-y-2">
@@ -467,20 +493,24 @@ export default function InvoiceDetailPage() {
                   onChange={(event) => setDueDate(event.target.value)}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject</Label>
+                <Input id="subject" value={subject} onChange={(event) => setSubject(event.target.value)} />
+              </div>
               <div className="space-y-2 md:col-span-3">
-                <Label htmlFor="notes">Notes</Label>
+                <Label htmlFor="notes">Message</Label>
                 <Textarea
                   id="notes"
                   rows={4}
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Add payment instructions or notes"
+                  placeholder="Add the greeting or message shown on the invoice"
                 />
               </div>
             </>
           ) : (
             <div className="md:col-span-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Notes</p>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Message</p>
               <p className="font-medium text-slate-900">{invoice.notes || "-"}</p>
             </div>
           )}

@@ -2,11 +2,17 @@ import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
+import { withStructuredAddress } from "@/lib/address";
+import { isSupportedCountry } from "@/lib/countries";
 
 type CreateClientBody = {
   email: unknown;
   address: unknown;
+  street?: unknown;
+  postalCode?: unknown;
+  city?: unknown;
   country: unknown;
+  phone?: unknown;
   companyName?: unknown;
   contactName?: unknown;
   vatNumber?: unknown;
@@ -50,14 +56,24 @@ export async function POST(request: Request) {
     const user = await getAuthenticatedUser(request);
     const body = (await request.json()) as CreateClientBody;
     const email = asString(body.email);
-    const address = asString(body.address);
     const country = asString(body.country);
     const companyName = asString(body.companyName);
     const contactName = asString(body.contactName);
+    const phone = asString(body.phone);
     const vatNumber = asString(body.vatNumber);
+    const structuredAddress = withStructuredAddress({
+      address: asString(body.address),
+      street: asString(body.street),
+      postalCode: asString(body.postalCode),
+      city: asString(body.city),
+    });
 
-    if (!email || !address || !country) {
+    if (!email || !structuredAddress.address || !structuredAddress.street || !structuredAddress.postalCode || !structuredAddress.city || !country) {
       return apiError("Missing required fields", 400);
+    }
+
+    if (!isSupportedCountry(country)) {
+      return apiError("Invalid country", 400);
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -84,7 +100,11 @@ export async function POST(request: Request) {
         companyName,
         contactName,
         email,
-        address,
+        phone,
+        address: structuredAddress.address,
+        street: structuredAddress.street,
+        postalCode: structuredAddress.postalCode,
+        city: structuredAddress.city,
         country,
         vatNumber,
       },

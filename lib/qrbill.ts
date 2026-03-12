@@ -1,8 +1,10 @@
 import { SwissQRBill, SwissQRCode } from "swissqrbill/svg";
 import type { Data } from "swissqrbill/types";
+import { normalizeInvoiceCurrency } from "@/lib/invoice";
 
 type InvoiceForQRBill = {
   invoiceNumber: string;
+  reference?: string | null;
   totalAmount: number;
   currency: string;
 };
@@ -25,13 +27,18 @@ type ClientForQRBill = {
 type ParsedAddress = {
   address: string;
   buildingNumber?: string;
+  line2?: string;
   zip: string;
   city: string;
 };
 
+export type SwissReferenceType = "NON" | "QRR" | "SCOR";
+
 export type SwissQRBillMetadata = {
   account: string;
-  reference: string;
+  referenceType: SwissReferenceType;
+  reference: string | null;
+  additionalInformation: string;
 };
 
 export type QRRect = {
@@ -110,71 +117,75 @@ function parseAddress(addressRaw: string, countryCode: string): ParsedAddress {
     city = normalizeWhitespace(parts[1]).slice(0, 35);
   }
 
+  const line2 = parts.find((part, index) => index > 0 && part !== zipCitySource);
+
   return {
     address: street.slice(0, 70),
     buildingNumber,
+    line2: line2?.slice(0, 70),
     zip,
     city,
   };
 }
 
-function mod97(value: string): number {
-  let remainder = 0;
-
-  for (const char of value) {
-    const code = char.charCodeAt(0);
-    const chunk =
-      code >= 65 && code <= 90
-        ? String(code - 55)
-        : code >= 48 && code <= 57
-          ? char
-          : "";
-
-    for (const digit of chunk) {
-      remainder = (remainder * 10 + Number(digit)) % 97;
-    }
-  }
-
-  return remainder;
+function toAddressLine1(parsedAddress: ParsedAddress): string {
+  return [parsedAddress.address, parsedAddress.buildingNumber].filter(Boolean).join(" ").slice(0, 70);
 }
 
-function isQRIBAN(account: string): boolean {
-  const iid = Number.parseInt(account.slice(4, 9), 10);
-  return Number.isFinite(iid) && iid >= 30000 && iid <= 31999;
+function buildReference(): {
+  referenceType: SwissReferenceType;
+  reference: string | null;
+} {
+  return { referenceType: "NON", reference: null };
 }
 
-function buildScorReference(invoiceNumber: string): string {
-  const cleaned = normalizeWhitespace(invoiceNumber).toUpperCase().replace(/[^A-Z0-9]/g, "");
-  const body = (cleaned || "INVOICE").slice(0, 21);
-  const checksum = String(98 - mod97(`${body}RF00`)).padStart(2, "0");
-  return `RF${checksum}${body}`;
-}
+function getPayloadFields(
+  invoice: InvoiceForQRBill,
+  business: BusinessForQRBill,
+  client: ClientForQRBill,
+  account: string,
+  referenceType: SwissReferenceType,
+  reference: string | null
+): string[] {
+  const creditorCountry = toCountryCode(business.country, "CH");
+  const debtorCountry = toCountryCode(client.country, "CH");
+  const creditorAddress = parseAddress(business.address ?? "", creditorCountry);
+  const debtorAddress = parseAddress(client.address ?? "", debtorCountry);
+  const debtorName =
+    normalizeWhitespace(client.companyName || client.contactName || client.email || "").slice(0, 70) || "Customer";
+  const additionalInformation = `Invoice ${normalizeWhitespace(invoice.invoiceNumber) || "Invoice"}`.slice(0, 140);
+  const amount = Math.max(0, Number(invoice.totalAmount || 0)).toFixed(2);
+  const currency = normalizeInvoiceCurrency(invoice.currency, "CHF");
 
-function buildQRReference(invoiceNumber: string): string {
-  const alphanumeric = normalizeWhitespace(invoiceNumber).toUpperCase();
-  const digitPayload = alphanumeric
-    .replace(/[^A-Z0-9]/g, "")
-    .split("")
-    .map((char) => {
-      if (/\d/.test(char)) return char;
-      return String(char.charCodeAt(0) - 55);
-    })
-    .join("");
-
-  const body = (digitPayload || "0").slice(-26).padStart(26, "0");
-  const table = [0, 9, 4, 6, 8, 2, 7, 1, 3, 5];
-  let carry = 0;
-
-  for (const digit of body) {
-    carry = table[(carry + Number(digit)) % 10];
-  }
-
-  const checksum = String((10 - carry) % 10);
-  return `${body}${checksum}`;
-}
-
-function buildReference(invoiceNumber: string, account: string): string {
-  return isQRIBAN(account) ? buildQRReference(invoiceNumber) : buildScorReference(invoiceNumber);
+  return [
+    "SPC",
+    "0200",
+    "1",
+    account,
+    normalizeWhitespace(business.name).slice(0, 70),
+    toAddressLine1(creditorAddress),
+    creditorAddress.line2 || "",
+    creditorAddress.zip,
+    creditorAddress.city,
+    creditorCountry,
+    "",
+    "",
+    "",
+    "",
+    "",
+    amount,
+    currency,
+    debtorName,
+    toAddressLine1(debtorAddress),
+    debtorAddress.line2 || "",
+    debtorAddress.zip,
+    debtorAddress.city,
+    debtorCountry,
+    referenceType,
+    reference ?? "",
+    additionalInformation,
+    "EPD",
+  ];
 }
 
 export function getSwissQRBillMetadata(
@@ -186,9 +197,14 @@ export function getSwissQRBillMetadata(
     throw new Error("Missing business IBAN for Swiss QR-bill.");
   }
 
+  const { referenceType, reference } = buildReference();
+  const additionalInformation = `Invoice ${normalizeWhitespace(invoice.invoiceNumber) || "Invoice"}`.slice(0, 140);
+
   return {
     account,
-    reference: buildReference(invoice.invoiceNumber, account),
+    referenceType,
+    reference,
+    additionalInformation,
   };
 }
 
@@ -196,27 +212,28 @@ function buildQRBillData(
   invoice: InvoiceForQRBill,
   business: BusinessForQRBill,
   client: ClientForQRBill
-): Data {
-  const { account, reference } = getSwissQRBillMetadata(invoice, business);
+): { data: Data; metadata: SwissQRBillMetadata } {
+  const account = normalizeWhitespace(business.iban ?? "").replace(/\s/g, "").toUpperCase();
+  if (!account) {
+    throw new Error("Missing business IBAN for Swiss QR-bill.");
+  }
 
+  const { referenceType, reference } = buildReference();
   const creditorCountry = toCountryCode(business.country, "CH");
   const debtorCountry = toCountryCode(client.country, "CH");
   const creditorAddress = parseAddress(business.address ?? "", creditorCountry);
   const debtorAddress = parseAddress(client.address ?? "", debtorCountry);
   const debtorName =
-    normalizeWhitespace(client.companyName || client.contactName || client.email || "").slice(
-      0,
-      70
-    ) || "Customer";
+    normalizeWhitespace(client.companyName || client.contactName || client.email || "").slice(0, 70) || "Customer";
 
-  const currency: "CHF" | "EUR" = invoice.currency === "EUR" ? "EUR" : "CHF";
-  const normalizedInvoiceNumber = normalizeWhitespace(invoice.invoiceNumber) || "Invoice";
+  const amount = Number(Math.max(0, invoice.totalAmount || 0).toFixed(2));
+  const currency = normalizeInvoiceCurrency(invoice.currency, "CHF");
+  const additionalInformation = `Invoice ${normalizeWhitespace(invoice.invoiceNumber) || "Invoice"}`.slice(0, 140);
 
-  return {
-    amount: Number(invoice.totalAmount.toFixed(2)),
+  const data: Data = {
+    amount,
     currency,
-    reference,
-    message: `Invoice ${normalizedInvoiceNumber}`.slice(0, 140),
+    message: additionalInformation,
     creditor: {
       account,
       name: normalizeWhitespace(business.name).slice(0, 70),
@@ -233,6 +250,20 @@ function buildQRBillData(
       zip: debtorAddress.zip,
       city: debtorAddress.city,
       country: debtorCountry,
+    },
+  };
+
+  if (referenceType !== "NON" && reference) {
+    data.reference = reference;
+  }
+
+  return {
+    data,
+    metadata: {
+      account,
+      referenceType,
+      reference,
+      additionalInformation,
     },
   };
 }
@@ -272,16 +303,39 @@ function parseSvgRects(svg: string): QRRect[] {
     .filter((rect): rect is QRRect => rect !== null);
 }
 
+export function generateSwissQRPayload(
+  invoice: InvoiceForQRBill,
+  business: BusinessForQRBill,
+  client: ClientForQRBill
+): string {
+  const account = normalizeWhitespace(business.iban ?? "").replace(/\s/g, "").toUpperCase();
+  if (!account) {
+    throw new Error("Missing business IBAN for Swiss QR-bill.");
+  }
+
+  const { referenceType, reference } = buildReference();
+  return getPayloadFields(invoice, business, client, account, referenceType, reference).join("\n");
+}
+
 export function generateQRBill(
   invoice: InvoiceForQRBill,
   business: BusinessForQRBill,
   client: ClientForQRBill
 ): string {
-  const qrBill = new SwissQRBill(buildQRBillData(invoice, business, client), {
+  const qrBill = new SwissQRBill(buildQRBillData(invoice, business, client).data, {
     language: "EN",
   });
 
   return qrBill.toString();
+}
+
+export function generateSwissQRCodeSvg(
+  invoice: InvoiceForQRBill,
+  business: BusinessForQRBill,
+  client: ClientForQRBill
+): string {
+  const qrCode = new SwissQRCode(buildQRBillData(invoice, business, client).data, 46);
+  return qrCode.toString();
 }
 
 export function generateSwissQRCodeRects(
@@ -289,7 +343,6 @@ export function generateSwissQRCodeRects(
   business: BusinessForQRBill,
   client: ClientForQRBill
 ): QRRect[] {
-  const qrCode = new SwissQRCode(buildQRBillData(invoice, business, client), 46);
-  const svgMarkup = qrCode.toString();
+  const svgMarkup = generateSwissQRCodeSvg(invoice, business, client);
   return parseSvgRects(svgMarkup);
 }

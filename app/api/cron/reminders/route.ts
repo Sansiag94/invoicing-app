@@ -9,6 +9,7 @@ import {
   isEmailConfigurationError,
   sendInvoiceReminderEmail,
 } from "@/lib/email";
+import { getInvoiceSenderName } from "@/lib/business";
 
 export const runtime = "nodejs";
 
@@ -22,10 +23,15 @@ type ReminderBatchSummary = {
 type ReminderCandidate = {
   id: string;
   invoiceNumber: string;
+  publicToken: string | null;
   totalAmount: number;
   currency: string;
   dueDate: Date;
   businessName: string;
+  businessOwnerName: string | null;
+  businessInvoiceSenderType: string | null;
+  clientCompanyName: string | null;
+  clientContactName: string | null;
   clientEmail: string;
 };
 
@@ -48,10 +54,15 @@ async function findReminderCandidates(
     SELECT
       i."uuid" AS "id",
       i."invoiceNumber",
+      i."publicToken",
       i."totalAmount",
       i."currency",
       i."dueDate",
       b."name" AS "businessName",
+      b."ownerName" AS "businessOwnerName",
+      b."invoiceSenderType" AS "businessInvoiceSenderType",
+      c."companyName" AS "clientCompanyName",
+      c."contactName" AS "clientContactName",
       c."email" AS "clientEmail"
     FROM "Invoice" i
     INNER JOIN "Business" b ON b."uuid" = i."businessId"
@@ -137,10 +148,36 @@ async function processReminderBatch(
     }
 
     try {
-      const invoiceLink = buildPublicInvoiceLink(invoiceNumber, request.url);
+      let publicToken = candidate.publicToken?.trim() || "";
+      if (!publicToken) {
+        const updatedInvoice = await prisma.invoice.update({
+          where: { id: candidate.id },
+          data: { publicToken: crypto.randomUUID() },
+          select: { publicToken: true },
+        });
+
+        publicToken = updatedInvoice.publicToken?.trim() || "";
+      }
+
+      if (!publicToken) {
+        skipped += 1;
+        await releaseReminderClaim(candidate.id, reminderType);
+        continue;
+      }
+
+      const invoiceLink = buildPublicInvoiceLink(publicToken, request.url);
+      const recipientName =
+        candidate.clientContactName?.trim() ||
+        candidate.clientCompanyName?.trim() ||
+        clientEmail;
       await sendInvoiceReminderEmail({
         to: clientEmail,
-        businessName: candidate.businessName,
+        businessName: getInvoiceSenderName({
+          name: candidate.businessName,
+          ownerName: candidate.businessOwnerName,
+          invoiceSenderType: candidate.businessInvoiceSenderType,
+        }),
+        recipientName,
         invoiceNumber,
         totalAmount: candidate.totalAmount,
         currency: candidate.currency,

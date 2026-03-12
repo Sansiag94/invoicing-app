@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
+import { calculateInvoiceTotals } from "@/lib/invoice";
 
 export const runtime = "nodejs";
 
@@ -38,6 +39,13 @@ export async function POST(
         totalAmount: true,
         currency: true,
         publicToken: true,
+        lineItems: {
+          select: {
+            quantity: true,
+            unitPrice: true,
+            taxRate: true,
+          },
+        },
       },
     });
 
@@ -53,7 +61,9 @@ export async function POST(
       return apiError("Invoice is already paid", 400);
     }
 
-    const amountInMinorUnit = Math.round(invoice.totalAmount * 100);
+    const computedTotals = calculateInvoiceTotals(invoice.lineItems);
+    const totalAmountDue = computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount;
+    const amountInMinorUnit = Math.round(totalAmountDue * 100);
     if (amountInMinorUnit <= 0) {
       return apiError("Invoice total must be greater than 0", 400);
     }

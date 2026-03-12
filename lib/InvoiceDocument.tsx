@@ -2,7 +2,10 @@ import React from "react";
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Image, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { Prisma } from "@prisma/client";
+import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
 import { generateSwissQRCodeRects, getSwissQRBillMetadata, type SwissQRBillMetadata } from "@/lib/qrbill";
+import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
+import { isSwissCountry } from "@/lib/countries";
 
 type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
@@ -12,221 +15,329 @@ type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   };
 }>;
 
-const FIRST_PAGE_ROWS = 18;
-const MIDDLE_PAGE_ROWS = 24;
-const LAST_PAGE_RESERVED_ROWS = 4;
+const POINTS_PER_MM = 72 / 25.4;
+
+function mm(value: number): number {
+  return value * POINTS_PER_MM;
+}
+
+const FIRST_PAGE_ROWS_NO_QR = 15;
+const NEXT_PAGE_ROWS_NO_QR = 28;
+const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 7;
+const MIN_ROWS_ON_QR_PAGE = 4;
+const MAX_ROWS_ON_QR_PAGE = 11;
+
+const PAGE_TOP_MARGIN = mm(20);
+const PAGE_SIDE_MARGIN = mm(20);
+const PAGE_BOTTOM_MARGIN = mm(12);
+const QR_BILL_HEIGHT = mm(105);
+const QR_CUT_LINE_SPACE = mm(4);
+const QR_BILL_TOTAL_SPACE = QR_BILL_HEIGHT + QR_CUT_LINE_SPACE;
+const QR_COLUMN_WIDTH = mm(46);
+const PAYMENT_PART_GAP = mm(6);
+const RECEIPT_WIDTH = mm(62);
+const PAYMENT_PART_WIDTH = mm(148);
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 32,
-    paddingHorizontal: 44,
-    paddingBottom: 40,
+    position: "relative",
     fontFamily: "Helvetica",
     fontSize: 10,
     color: "#111827",
   },
-  topBand: {
+  pageBody: {
+    paddingTop: PAGE_TOP_MARGIN,
+    paddingHorizontal: PAGE_SIDE_MARGIN,
+    paddingBottom: PAGE_BOTTOM_MARGIN,
+    minHeight: "100%",
+  },
+  pageBodyWithQrSpace: {
+    paddingBottom: QR_BILL_TOTAL_SPACE + PAGE_BOTTOM_MARGIN,
+  },
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 12,
+    marginBottom: mm(16),
+  },
+  sellerCol: {
+    width: "48%",
+    paddingRight: mm(6),
+  },
+  businessMetaCol: {
+    width: "36%",
+    alignItems: "flex-start",
+    marginTop: mm(28),
   },
   logo: {
-    width: 82,
-    height: 82,
+    width: mm(24),
+    height: mm(24),
     objectFit: "contain",
+    marginBottom: mm(3.5),
   },
-  senderBlock: {
-    width: "50%",
-    paddingRight: 12,
-  },
-  clientBlock: {
-    width: "42%",
-  },
-  nameStrong: {
-    fontSize: 17,
+  sellerName: {
+    fontSize: 11.8,
     fontWeight: "bold",
-    marginBottom: 6,
-    color: "#111827",
+    marginBottom: mm(0.8),
   },
-  blockLine: {
-    fontSize: 10,
+  sellerSecondary: {
+    fontSize: 9.3,
     color: "#374151",
-    marginBottom: 2,
+    marginBottom: mm(1.2),
   },
-  invoiceMeta: {
-    marginTop: 8,
-    marginBottom: 14,
+  bodyLine: {
+    fontSize: 9.2,
+    lineHeight: 1.35,
+    marginBottom: mm(0.55),
   },
-  invoiceMetaRow: {
-    flexDirection: "row",
-    marginTop: 2,
-  },
-  invoiceMetaLabel: {
-    fontSize: 10,
-    color: "#4b5563",
-    width: 68,
-  },
-  invoiceMetaValue: {
-    fontSize: 10,
-    color: "#111827",
-  },
-  invoiceNo: {
-    fontSize: 18,
+  infoLabel: {
+    fontSize: 7.2,
     fontWeight: "bold",
-    color: "#111827",
-    marginBottom: 4,
+    color: "#6b7280",
+    textTransform: "uppercase",
+    marginBottom: mm(1.2),
+    letterSpacing: 0.3,
+  },
+  recipientName: {
+    fontSize: 11.8,
+    fontWeight: "bold",
+    marginBottom: mm(1),
+  },
+  recipientSecondary: {
+    fontSize: 9.3,
+    color: "#374151",
+    marginBottom: mm(1.8),
+  },
+  invoiceHero: {
+    marginBottom: mm(10),
+  },
+  invoiceTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginBottom: mm(1.2),
+    letterSpacing: 0.2,
+  },
+  invoiceDate: {
+    fontSize: 10.2,
+    color: "#374151",
+    marginBottom: mm(1.6),
+  },
+  invoiceSubject: {
+    fontSize: 8.8,
+    color: "#374151",
+    lineHeight: 1.35,
+    marginBottom: mm(0.8),
+  },
+  invoiceDueDate: {
+    fontSize: 8.8,
+    color: "#6b7280",
+  },
+  introTextBlock: {
+    marginBottom: mm(10),
+    width: "78%",
+  },
+  introText: {
+    fontSize: 10,
+    lineHeight: 1.45,
+    color: "#374151",
   },
   tableWrap: {
-    marginTop: 8,
+    marginTop: mm(10),
+    marginBottom: mm(4),
   },
-  tableHeaderRow: {
+  tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#4b5563",
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    marginBottom: 4,
+    borderBottomWidth: 1.2,
+    borderBottomColor: "#111827",
+    paddingBottom: mm(1.8),
+    paddingHorizontal: mm(1.2),
   },
-  tableHeaderCell: {
-    fontSize: 10,
-    color: "#ffffff",
+  tableHeaderText: {
+    fontSize: 8,
     fontWeight: "bold",
+    color: "#374151",
+    textTransform: "uppercase",
   },
   tableRow: {
     flexDirection: "row",
-    backgroundColor: "#f3f4f6",
-    borderRadius: 4,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    marginBottom: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    paddingVertical: mm(2.1),
+    paddingHorizontal: mm(1.2),
   },
-  colDescription: { width: "48%" },
-  colPrice: { width: "16%", textAlign: "right" },
-  colUnits: { width: "13%", textAlign: "right" },
-  colTotal: { width: "23%", textAlign: "right" },
-  totalSummaryWrap: {
-    alignSelf: "flex-end",
-    width: 230,
-    marginTop: 14,
-    marginBottom: 12,
+  tableCellText: {
+    fontSize: 9.3,
+  },
+  colPos: { width: "8%" },
+  colDesc: { width: "46%" },
+  colQty: { width: "12%", textAlign: "right" },
+  colUnit: { width: "16%", textAlign: "right" },
+  colTotal: { width: "18%", textAlign: "right" },
+  totalsBox: {
+    marginTop: mm(10),
+    marginLeft: "auto",
+    width: mm(66),
+  },
+  totalsRule: {
     borderTopWidth: 1,
     borderTopColor: "#d1d5db",
-    paddingTop: 8,
+    paddingTop: mm(2.6),
   },
-  totalSummaryRow: {
+  totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    marginBottom: mm(1.2),
   },
-  totalLabel: {
-    fontSize: 16,
+  totalsLabel: {
+    fontSize: 9.4,
+    color: "#374151",
+  },
+  totalsValue: {
+    fontSize: 9.4,
+    color: "#374151",
+  },
+  totalDueLabel: {
+    fontSize: 11,
     fontWeight: "bold",
-    color: "#111827",
   },
-  totalValue: {
-    fontSize: 16,
+  totalDueValue: {
+    fontSize: 11,
     fontWeight: "bold",
-    color: "#111827",
   },
-  notesBox: {
-    borderWidth: 1,
-    borderColor: "#d1d5db",
-    borderRadius: 7,
-    backgroundColor: "#f9fafb",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    marginTop: 8,
+  closingTextBlock: {
+    marginTop: mm(15),
+    width: "72%",
   },
-  notesText: {
-    fontSize: 10,
+  closingText: {
+    fontSize: 9.6,
     lineHeight: 1.4,
-    color: "#1f2937",
+    color: "#374151",
   },
-  bottomGrow: {
-    flexGrow: 1,
+  cutLineWrap: {
+    position: "relative",
+    marginBottom: mm(1.5),
   },
-  paymentSection: {
-    marginTop: 12,
+  cutLine: {
     borderTopWidth: 1,
-    borderTopColor: "#111827",
+    borderTopColor: "#000000",
     borderTopStyle: "dashed",
-    paddingTop: 10,
-    minHeight: 260,
   },
-  paymentColumns: {
+  qrBillSection: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: PAGE_BOTTOM_MARGIN,
+    height: QR_BILL_TOTAL_SPACE,
+  },
+  qrBillRow: {
     flexDirection: "row",
-    minHeight: 238,
+    height: QR_BILL_HEIGHT,
   },
   receiptCol: {
-    width: "27%",
-    paddingTop: 6,
-    paddingRight: 10,
+    width: RECEIPT_WIDTH,
+    paddingLeft: mm(5),
+    paddingRight: mm(4),
     borderRightWidth: 1,
-    borderRightColor: "#111827",
+    borderRightColor: "#000000",
     borderRightStyle: "dashed",
   },
   paymentPartCol: {
-    width: "73%",
-    paddingLeft: 12,
-    paddingTop: 6,
+    width: PAYMENT_PART_WIDTH,
+    paddingLeft: mm(5),
+    paddingRight: mm(5),
   },
-  paymentTitle: {
-    fontSize: 10.5,
+  qrTitle: {
+    fontSize: 11,
     fontWeight: "bold",
-    marginBottom: 8,
-    color: "#111827",
+    marginBottom: mm(4),
+    color: "#000000",
   },
-  paymentSubtitle: {
-    fontSize: 8.8,
+  labelSmall: {
+    fontSize: 6,
     fontWeight: "bold",
-    marginBottom: 2,
-    color: "#111827",
+    marginBottom: mm(0.7),
+    color: "#000000",
   },
-  paymentLine: {
-    fontSize: 8.8,
-    color: "#111827",
-    marginBottom: 1,
+  paymentLabel: {
+    fontSize: 8,
+    fontWeight: "bold",
+    marginBottom: mm(0.8),
+    color: "#000000",
   },
-  qrAndDetails: {
+  textSmall: {
+    fontSize: 8,
+    lineHeight: 1.18,
+    marginBottom: mm(0.35),
+    color: "#000000",
+  },
+  textMedium: {
+    fontSize: 10,
+    lineHeight: 1.16,
+    marginBottom: mm(0.45),
+    color: "#000000",
+  },
+  blockGap: {
+    marginTop: mm(4),
+  },
+  paymentPartInner: {
     flexDirection: "row",
-    marginBottom: 8,
+    flexGrow: 1,
+  },
+  qrCol: {
+    width: QR_COLUMN_WIDTH,
+    justifyContent: "flex-start",
   },
   qrBox: {
-    width: 164,
-    height: 164,
-    borderWidth: 1,
-    borderColor: "#6b7280",
-    backgroundColor: "#ffffff",
+    width: QR_COLUMN_WIDTH,
+    height: QR_COLUMN_WIDTH,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
   },
   detailsCol: {
     flexGrow: 1,
-    paddingTop: 2,
+    paddingLeft: PAYMENT_PART_GAP,
   },
-  receiptBottom: {
-    marginTop: 10,
+  receiptMain: {
+    flexGrow: 1,
   },
-  amountsRow: {
+  receiptFooter: {
+    marginTop: "auto",
+    paddingTop: mm(1),
+  },
+  qrFooter: {
+    marginTop: "auto",
+    paddingTop: mm(1),
+    paddingBottom: mm(8),
+  },
+  amountRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginTop: 10,
-  },
-  amountCol: {
-    width: "48%",
   },
   amountLabel: {
-    fontSize: 8.3,
-    color: "#111827",
-    marginBottom: 2,
+    fontSize: 8,
     fontWeight: "bold",
+    marginBottom: mm(0.8),
+    color: "#000000",
   },
   amountValue: {
     fontSize: 10,
-    color: "#111827",
+    lineHeight: 1.16,
+    color: "#000000",
+  },
+  amountCol: {
+    width: "44%",
+  },
+  acceptancePointWrap: {
+    height: mm(8),
+    justifyContent: "flex-end",
+    alignItems: "flex-end",
+  },
+  acceptancePoint: {
+    fontSize: 8,
+    fontWeight: "bold",
+    color: "#000000",
   },
   qrFallback: {
-    fontSize: 8.8,
+    fontSize: 8,
     color: "#b91c1c",
   },
 });
@@ -234,6 +345,7 @@ const styles = StyleSheet.create({
 function formatDate(value: string | Date): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
+
   const day = String(date.getUTCDate()).padStart(2, "0");
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const year = date.getUTCFullYear();
@@ -252,106 +364,237 @@ function formatMoney(value: number): string {
   }).format(value);
 }
 
-function formatIban(value: string): string {
+function formatIban(value: string | null | undefined): string {
+  if (!value) return "-";
   const compact = value.replace(/\s+/g, "").toUpperCase();
-  return compact.match(/.{1,4}/g)?.join(" ") ?? value;
+  return compact.match(/.{1,4}/g)?.join(" ") ?? compact;
 }
 
-function formatReference(value: string): string {
-  const compact = value.replace(/\s+/g, "").toUpperCase();
-
-  if (/^RF[A-Z0-9]{3,23}$/.test(compact)) {
-    return compact.match(/.{1,4}/g)?.join(" ") ?? compact;
-  }
-
-  if (/^\d{27}$/.test(compact)) {
-    const head = compact.slice(0, 2);
-    const tail = compact.slice(2).match(/.{1,5}/g)?.join(" ") ?? compact.slice(2);
-    return `${head} ${tail}`.trim();
-  }
-
-  return value;
+function normalizeLine(value: string | null | undefined): string | null {
+  const normalized = (value ?? "").trim();
+  return normalized.length > 0 ? normalized : null;
 }
 
-function splitAddress(address: string | null | undefined): string[] {
-  if (!address) return [];
-  return address
-    .split(/\r?\n|,/)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
+function collectLines(...values: Array<string | null | undefined>): string[] {
+  const lines: string[] = [];
+
+  values.forEach((value) => {
+    const normalized = normalizeLine(value);
+    if (normalized && !lines.includes(normalized)) {
+      lines.push(normalized);
+    }
+  });
+
+  return lines;
 }
 
-function paginateLineItems<T>(items: T[]): T[][] {
-  if (items.length <= FIRST_PAGE_ROWS) {
+function toCompactAddressLines(address: ReturnType<typeof parsePostalAddress>): string[] {
+  return [address.street, address.line2, [address.postalCode, address.city].filter(Boolean).join(" "), address.country]
+    .filter((line) => line && line.trim().length > 0)
+    .reduce<string[]>((acc, line) => {
+      if (acc.length === 0) {
+        acc.push(line);
+        return acc;
+      }
+
+      const isCountryLine = line === address.country;
+      if (isCountryLine) {
+        const previousLine = acc[acc.length - 1] ?? "";
+        acc[acc.length - 1] = previousLine ? `${previousLine}, ${line}` : line;
+        return acc;
+      }
+
+      acc.push(line);
+      return acc;
+    }, []);
+}
+
+function toPaymentAddressLines(address: ReturnType<typeof parsePostalAddress>): string[] {
+  return [address.street, address.line2, [address.postalCode, address.city].filter(Boolean).join(" ")]
+    .filter((line) => line && line.trim().length > 0);
+}
+
+function paginateWithoutQr<T>(items: T[]): T[][] {
+  if (items.length <= FIRST_PAGE_ROWS_NO_QR) {
     return [items];
   }
 
   const pages: T[][] = [];
   let index = 0;
 
-  pages.push(items.slice(index, index + FIRST_PAGE_ROWS));
-  index += FIRST_PAGE_ROWS;
+  pages.push(items.slice(index, index + FIRST_PAGE_ROWS_NO_QR));
+  index += FIRST_PAGE_ROWS_NO_QR;
 
   while (index < items.length) {
-    const remaining = items.length - index;
-    if (remaining <= LAST_PAGE_RESERVED_ROWS) {
-      pages.push(items.slice(index));
-      break;
-    }
-
-    const chunkSize = Math.min(MIDDLE_PAGE_ROWS, remaining - LAST_PAGE_RESERVED_ROWS);
-    pages.push(items.slice(index, index + chunkSize));
-    index += chunkSize;
+    pages.push(items.slice(index, index + NEXT_PAGE_ROWS_NO_QR));
+    index += NEXT_PAGE_ROWS_NO_QR;
   }
 
   return pages;
 }
 
-function InvoiceTable(props: {
+function paginateWithQr<T>(items: T[]): { pages: T[][]; qrPageIndex: number } {
+  if (items.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE) {
+    return { pages: [items], qrPageIndex: 0 };
+  }
+
+  const pages: T[][] = [];
+  let index = 0;
+
+  pages.push(items.slice(index, index + FIRST_PAGE_ROWS_NO_QR));
+  index += FIRST_PAGE_ROWS_NO_QR;
+
+  while (items.length - index > MAX_ROWS_ON_QR_PAGE) {
+    const remaining = items.length - index;
+
+    if (remaining <= NEXT_PAGE_ROWS_NO_QR + MAX_ROWS_ON_QR_PAGE) {
+      const rowsWithoutQr = remaining - MAX_ROWS_ON_QR_PAGE;
+      if (rowsWithoutQr > 0) {
+        pages.push(items.slice(index, index + rowsWithoutQr));
+        index += rowsWithoutQr;
+      }
+      break;
+    }
+
+    pages.push(items.slice(index, index + NEXT_PAGE_ROWS_NO_QR));
+    index += NEXT_PAGE_ROWS_NO_QR;
+  }
+
+  pages.push(items.slice(index));
+
+  const lastPage = pages[pages.length - 1];
+  const previousPage = pages[pages.length - 2];
+
+  if (previousPage && lastPage && lastPage.length < MIN_ROWS_ON_QR_PAGE) {
+    const rowsToMove = Math.min(MIN_ROWS_ON_QR_PAGE - lastPage.length, previousPage.length - 1);
+    if (rowsToMove > 0) {
+      const movedRows = previousPage.splice(previousPage.length - rowsToMove, rowsToMove);
+      lastPage.unshift(...movedRows);
+    }
+  }
+
+  return {
+    pages,
+    qrPageIndex: pages.length - 1,
+  };
+}
+
+function paginateLineItems<T>(items: T[], includeQr: boolean): { pages: T[][]; qrPageIndex: number | null } {
+  if (!includeQr) {
+    return {
+      pages: paginateWithoutQr(items),
+      qrPageIndex: null,
+    };
+  }
+
+  const { pages, qrPageIndex } = paginateWithQr(items);
+  return { pages, qrPageIndex };
+}
+
+function InvoiceLineItemsTable(props: {
   lineItems: InvoiceWithRelations["lineItems"];
+  startIndex: number;
 }) {
   return (
     <View style={styles.tableWrap}>
-      <View style={styles.tableHeaderRow}>
-        <Text style={[styles.tableHeaderCell, styles.colDescription]}>Description</Text>
-        <Text style={[styles.tableHeaderCell, styles.colPrice]}>Price</Text>
-        <Text style={[styles.tableHeaderCell, styles.colUnits]}>Units</Text>
-        <Text style={[styles.tableHeaderCell, styles.colTotal]}>Total</Text>
+      <View style={styles.tableHeader}>
+        <Text style={[styles.tableHeaderText, styles.colPos]}>Pos.</Text>
+        <Text style={[styles.tableHeaderText, styles.colDesc]}>Description</Text>
+        <Text style={[styles.tableHeaderText, styles.colQty]}>Qty</Text>
+        <Text style={[styles.tableHeaderText, styles.colUnit]}>Unit price</Text>
+        <Text style={[styles.tableHeaderText, styles.colTotal]}>Amount</Text>
       </View>
 
-      {props.lineItems.map((item) => (
+      {props.lineItems.map((item, index) => (
         <View key={item.id} style={styles.tableRow} wrap={false}>
-          <Text style={[styles.colDescription]}>{item.description}</Text>
-          <Text style={[styles.colPrice]}>{item.unitPrice.toFixed(2)}</Text>
-          <Text style={[styles.colUnits]}>{formatQuantity(item.quantity)}</Text>
-          <Text style={[styles.colTotal]}>{(item.quantity * item.unitPrice).toFixed(2)}</Text>
+          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
+          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
+          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
+          <Text style={[styles.tableCellText, styles.colUnit]}>{formatMoney(item.unitPrice)}</Text>
+          <Text style={[styles.tableCellText, styles.colTotal]}>{formatMoney(item.quantity * item.unitPrice)}</Text>
         </View>
       ))}
     </View>
   );
 }
 
-const InvoiceDocument = ({ invoice }: { invoice: InvoiceWithRelations }) => {
+const InvoiceDocument = ({
+  invoice,
+  senderPreferences,
+}: {
+  invoice: InvoiceWithRelations;
+  senderPreferences?: {
+    ownerName: string | null;
+    invoiceSenderType: "company" | "owner";
+  };
+}) => {
   const shouldRenderQRSection =
-    invoice.currency === "CHF" &&
+    isSwissCountry(invoice.client.country) && (invoice.currency === "CHF" || invoice.currency === "EUR");
+  const canGenerateQRCode =
+    shouldRenderQRSection &&
     typeof invoice.business.iban === "string" &&
     invoice.business.iban.trim().length > 0;
 
-  const clientName =
-    invoice.client.companyName || invoice.client.contactName || invoice.client.email || "Client";
+  const senderName = getInvoiceSenderName({
+    ...invoice.business,
+    ownerName: senderPreferences?.ownerName ?? invoice.business.ownerName ?? null,
+    invoiceSenderType: senderPreferences?.invoiceSenderType ?? invoice.business.invoiceSenderType ?? "company",
+  });
+  const senderType = normalizeInvoiceSenderType(
+    senderPreferences?.invoiceSenderType ?? invoice.business.invoiceSenderType ?? "company"
+  );
 
-  const businessAddressLines = splitAddress(invoice.business.address);
-  const clientAddressLines = splitAddress(invoice.client.address);
-  const pages = paginateLineItems(invoice.lineItems);
-  const totalPages = pages.length;
+  const businessAddress = parsePostalAddress(invoice.business.address, invoice.business.country);
+  const clientAddress = parsePostalAddress(invoice.client.address, invoice.client.country);
+  const senderBusinessName = normalizeLine(invoice.business.name) ?? normalizeLine(senderName) ?? "Business";
+  const senderOwnerName = normalizeLine(senderPreferences?.ownerName ?? invoice.business.ownerName ?? null);
+  const sellerSecondaryName = senderOwnerName && senderOwnerName !== senderBusinessName ? senderOwnerName : null;
+  const paymentRecipientName = normalizeLine(senderName) ?? senderBusinessName;
+
+  const clientCompanyName = normalizeLine(invoice.client.companyName);
+  const clientContactName = normalizeLine(invoice.client.contactName);
+  const clientPrimaryName = clientCompanyName ?? clientContactName ?? invoice.client.email ?? "Client";
+  const clientSecondaryName =
+    clientCompanyName && clientContactName && clientContactName !== clientPrimaryName ? clientContactName : null;
+
+  const businessEmail = normalizeLine(invoice.business.email);
+  const businessPhone = normalizeLine(invoice.business.phone);
+  const businessWebsite = normalizeLine(invoice.business.website);
+  const headerPrimaryName = senderBusinessName;
+  const headerSecondaryName = sellerSecondaryName;
+
+  const businessHeaderLines = collectLines(...toCompactAddressLines(businessAddress));
+  const sellerContactLines = collectLines(businessEmail, businessPhone);
+  const clientLines = collectLines(clientPrimaryName, clientSecondaryName, ...toCompactAddressLines(clientAddress));
+  const creditorLines =
+    senderType === "owner"
+      ? collectLines(paymentRecipientName, ...toPaymentAddressLines(businessAddress))
+      : collectLines(senderBusinessName, sellerSecondaryName, ...toPaymentAddressLines(businessAddress));
+  const debtorLines = collectLines(clientPrimaryName, clientSecondaryName, ...toPaymentAddressLines(clientAddress));
+
+  const { pages, qrPageIndex } = paginateLineItems(invoice.lineItems, shouldRenderQRSection);
+  const totals = calculateInvoiceTotals(invoice.lineItems);
+  const subtotal = totals.subtotal;
+  const taxAmount = totals.taxAmount;
+  const totalAmountDue = totals.totalAmount;
+
+  const invoiceForQR = {
+    ...invoice,
+    totalAmount: totalAmountDue,
+  };
+
+  const businessForQR = {
+    ...invoice.business,
+    name: paymentRecipientName,
+  };
 
   let qrRects: Array<{ x: number; y: number; width: number; height: number; fill: string }> = [];
   let qrMetadata: SwissQRBillMetadata | null = null;
 
-  if (shouldRenderQRSection) {
+  if (canGenerateQRCode) {
     try {
-      qrMetadata = getSwissQRBillMetadata(invoice, invoice.business);
-      qrRects = generateSwissQRCodeRects(invoice, invoice.business, invoice.client);
+      qrMetadata = getSwissQRBillMetadata(invoiceForQR, businessForQR);
+      qrRects = generateSwissQRCodeRects(invoiceForQR, businessForQR, invoice.client);
     } catch (error) {
       console.error("Failed to generate Swiss QR code:", error);
       qrMetadata = null;
@@ -359,200 +602,216 @@ const InvoiceDocument = ({ invoice }: { invoice: InvoiceWithRelations }) => {
     }
   }
 
-  const paymentAccount = qrMetadata ? formatIban(qrMetadata.account) : invoice.business.iban || "-";
-  const paymentReference = qrMetadata ? formatReference(qrMetadata.reference) : null;
+  const paymentAccount = qrMetadata ? formatIban(qrMetadata.account) : formatIban(invoice.business.iban);
+  const additionalInformation = qrMetadata?.additionalInformation || invoice.invoiceNumber;
+
+  const introText = normalizeLine(invoice.notes) ?? "Thank you for your business.";
 
   return (
     <Document>
       {pages.map((lineItems, pageIndex) => {
         const isFirstPage = pageIndex === 0;
-        const isLastPage = pageIndex === totalPages - 1;
+        const isQrPage = qrPageIndex !== null && pageIndex === qrPageIndex;
+        const isFinalPageWithoutQr = qrPageIndex === null && pageIndex === pages.length - 1;
+        const shouldRenderClosingSections = isQrPage || isFinalPageWithoutQr;
+        const startIndex = pages.slice(0, pageIndex).reduce((sum, pageItems) => sum + pageItems.length, 1);
+        const pageBodyStyles: Array<
+          typeof styles.pageBody | typeof styles.pageBodyWithQrSpace
+        > = [styles.pageBody];
+
+        if (isQrPage) {
+          pageBodyStyles.push(styles.pageBodyWithQrSpace);
+        }
 
         return (
           <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page}>
-            {isFirstPage ? (
-              <>
-                <View style={styles.topBand}>
-                  {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : <View />}
-                  <View />
+            <View style={pageBodyStyles}>
+              {isFirstPage ? (
+                <>
+                  <View style={styles.header}>
+                    <View style={styles.sellerCol}>
+                      {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
+                      <Text style={styles.sellerName}>{headerPrimaryName}</Text>
+                      {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
+                      {businessHeaderLines.map((line, index) => (
+                        <Text key={`seller-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
+                      {sellerContactLines.map((line, index) => (
+                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
+                    </View>
+
+                    <View style={styles.businessMetaCol}>
+                      <Text style={styles.recipientName}>{clientPrimaryName}</Text>
+                      {clientSecondaryName ? (
+                        <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
+                      ) : null}
+                      {toCompactAddressLines(clientAddress).map((line, index) => (
+                        <Text key={`client-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
+                    </View>
+                  </View>
+
+                  <View style={styles.invoiceHero}>
+                    <Text style={styles.invoiceTitle}>Invoice: {invoice.invoiceNumber}</Text>
+                    <Text style={styles.invoiceDate}>{formatDate(invoice.issueDate)}</Text>
+                    {invoice.subject ? <Text style={styles.invoiceSubject}>{invoice.subject}</Text> : null}
+                    <Text style={styles.invoiceDueDate}>Due date: {formatDate(invoice.dueDate)}</Text>
+                  </View>
+
+                  <View style={styles.introTextBlock}>
+                    <Text style={styles.introText}>{introText}</Text>
+                  </View>
+                </>
+              ) : null}
+
+              {lineItems.length > 0 ? <InvoiceLineItemsTable lineItems={lineItems} startIndex={startIndex} /> : null}
+
+              {shouldRenderClosingSections ? (
+                <>
+                  <View style={styles.totalsBox}>
+                    <View style={styles.totalsRule}>
+                      <View style={styles.totalsRow}>
+                        <Text style={styles.totalsLabel}>Subtotal</Text>
+                        <Text style={styles.totalsValue}>
+                          {invoice.currency} {formatMoney(subtotal)}
+                        </Text>
+                      </View>
+                      {taxAmount > 0 ? (
+                        <View style={styles.totalsRow}>
+                          <Text style={styles.totalsLabel}>VAT</Text>
+                          <Text style={styles.totalsValue}>
+                            {invoice.currency} {formatMoney(taxAmount)}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <View style={styles.totalsRow}>
+                        <Text style={styles.totalDueLabel}>Total amount due</Text>
+                        <Text style={styles.totalDueValue}>
+                          {invoice.currency} {formatMoney(totalAmountDue)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+
+                </>
+              ) : null}
+            </View>
+
+            {isQrPage ? (
+              <View style={styles.qrBillSection} wrap={false}>
+                <View style={styles.cutLineWrap}>
+                  <View style={styles.cutLine} />
                 </View>
 
-                <View style={styles.topBand}>
-                  <View style={styles.senderBlock}>
-                    <Text style={styles.nameStrong}>{invoice.business.name}</Text>
-                    {businessAddressLines.map((line, index) => (
-                      <Text key={`business-address-${index}`} style={styles.blockLine}>
-                        {line}
-                      </Text>
-                    ))}
-                    <Text style={styles.blockLine}>{invoice.business.country}</Text>
-                    <Text style={styles.blockLine}>{invoice.business.iban || ""}</Text>
+                <View style={styles.qrBillRow}>
+                  <View style={styles.receiptCol}>
+                    <Text style={styles.qrTitle}>Receipt</Text>
+
+                    <View style={styles.receiptMain}>
+                      <Text style={styles.labelSmall}>Account / Payable to</Text>
+                      <Text style={styles.textSmall}>{paymentAccount}</Text>
+                      {creditorLines.map((line, index) => (
+                        <Text key={`receipt-creditor-${index}`} style={styles.textSmall}>
+                          {line}
+                        </Text>
+                      ))}
+
+                      <Text style={[styles.labelSmall, styles.blockGap]}>Payable by</Text>
+                      {debtorLines.map((line, index) => (
+                        <Text key={`receipt-debtor-${index}`} style={styles.textSmall}>
+                          {line}
+                        </Text>
+                      ))}
+                    </View>
+
+                    <View style={styles.receiptFooter}>
+                      <View style={styles.amountRow}>
+                        <View style={styles.amountCol}>
+                          <Text style={styles.amountLabel}>Currency</Text>
+                          <Text style={styles.amountValue}>{invoice.currency}</Text>
+                        </View>
+                        <View style={styles.amountCol}>
+                          <Text style={styles.amountLabel}>Amount</Text>
+                          <Text style={styles.amountValue}>{formatMoney(totalAmountDue)}</Text>
+                        </View>
+                      </View>
+                      <View style={styles.acceptancePointWrap}>
+                        <Text style={styles.acceptancePoint}>Acceptance point</Text>
+                      </View>
+                    </View>
                   </View>
 
-                  <View style={styles.clientBlock}>
-                    <Text style={styles.nameStrong}>{clientName}</Text>
-                    {invoice.client.contactName && invoice.client.companyName ? (
-                      <Text style={styles.blockLine}>{invoice.client.contactName}</Text>
-                    ) : null}
-                    {clientAddressLines.map((line, index) => (
-                      <Text key={`client-address-${index}`} style={styles.blockLine}>
-                        {line}
-                      </Text>
-                    ))}
-                    <Text style={styles.blockLine}>{invoice.client.country}</Text>
-                  </View>
-                </View>
+                  <View style={styles.paymentPartCol}>
+                    <Text style={styles.qrTitle}>Payment part</Text>
 
-                <View style={styles.invoiceMeta}>
-                  <Text style={styles.invoiceNo}>Invoice: {invoice.invoiceNumber}</Text>
-                  <View style={styles.invoiceMetaRow}>
-                    <Text style={styles.invoiceMetaLabel}>Issue date:</Text>
-                    <Text style={styles.invoiceMetaValue}>{formatDate(invoice.issueDate)}</Text>
-                  </View>
-                  <View style={styles.invoiceMetaRow}>
-                    <Text style={styles.invoiceMetaLabel}>Due date:</Text>
-                    <Text style={styles.invoiceMetaValue}>{formatDate(invoice.dueDate)}</Text>
-                  </View>
-                </View>
-              </>
-            ) : null}
+                    <View style={styles.paymentPartInner}>
+                      <View style={styles.qrCol}>
+                        <View style={styles.qrBox}>
+                          {qrRects.length > 0 ? (
+                            <Svg width={122} height={122} viewBox="0 0 46 46">
+                              {qrRects.map((rect, index) => (
+                                <Rect
+                                  key={`qr-${index}`}
+                                  x={rect.x}
+                                  y={rect.y}
+                                  width={rect.width}
+                                  height={rect.height}
+                                  fill={rect.fill}
+                                />
+                              ))}
+                              <Rect x={19.3} y={19.3} width={7.4} height={7.4} fill="#000000" />
+                              <Rect x={21.95} y={20.4} width={2.1} height={5.2} fill="#ffffff" />
+                              <Rect x={20.4} y={21.95} width={5.2} height={2.1} fill="#ffffff" />
+                            </Svg>
+                          ) : (
+                            <Text style={styles.qrFallback}>QR code unavailable</Text>
+                          )}
+                        </View>
 
-            <InvoiceTable lineItems={lineItems} />
+                        <View style={styles.qrFooter}>
+                          <View style={styles.amountRow}>
+                            <View style={styles.amountCol}>
+                              <Text style={styles.amountLabel}>Currency</Text>
+                              <Text style={styles.amountValue}>{invoice.currency}</Text>
+                            </View>
+                            <View style={styles.amountCol}>
+                              <Text style={styles.amountLabel}>Amount</Text>
+                              <Text style={styles.amountValue}>{formatMoney(totalAmountDue)}</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
 
-            {isLastPage ? (
-              <>
-                <View style={styles.totalSummaryWrap}>
-                  <View style={styles.totalSummaryRow}>
-                    <Text style={styles.totalLabel}>Total</Text>
-                    <Text style={styles.totalValue}>
-                      {invoice.currency} {formatMoney(invoice.totalAmount)}
-                    </Text>
-                  </View>
-                </View>
-
-                {invoice.notes ? (
-                  <View style={styles.notesBox}>
-                    <Text style={styles.notesText}>{invoice.notes}</Text>
-                  </View>
-                ) : null}
-
-                {shouldRenderQRSection ? <View style={styles.bottomGrow} /> : null}
-
-                {shouldRenderQRSection ? (
-                  <View style={styles.paymentSection} wrap={false}>
-                    <View style={styles.paymentColumns}>
-                      <View style={styles.receiptCol}>
-                        <Text style={styles.paymentTitle}>Receipt</Text>
-
-                        <Text style={styles.paymentSubtitle}>Account / Payable to</Text>
-                        <Text style={styles.paymentLine}>{paymentAccount}</Text>
-                        <Text style={styles.paymentLine}>{invoice.business.name}</Text>
-                        {businessAddressLines.map((line, index) => (
-                          <Text key={`receipt-business-${index}`} style={styles.paymentLine}>
+                      <View style={styles.detailsCol}>
+                        <Text style={styles.paymentLabel}>Account / Payable to</Text>
+                        <Text style={styles.textMedium}>{paymentAccount}</Text>
+                        {creditorLines.map((line, index) => (
+                          <Text key={`payment-creditor-${index}`} style={styles.textMedium}>
                             {line}
                           </Text>
                         ))}
 
-                        {paymentReference ? (
-                          <View style={styles.receiptBottom}>
-                            <Text style={styles.paymentSubtitle}>Reference</Text>
-                            <Text style={styles.paymentLine}>{paymentReference}</Text>
-                          </View>
-                        ) : null}
+                        <Text style={[styles.paymentLabel, styles.blockGap]}>Additional information</Text>
+                        <Text style={styles.textMedium}>{additionalInformation}</Text>
 
-                        <View style={styles.receiptBottom}>
-                          <Text style={styles.paymentSubtitle}>Payable by</Text>
-                          <Text style={styles.paymentLine}>{clientName}</Text>
-                          {clientAddressLines.map((line, index) => (
-                            <Text key={`receipt-client-${index}`} style={styles.paymentLine}>
-                              {line}
-                            </Text>
-                          ))}
-                        </View>
-
-                        <View style={styles.amountsRow}>
-                          <View style={styles.amountCol}>
-                            <Text style={styles.amountLabel}>Currency</Text>
-                            <Text style={styles.amountValue}>{invoice.currency}</Text>
-                          </View>
-                          <View style={styles.amountCol}>
-                            <Text style={styles.amountLabel}>Amount</Text>
-                            <Text style={styles.amountValue}>{formatMoney(invoice.totalAmount)}</Text>
-                          </View>
-                        </View>
-                      </View>
-
-                      <View style={styles.paymentPartCol}>
-                        <Text style={styles.paymentTitle}>Payment part</Text>
-                        <View style={styles.qrAndDetails}>
-                          <View style={styles.qrBox}>
-                            {qrRects.length > 0 ? (
-                              <Svg width={150} height={150} viewBox="0 0 46 46">
-                                {qrRects.map((rect, index) => (
-                                  <Rect
-                                    key={`qr-${index}`}
-                                    x={rect.x}
-                                    y={rect.y}
-                                    width={rect.width}
-                                    height={rect.height}
-                                    fill={rect.fill}
-                                  />
-                                ))}
-                              </Svg>
-                            ) : (
-                              <Text style={styles.qrFallback}>QR code unavailable</Text>
-                            )}
-                          </View>
-
-                          <View style={styles.detailsCol}>
-                            <Text style={styles.paymentSubtitle}>Account / Payable to</Text>
-                            <Text style={styles.paymentLine}>{paymentAccount}</Text>
-                            <Text style={styles.paymentLine}>{invoice.business.name}</Text>
-                            {businessAddressLines.map((line, index) => (
-                              <Text key={`payment-business-${index}`} style={styles.paymentLine}>
-                                {line}
-                              </Text>
-                            ))}
-
-                            {paymentReference ? (
-                              <View style={{ marginTop: 6 }}>
-                                <Text style={styles.paymentSubtitle}>Reference</Text>
-                                <Text style={styles.paymentLine}>{paymentReference}</Text>
-                              </View>
-                            ) : null}
-
-                            <View style={{ marginTop: 6 }}>
-                              <Text style={styles.paymentSubtitle}>Additional information</Text>
-                              <Text style={styles.paymentLine}>{invoice.invoiceNumber}</Text>
-                            </View>
-
-                            <View style={{ marginTop: 6 }}>
-                              <Text style={styles.paymentSubtitle}>Payable by</Text>
-                              <Text style={styles.paymentLine}>{clientName}</Text>
-                              {clientAddressLines.map((line, index) => (
-                                <Text key={`payment-client-${index}`} style={styles.paymentLine}>
-                                  {line}
-                                </Text>
-                              ))}
-                            </View>
-                          </View>
-                        </View>
-
-                        <View style={styles.amountsRow}>
-                          <View style={styles.amountCol}>
-                            <Text style={styles.amountLabel}>Currency</Text>
-                            <Text style={styles.amountValue}>{invoice.currency}</Text>
-                          </View>
-                          <View style={styles.amountCol}>
-                            <Text style={styles.amountLabel}>Amount</Text>
-                            <Text style={styles.amountValue}>{formatMoney(invoice.totalAmount)}</Text>
-                          </View>
-                        </View>
+                        <Text style={[styles.paymentLabel, styles.blockGap]}>Payable by</Text>
+                        {debtorLines.map((line, index) => (
+                          <Text key={`payment-debtor-${index}`} style={styles.textMedium}>
+                            {line}
+                          </Text>
+                        ))}
                       </View>
                     </View>
                   </View>
-                ) : null}
-              </>
+                </View>
+              </View>
             ) : null}
           </Page>
         );
