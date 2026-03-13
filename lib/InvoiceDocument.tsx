@@ -231,24 +231,27 @@ const styles = StyleSheet.create({
   qrBillRow: {
     flexDirection: "row",
     height: QR_BILL_HEIGHT,
+    paddingTop: mm(5),
   },
   receiptCol: {
     width: RECEIPT_WIDTH,
-    paddingLeft: mm(5),
-    paddingRight: mm(4),
+    paddingLeft: mm(4.5),
+    paddingRight: mm(4.5),
+    paddingBottom: mm(3),
     borderRightWidth: 1,
     borderRightColor: "#000000",
     borderRightStyle: "dashed",
   },
   paymentPartCol: {
     width: PAYMENT_PART_WIDTH,
-    paddingLeft: mm(5),
-    paddingRight: mm(5),
+    paddingLeft: mm(4.5),
+    paddingRight: mm(4.5),
+    paddingBottom: mm(3),
   },
   qrTitle: {
     fontSize: 11,
     fontWeight: "bold",
-    marginBottom: mm(4),
+    marginBottom: mm(5),
     color: "#000000",
   },
   labelSmall: {
@@ -276,7 +279,7 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
   blockGap: {
-    marginTop: mm(4),
+    marginTop: mm(5),
   },
   paymentPartInner: {
     flexDirection: "row",
@@ -295,18 +298,21 @@ const styles = StyleSheet.create({
   detailsCol: {
     flexGrow: 1,
     paddingLeft: PAYMENT_PART_GAP,
+    marginTop: mm(-10),
   },
   receiptMain: {
-    flexGrow: 1,
+    flexGrow: 0,
+    paddingTop: 0,
+    minHeight: QR_COLUMN_WIDTH,
   },
   receiptFooter: {
-    marginTop: "auto",
-    paddingTop: mm(1),
+    marginTop: mm(10),
+    paddingTop: 0,
   },
   qrFooter: {
-    marginTop: "auto",
-    paddingTop: mm(1),
-    paddingBottom: mm(8),
+    marginTop: mm(10),
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   amountRow: {
     flexDirection: "row",
@@ -327,7 +333,7 @@ const styles = StyleSheet.create({
     width: "44%",
   },
   acceptancePointWrap: {
-    height: mm(8),
+    height: mm(7),
     justifyContent: "flex-end",
     alignItems: "flex-end",
   },

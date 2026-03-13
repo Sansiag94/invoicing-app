@@ -285,31 +285,34 @@ export default function PublicInvoicePage() {
         className="grid min-h-[105mm] gap-0"
         style={{
           gridTemplateColumns: "62mm 1fr",
+          paddingTop: "5mm",
         }}
       >
-        <div className="flex h-full flex-col border-r border-dashed border-black pl-[5mm] pr-[4mm]">
-          <p className="mb-[4mm] text-[11px] font-semibold text-black">Receipt</p>
+        <div className="flex h-full flex-col border-r border-dashed border-black pl-[4.5mm] pr-[4.5mm] pb-[3mm]">
+          <div>
+            <p className="mb-[5mm] text-[11px] font-semibold text-black">Receipt</p>
 
-          <div className="space-y-[4mm] text-[8px] leading-[1.18] text-black">
-            <div>
-              <p className="mb-[0.7mm] text-[6px] font-semibold">Account / Payable to</p>
-              <p>{formatIban(invoice.qrBill?.account || invoice.business.iban)}</p>
-              <p>{senderName}</p>
-              {toPaymentAddressLines(businessAddress).map((line, index) => (
-                <p key={`receipt-creditor-${index}`}>{line}</p>
-              ))}
-            </div>
+            <div className="min-h-[46mm] space-y-[5mm] text-[8px] leading-[1.18] text-black">
+              <div>
+                <p className="mb-[0.7mm] text-[6px] font-semibold">Account / Payable to</p>
+                <p>{formatIban(invoice.qrBill?.account || invoice.business.iban)}</p>
+                <p>{senderName}</p>
+                {toPaymentAddressLines(businessAddress).map((line, index) => (
+                  <p key={`receipt-creditor-${index}`}>{line}</p>
+                ))}
+              </div>
 
-            <div>
-              <p className="mb-[0.7mm] text-[6px] font-semibold">Payable by</p>
-              <p>{clientName}</p>
-              {toPaymentAddressLines(clientAddress).map((line, index) => (
-                <p key={`receipt-debtor-${index}`}>{line}</p>
-              ))}
+              <div>
+                <p className="mb-[0.7mm] text-[6px] font-semibold">Payable by</p>
+                <p>{clientName}</p>
+                {toPaymentAddressLines(clientAddress).map((line, index) => (
+                  <p key={`receipt-debtor-${index}`}>{line}</p>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="mt-auto pt-[1mm]">
+          <div className="mt-[10mm]">
             <div className="grid grid-cols-2 gap-3 text-black">
               <div>
                 <p className="mb-[0.8mm] text-[8px] font-semibold">Currency</p>
@@ -320,14 +323,14 @@ export default function PublicInvoicePage() {
                 <p className="text-[10px] leading-[1.16]">{formatMoney(totalAmountDue)}</p>
               </div>
             </div>
-            <div className="flex h-[8mm] items-end justify-end">
+            <div className="flex h-[7mm] items-end justify-end">
               <p className="text-[8px] font-semibold text-black">Acceptance point</p>
             </div>
           </div>
         </div>
 
-        <div className="flex h-full flex-col pl-[5mm] pr-[5mm]">
-          <p className="mb-[4mm] text-[11px] font-semibold text-black">Payment part</p>
+        <div className="flex h-full flex-col pl-[4.5mm] pr-[4.5mm] pb-[3mm]">
+          <p className="mb-[5mm] text-[11px] font-semibold text-black">Payment part</p>
 
           <div
             className="grid flex-1"
@@ -336,7 +339,7 @@ export default function PublicInvoicePage() {
               columnGap: "6mm",
             }}
           >
-            <div className="flex h-full flex-col">
+            <div className="flex h-full flex-col justify-start">
               <div className="h-[46mm] w-[46mm] bg-white">
                 {invoice.qrBill?.qrRects?.length ? (
                   <div className="relative h-full w-full">
@@ -364,7 +367,7 @@ export default function PublicInvoicePage() {
                 )}
               </div>
 
-              <div className="mt-auto pt-[1mm] pb-[8mm] text-black">
+              <div className="mt-[10mm] text-black">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <p className="mb-[0.8mm] text-[8px] font-semibold">Currency</p>
@@ -378,7 +381,7 @@ export default function PublicInvoicePage() {
               </div>
             </div>
 
-            <div className="space-y-[4mm] text-[10px] leading-[1.16] text-black">
+            <div className="-mt-[10mm] space-y-[5mm] self-start text-[10px] leading-[1.16] text-black">
               <div>
                 <p className="mb-[0.8mm] text-[8px] font-semibold">Account / Payable to</p>
                 <p>{formatIban(invoice.qrBill?.account || invoice.business.iban)}</p>
