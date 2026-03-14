@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Download, Eye, PencilLine, Plus, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, Download, Eye, PencilLine, Plus, Send, Trash2 } from "lucide-react";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { InvoiceDetails, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -70,6 +70,7 @@ export default function InvoiceDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -203,6 +204,32 @@ export default function InvoiceDetailPage() {
       alert("Failed to send invoice");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleDuplicateInvoice = async () => {
+    if (!invoice || isDuplicating) {
+      return;
+    }
+
+    try {
+      setIsDuplicating(true);
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/duplicate`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as InvoiceDetails & { error?: string };
+
+      if (!response.ok || !result?.id) {
+        alert(result?.error ?? "Failed to duplicate invoice");
+        return;
+      }
+
+      router.push(`/invoices/${result.id}/preview`);
+    } catch (error) {
+      console.error("Error duplicating invoice:", error);
+      alert("Failed to duplicate invoice");
+    } finally {
+      setIsDuplicating(false);
     }
   };
 
@@ -378,6 +405,35 @@ export default function InvoiceDetailPage() {
     );
   }
 
+  const timelineSteps = [
+    {
+      label: "Created",
+      description: `Created ${new Date(invoice.createdAt).toLocaleDateString()}`,
+      active: true,
+    },
+    {
+      label: "Sent",
+      description: invoice.status === "draft" ? "Not sent yet" : "Client-facing invoice",
+      active: invoice.status !== "draft",
+    },
+    {
+      label: "Due",
+      description: `Due ${new Date(invoice.dueDate).toLocaleDateString()}`,
+      active: invoice.status === "overdue" || invoice.status === "paid",
+    },
+    {
+      label: "Paid",
+      description:
+        invoice.status === "paid"
+          ? "Payment completed"
+          : invoice.status === "overdue"
+            ? "Still awaiting payment"
+            : "Awaiting payment",
+      active: invoice.status === "paid",
+      danger: invoice.status === "overdue",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -405,7 +461,7 @@ export default function InvoiceDetailPage() {
             </Button>
           ) : null}
           {!isEditing ? (
-            <Button onClick={() => router.push(`/invoices/${invoice.id}?mode=edit`)}>
+            <Button variant="outline" onClick={() => router.push(`/invoices/${invoice.id}?mode=edit`)}>
               <PencilLine className="h-4 w-4" />
               Edit Invoice
             </Button>
@@ -424,16 +480,27 @@ export default function InvoiceDetailPage() {
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
+          {!isEditing ? (
+            <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isDeleting}>
+              <Copy className="h-4 w-4" />
+              {isDuplicating ? "Duplicating..." : "Duplicate"}
+            </Button>
+          ) : null}
           <Button
-            variant="secondary"
+            variant="default"
             onClick={handleSendInvoice}
-            disabled={isSending || invoice.status === "paid" || isEditing}
+            disabled={isSending || invoice.status === "paid" || isEditing || isDuplicating}
             title={invoice.status === "paid" ? "Paid invoices cannot be sent" : undefined}
           >
             <Send className="h-4 w-4" />
             {isSending ? "Sending..." : "Send"}
           </Button>
-          <Button variant="destructive" onClick={() => setShowDeleteDialog(true)} disabled={isDeleting}>
+          <Button
+            variant="outline"
+            onClick={() => setShowDeleteDialog(true)}
+            disabled={isDeleting || isDuplicating}
+            className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+          >
             <Trash2 className="h-4 w-4" />
             Delete
           </Button>
@@ -444,6 +511,39 @@ export default function InvoiceDetailPage() {
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
           {successMessage}
         </div>
+      ) : null}
+
+      {!isEditing ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice Progress</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            {timelineSteps.map((step) => (
+              <div
+                key={step.label}
+                className={`rounded-lg border px-4 py-3 ${
+                  step.danger
+                    ? "border-red-200 bg-red-50"
+                    : step.active
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-slate-50"
+                }`}
+              >
+                <p
+                  className={`text-xs font-semibold uppercase tracking-wide ${
+                    step.danger ? "text-red-700" : step.active ? "text-white/70" : "text-slate-500"
+                  }`}
+                >
+                  {step.label}
+                </p>
+                <p className={`mt-1 font-medium ${step.active && !step.danger ? "text-white" : "text-slate-900"}`}>
+                  {step.description}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       ) : null}
 
       <Card>

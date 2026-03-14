@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import AuthSplitShell from "@/components/AuthSplitShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -52,13 +51,17 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md items-center">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Create account</CardTitle>
-          <CardDescription>Start sending invoices in a few minutes.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <AuthSplitShell
+      eyebrow="Create account"
+      title="Start with Sierra Invoices"
+      description="Set up your billing workspace and start sending client-ready invoices within minutes."
+      alternateText="Already have an account?"
+      alternateLabel="Log in"
+      alternateHref="/login"
+    >
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -86,15 +89,9 @@ export default function SignupPage() {
           >
             {isLoading ? "Creating account..." : "Create account"}
           </Button>
-          <p className="text-sm text-slate-600">
-            Already have an account?{" "}
-            <Link className="font-medium text-slate-900 underline underline-offset-4" href="/login">
-              Log in
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+        </div>
+      </div>
+    </AuthSplitShell>
   );
 }
-

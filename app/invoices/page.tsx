@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, Eye, FilePenLine, Plus, Send, Trash2 } from "lucide-react";
+import { Building2, CalendarDays, ChevronDown, ChevronUp, Eye, FilePenLine, FileText, Plus, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -60,7 +60,7 @@ function getClientFirstName(client: ClientSummary | null): string {
 function buildInvoiceNotesTemplate(clientFirstName: string, senderName: string): string {
   return `Dear ${clientFirstName},
 
-Please find below the details of your invoice.
+Please find here the details of your invoice.
 
 Kind regards,
 ${senderName}`;
@@ -69,6 +69,7 @@ ${senderName}`;
 function InvoicePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const requestedClientId = (searchParams.get("clientId") ?? "").trim();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [invoiceSenderName, setInvoiceSenderName] = useState("User_name");
@@ -78,7 +79,7 @@ function InvoicePageContent() {
   ]);
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
-  const [clientId, setClientId] = useState("");
+  const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate("client_first_name", "User_name"));
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
@@ -90,11 +91,39 @@ function InvoicePageContent() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const createInvoiceRef = useRef<HTMLDivElement | null>(null);
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
+  const statusFilter = (searchParams.get("status") ?? "").trim().toLowerCase();
+
+  const selectedClient = useMemo(
+    () => clients.find((client) => client.id === clientId) ?? null,
+    [clientId, clients]
+  );
+  const activeFilterLabel = useMemo(() => {
+    if (!statusFilter) return null;
+    if (statusFilter === "paid") return "Paid";
+    if (statusFilter === "overdue") return "Overdue";
+    if (statusFilter === "draft") return "Draft";
+    if (statusFilter === "sent") return "Sent";
+    if (statusFilter === "open") return "Open";
+    if (statusFilter === "unpaid") return "Unpaid";
+    return statusFilter;
+  }, [statusFilter]);
 
   const filteredInvoices = useMemo(() => {
-    if (!searchQuery) return invoices;
+    const statusMatches = (status: string) => {
+      if (!statusFilter) return true;
+      if (statusFilter === "paid") return status === "paid";
+      if (statusFilter === "overdue") return status === "overdue";
+      if (statusFilter === "draft") return status === "draft";
+      if (statusFilter === "sent") return status === "sent";
+      if (statusFilter === "open") return status === "draft" || status === "sent";
+      if (statusFilter === "unpaid") return status !== "paid";
+      return true;
+    };
 
-    return invoices
+    const baseInvoices = invoices.filter((invoice) => statusMatches(invoice.status));
+    if (!searchQuery) return baseInvoices;
+
+    return baseInvoices
       .filter((invoice) => {
         const searchable = [
           invoice.invoiceNumber,
@@ -107,7 +136,7 @@ function InvoicePageContent() {
         return searchable.toLowerCase().includes(searchQuery);
       })
       .sort((left, right) => new Date(left.dueDate).getTime() - new Date(right.dueDate).getTime());
-  }, [invoices, searchQuery]);
+  }, [invoices, searchQuery, statusFilter]);
 
   async function fetchInvoices() {
     const res = await authenticatedFetch("/api/invoices");
@@ -145,6 +174,15 @@ function InvoicePageContent() {
       mounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!requestedClientId) {
+      return;
+    }
+
+    setClientId(requestedClientId);
+    setIsCreateFormOpen(true);
+  }, [requestedClientId]);
 
   useEffect(() => {
     if (notesManuallyEdited && notes.trim().length > 0) return;
@@ -350,172 +388,254 @@ function InvoicePageContent() {
           </Button>
         </CardHeader>
         {isCreateFormOpen ? (
-          <CardContent className="space-y-5">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="client">Client</Label>
-                <Select id="client" value={clientId} onChange={(event) => setClientId(event.target.value)}>
-                  <option value="">Select Client</option>
-                  {clients.map((client) => (
-                    <option key={client.id} value={client.id}>
-                      {client.companyName || client.contactName || client.email}
-                    </option>
-                  ))}
-                </Select>
+          <CardContent>
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_18rem]">
+              <div className="space-y-5">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="client">Client</Label>
+                    <Select id="client" value={clientId} onChange={(event) => setClientId(event.target.value)}>
+                      <option value="">Select Client</option>
+                      {clients.map((client) => (
+                        <option key={client.id} value={client.id}>
+                          {client.companyName || client.contactName || client.email}
+                        </option>
+                      ))}
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="issueDate">Issue Date</Label>
+                    <Input
+                      id="issueDate"
+                      type="date"
+                      value={issueDate}
+                      onChange={(event) => setIssueDate(event.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="dueDate">Due Date</Label>
+                    <Input
+                      id="dueDate"
+                      type="date"
+                      value={dueDate}
+                      onChange={(event) => setDueDate(event.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="subject">Subject</Label>
+                  <Input
+                    id="subject"
+                    value={subject}
+                    onChange={(event) => setSubject(event.target.value)}
+                    placeholder="Optional project or invoice subject"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="notes">Message</Label>
+                  <Textarea
+                    id="notes"
+                    rows={4}
+                    value={notes}
+                    onChange={(event) => {
+                      setNotes(event.target.value);
+                      setNotesManuallyEdited(true);
+                    }}
+                    placeholder="Add the greeting or message shown on the invoice"
+                  />
+                </div>
+
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Description</TableHead>
+                      <TableHead>Qty</TableHead>
+                      <TableHead>Unit Price</TableHead>
+                      <TableHead>Tax %</TableHead>
+                      <TableHead>Line Total</TableHead>
+                      <TableHead>Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {lineItems.map((item, index) => (
+                      <TableRow key={`${item.id ?? "new"}-${index}`}>
+                        <TableCell>
+                          <Input
+                            value={item.description}
+                            placeholder="Description"
+                            onChange={(event) => updateLineItem(index, "description", event.target.value)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0.01}
+                            step="0.01"
+                            value={item.quantity}
+                            onFocus={handleNumberInputFocus}
+                            onBlur={(event) => {
+                              if (parseNumber(event.target.value) <= 0) {
+                                updateLineItem(index, "quantity", MIN_QUANTITY);
+                              }
+                            }}
+                            onChange={(event) =>
+                              updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={item.unitPrice}
+                            onFocus={handleNumberInputFocus}
+                            onChange={(event) =>
+                              updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.1"
+                            value={item.taxRate}
+                            onFocus={handleNumberInputFocus}
+                            onChange={(event) =>
+                              updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
+                            }
+                          />
+                        </TableCell>
+                        <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                        <TableCell>
+                          <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow>
+                      <TableCell>
+                        <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
+                          <Plus className="h-4 w-4" />
+                          Add Line Item
+                        </Button>
+                      </TableCell>
+                      <TableCell colSpan={5} />
+                    </TableRow>
+                  </TableBody>
+                </Table>
+
+                <div className="flex justify-end">
+                  <Button onClick={handleCreateInvoice} disabled={isCreating} className="min-w-[10rem]">
+                    {isCreating ? "Creating..." : "Create Invoice"}
+                  </Button>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="issueDate">Issue Date</Label>
-                <Input
-                  id="issueDate"
-                  type="date"
-                  value={issueDate}
-                  onChange={(event) => setIssueDate(event.target.value)}
-                />
+              <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
+                <Card className="border-slate-200 bg-slate-50/80 shadow-none">
+                  <CardHeader>
+                    <CardTitle className="text-base">Quick Summary</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <Building2 className="h-4 w-4" />
+                        <span className="text-xs font-semibold uppercase tracking-wide">Client</span>
+                      </div>
+                      {selectedClient ? (
+                        <div className="space-y-1 text-slate-700">
+                          <p className="font-medium text-slate-900">
+                            {selectedClient.companyName || selectedClient.contactName || selectedClient.email}
+                          </p>
+                          {selectedClient.contactName && selectedClient.companyName ? (
+                            <p>{selectedClient.contactName}</p>
+                          ) : null}
+                          <p>{selectedClient.email}</p>
+                          {selectedClient.phone ? <p>{selectedClient.phone}</p> : null}
+                          <p>{selectedClient.country}</p>
+                        </div>
+                      ) : (
+                        <p className="text-slate-500">Select a client to see billing details.</p>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <CalendarDays className="h-4 w-4" />
+                        <span className="text-xs font-semibold uppercase tracking-wide">Schedule</span>
+                      </div>
+                      <div className="space-y-1 text-slate-700">
+                        <p>Issue date: {issueDate || "-"}</p>
+                        <p>Due date: {dueDate || "-"}</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-slate-500">
+                        <FileText className="h-4 w-4" />
+                        <span className="text-xs font-semibold uppercase tracking-wide">Totals</span>
+                      </div>
+                      <div className="rounded-lg border border-slate-200 bg-white p-3">
+                        <div className="mb-2 flex items-center justify-between text-slate-600">
+                          <span>Subtotal</span>
+                          <span>{businessCurrency} {totals.subtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="mb-2 flex items-center justify-between text-slate-600">
+                          <span>Tax</span>
+                          <span>{businessCurrency} {totals.taxAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between border-t border-slate-200 pt-2 font-semibold text-slate-900">
+                          <span>Total</span>
+                          <span>{businessCurrency} {totals.totalAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={dueDate}
-                  onChange={(event) => setDueDate(event.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
-              <div className="space-y-2">
-                <Label htmlFor="subject">Subject</Label>
-                <Input
-                  id="subject"
-                  value={subject}
-                  onChange={(event) => setSubject(event.target.value)}
-                  placeholder="Optional project or invoice subject"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="notes">Message</Label>
-              <Textarea
-                id="notes"
-                rows={4}
-                value={notes}
-                onChange={(event) => {
-                  setNotes(event.target.value);
-                  setNotesManuallyEdited(true);
-                }}
-                placeholder="Add the greeting or message shown on the invoice"
-              />
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Qty</TableHead>
-                  <TableHead>Unit Price</TableHead>
-                  <TableHead>Tax %</TableHead>
-                  <TableHead>Line Total</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lineItems.map((item, index) => (
-                  <TableRow key={`${item.id ?? "new"}-${index}`}>
-                    <TableCell>
-                      <Input
-                        value={item.description}
-                        placeholder="Description"
-                        onChange={(event) => updateLineItem(index, "description", event.target.value)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0.01}
-                        step="0.01"
-                        value={item.quantity}
-                        onFocus={handleNumberInputFocus}
-                        onBlur={(event) => {
-                          if (parseNumber(event.target.value) <= 0) {
-                            updateLineItem(index, "quantity", MIN_QUANTITY);
-                          }
-                        }}
-                        onChange={(event) =>
-                          updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        value={item.unitPrice}
-                        onFocus={handleNumberInputFocus}
-                        onChange={(event) =>
-                          updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.1"
-                        value={item.taxRate}
-                        onFocus={handleNumberInputFocus}
-                        onChange={(event) =>
-                          updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableRow>
-                  <TableCell>
-                    <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
-                      <Plus className="h-4 w-4" />
-                      Add Line Item
-                    </Button>
-                  </TableCell>
-                  <TableCell colSpan={5} />
-                </TableRow>
-              </TableBody>
-            </Table>
-
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div className="text-sm text-slate-600">
-                <p>
-                  Subtotal: {businessCurrency} {totals.subtotal.toFixed(2)}
-                </p>
-                <p>
-                  Tax: {businessCurrency} {totals.taxAmount.toFixed(2)}
-                </p>
-                <p className="font-semibold text-slate-900">
-                  Total: {businessCurrency} {totals.totalAmount.toFixed(2)}
-                </p>
-              </div>
-              <Button onClick={handleCreateInvoice} disabled={isCreating}>
-                {isCreating ? "Creating..." : "Create Invoice"}
-              </Button>
             </div>
           </CardContent>
         ) : null}
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Invoice Table</CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="space-y-2">
+            <CardTitle>Invoice Table</CardTitle>
+            {activeFilterLabel ? (
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+                  Filter: {activeFilterLabel}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(searchQuery ? `/invoices?q=${encodeURIComponent(searchQuery)}` : "/invoices")}
+                >
+                  Clear filter
+                </Button>
+              </div>
+            ) : null}
+          </div>
+          <div className="hidden md:flex flex-wrap gap-2">
+            <Button asChild size="sm" variant={statusFilter === "unpaid" ? "default" : "outline"}>
+              <Link href="/invoices?status=unpaid">Unpaid</Link>
+            </Button>
+            <Button asChild size="sm" variant={statusFilter === "overdue" ? "default" : "outline"}>
+              <Link href="/invoices?status=overdue">Overdue</Link>
+            </Button>
+            <Button asChild size="sm" variant={statusFilter === "paid" ? "default" : "outline"}>
+              <Link href="/invoices?status=paid">Paid</Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {invoices.length === 0 ? (
@@ -537,6 +657,26 @@ function InvoicePageContent() {
               <p className="text-sm text-slate-600">
                 Try a different term for invoice number, client, status, or currency.
               </p>
+              <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+                {activeFilterLabel ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => router.push(searchQuery ? `/invoices?q=${encodeURIComponent(searchQuery)}` : "/invoices")}
+                  >
+                    Clear Filter
+                  </Button>
+                ) : null}
+                <Button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateFormOpen(true);
+                    createInvoiceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                >
+                  Create Invoice
+                </Button>
+              </div>
             </div>
           ) : (
             <Table>

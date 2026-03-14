@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import AuthSplitShell from "@/components/AuthSplitShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -54,13 +53,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-md items-center">
-      <Card className="w-full">
-        <CardHeader>
-          <CardTitle>Log in</CardTitle>
-          <CardDescription>Access your billing dashboard.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <AuthSplitShell
+      eyebrow="Log in"
+      title="Welcome back"
+      description="Access your billing workspace, review revenue, and keep every invoice under control."
+      alternateText="Need a new account instead?"
+      alternateLabel="Create account"
+      alternateHref="/signup"
+    >
+      <div className="space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -88,15 +91,9 @@ export default function LoginPage() {
           >
             {isLoading ? "Logging in..." : "Log in"}
           </Button>
-          <p className="text-sm text-slate-600">
-            No account yet?{" "}
-            <Link className="font-medium text-slate-900 underline underline-offset-4" href="/signup">
-              Create one
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+          </div>
+        </div>
+      </div>
+    </AuthSplitShell>
   );
 }
-

@@ -430,7 +430,7 @@ function buildDefaultInvoiceMessage(clientName: string, senderName: string): str
       .split(" ")
       .find((part) => part.trim().length > 0) || senderName;
 
-  return `Hello ${firstName},\nThank you for your trust.\nPlease find the breakdown of the services below.\n\nBest regards,\n${senderFirstName}`;
+  return `Hello ${firstName},\nThank you for your trust.\nPlease find here the breakdown of the services.\n\nBest regards,\n${senderFirstName}`;
 }
 
 function paginateWithoutQr<T>(items: T[]): T[][] {

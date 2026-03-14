@@ -78,7 +78,7 @@ function formatShortDate(value: string): string {
 }
 
 export default function Navbar({ onOpenMenu }: NavbarProps) {
-  const seenNotificationsStorageKey = "sierra-invoice-seen-notifications";
+  const seenNotificationsStorageKey = "sierra-invoices-seen-notifications";
   const pathname = usePathname();
   const router = useRouter();
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
@@ -421,7 +421,7 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
             href="/dashboard"
             className="text-sm font-semibold tracking-tight text-slate-900 sm:text-base"
           >
-            Sierra Invoice
+            Sierra Invoices
           </Link>
         </div>
 

@@ -149,7 +149,7 @@ export default function PublicInvoicePage() {
         .find((part) => part.trim().length > 0) || "there";
     const senderFirstName = senderName.split(" ").find((part) => part.trim().length > 0) || senderName;
 
-    return `Hello ${firstName},\nThank you for your trust.\nPlease find the breakdown of the services below.\n\nBest regards,\n${senderFirstName}`;
+    return `Hello ${firstName},\nThank you for your trust.\nPlease find here the breakdown of the services.\n\nBest regards,\n${senderFirstName}`;
   }, [clientName, invoice?.client.companyName, invoice?.client.contactName, senderName]);
 
   const handleCheckout = async () => {

@@ -23,6 +23,7 @@ function StatCard(props: {
   helper: string;
   icon: ReactNode;
   tone?: "default" | "success" | "warning" | "danger";
+  href?: string;
 }) {
   const toneClasses =
     props.tone === "success"
@@ -42,7 +43,7 @@ function StatCard(props: {
           ? "bg-red-100 text-red-700"
           : "bg-slate-100 text-slate-700";
 
-  return (
+  const content = (
     <Card className={toneClasses}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-slate-500">{props.label}</CardTitle>
@@ -54,6 +55,16 @@ function StatCard(props: {
       </CardContent>
     </Card>
   );
+
+  if (props.href) {
+    return (
+      <Link href={props.href} className="block transition-transform hover:-translate-y-0.5">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }
 
 function statusVariant(status: string): "default" | "success" | "warning" | "danger" {
@@ -168,6 +179,7 @@ export default function DashboardPage() {
           value={`${dashboard.currency} ${formatMoney(dashboard.revenueThisMonth)}`}
           helper="Cash collected this calendar month"
           icon={<Wallet className="h-5 w-5" />}
+          href="/invoices?status=paid"
         />
         <StatCard
           label="Total revenue"
@@ -175,6 +187,7 @@ export default function DashboardPage() {
           helper={`${dashboard.paidInvoices} paid invoices`}
           icon={<Coins className="h-5 w-5" />}
           tone="success"
+          href="/invoices?status=paid"
         />
         <StatCard
           label="Prospect revenue"
@@ -182,6 +195,7 @@ export default function DashboardPage() {
           helper={`${dashboard.unpaidInvoices} unpaid invoices in pipeline`}
           icon={<FileClock className="h-5 w-5" />}
           tone="warning"
+          href="/invoices?status=unpaid"
         />
         <StatCard
           label="Paid invoices"
@@ -189,6 +203,7 @@ export default function DashboardPage() {
           helper="Settled and closed"
           icon={<CheckCircle2 className="h-5 w-5" />}
           tone="success"
+          href="/invoices?status=paid"
         />
         <StatCard
           label="Unpaid invoices"
@@ -196,6 +211,7 @@ export default function DashboardPage() {
           helper={`${dashboard.draftInvoices} draft · ${dashboard.sentInvoices} sent · ${dashboard.overdueInvoices} overdue`}
           icon={<Clock3 className="h-5 w-5" />}
           tone="warning"
+          href="/invoices?status=unpaid"
         />
       </div>
 
@@ -206,18 +222,21 @@ export default function DashboardPage() {
           helper={`${dashboard.currency} ${formatMoney(dashboard.overdueAmount)} at risk`}
           icon={<AlertCircle className="h-5 w-5" />}
           tone="danger"
+          href="/invoices?status=overdue"
         />
         <StatCard
           label="Open invoices"
           value={dashboard.openInvoices}
           helper="Draft and sent, excluding overdue"
           icon={<FileClock className="h-5 w-5" />}
+          href="/invoices?status=open"
         />
         <StatCard
           label="Active clients"
           value={dashboard.clientCount}
           helper={`${dashboard.invoiceCount} invoices created`}
           icon={<Users className="h-5 w-5" />}
+          href="/clients"
         />
       </div>
 
@@ -241,8 +260,19 @@ export default function DashboardPage() {
             <TableBody>
             {dashboard.recentInvoices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-slate-500">
-                  No invoices yet.
+                <TableCell colSpan={4}>
+                  <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center">
+                    <p className="text-base font-medium text-slate-900">No invoice activity yet</p>
+                    <p className="text-sm text-slate-600">Create an invoice or add a client to start building revenue.</p>
+                    <div className="flex flex-wrap gap-2">
+                      <Button asChild size="sm">
+                        <Link href="/invoices">Create Invoice</Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline">
+                        <Link href="/clients">Add Client</Link>
+                      </Button>
+                    </div>
+                  </div>
                 </TableCell>
               </TableRow>
             ) : (

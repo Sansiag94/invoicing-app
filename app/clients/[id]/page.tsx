@@ -446,7 +446,10 @@ export default function ClientDetailPage() {
             <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
               <Building2 className="h-6 w-6 text-slate-400" />
               <p className="text-base font-medium text-slate-900">No invoices for this client yet</p>
-              <p className="text-sm text-slate-600">Create one from the invoices page.</p>
+              <p className="text-sm text-slate-600">Create one directly with this client preselected.</p>
+              <Button asChild size="sm">
+                <Link href={`/invoices?clientId=${client.id}`}>Create Invoice</Link>
+              </Button>
             </div>
           ) : (
             <Table>

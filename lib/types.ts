@@ -66,6 +66,8 @@ export interface InvoiceSummary {
   status: InvoiceStatus;
   issueDate: string;
   dueDate: string;
+  createdAt: string;
+  updatedAt: string;
   currency: InvoiceCurrency;
   subject: string | null;
   reference: string | null;

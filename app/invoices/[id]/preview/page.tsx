@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Download, PencilLine, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Copy, Download, PencilLine, Send, Trash2 } from "lucide-react";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -37,6 +37,7 @@ export default function InvoicePreviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -150,6 +151,32 @@ export default function InvoicePreviewPage() {
     }
   };
 
+  const handleDuplicateInvoice = async () => {
+    if (!id || isDuplicating) {
+      return;
+    }
+
+    try {
+      setIsDuplicating(true);
+      const response = await authenticatedFetch(`/api/invoices/${id}/duplicate`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as { id?: string; error?: string };
+
+      if (!response.ok || !result?.id) {
+        alert(result?.error ?? "Failed to duplicate invoice");
+        return;
+      }
+
+      router.push(`/invoices/${result.id}/preview`);
+    } catch (error) {
+      console.error("Error duplicating invoice:", error);
+      alert("Failed to duplicate invoice");
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
   const handleDeleteInvoice = async () => {
     if (!id || isDeleting) {
       return;
@@ -202,13 +229,17 @@ export default function InvoicePreviewPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white/90 p-1.5 shadow-sm">
-          <Button variant="secondary" onClick={handleSendInvoice} disabled={isSending || isLoading} className="min-w-[7.5rem]">
+          <Button variant="default" onClick={handleSendInvoice} disabled={isSending || isLoading || isDuplicating} className="min-w-[7.5rem]">
             <Send className="h-4 w-4" />
             {isSending ? "Sending..." : "Send"}
           </Button>
           <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading}>
             <Download className="h-4 w-4" />
             Download PDF
+          </Button>
+          <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isLoading || isDeleting}>
+            <Copy className="h-4 w-4" />
+            {isDuplicating ? "Duplicating..." : "Duplicate"}
           </Button>
           <Button asChild variant="outline">
             <Link href={`/invoices/${id}?mode=edit`}>
@@ -219,7 +250,7 @@ export default function InvoicePreviewPage() {
           <Button
             variant="outline"
             onClick={() => setShowDeleteDialog(true)}
-            disabled={isDeleting || isLoading}
+            disabled={isDeleting || isLoading || isDuplicating}
             className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
           >
             <Trash2 className="h-4 w-4" />

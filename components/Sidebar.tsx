@@ -21,7 +21,7 @@ export default function Sidebar({ onNavigate }: SidebarProps) {
   return (
     <div className="h-full overflow-y-auto bg-white">
       <div className="border-b border-slate-200 px-5 py-6">
-        <h1 className="text-lg font-bold tracking-tight text-slate-900">Sierra Invoice</h1>
+        <h1 className="text-lg font-bold tracking-tight text-slate-900">Sierra Invoices</h1>
         <p className="mt-1 text-xs text-slate-500">Invoicing solutions for freelancers</p>
       </div>
 

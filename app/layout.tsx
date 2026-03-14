@@ -7,7 +7,7 @@ import AppFrame from "@/components/AppFrame";
 validateRequiredEnv();
 
 export const metadata: Metadata = {
-  title: "Sierra Invoice",
+  title: "Sierra Invoices",
   description: "Invoicing solutions for freelancers",
   icons: {
     icon: "/favicon.ico",
