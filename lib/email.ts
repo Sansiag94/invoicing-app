@@ -27,6 +27,8 @@ type SendInvoiceReminderEmailInput = {
 };
 
 let resendClient: Resend | null = null;
+const DEFAULT_RESEND_FROM_EMAIL = "Sierra Services <invoices@sierraservices.ch>";
+const DEFAULT_RESEND_REPLY_TO_EMAIL = "santiago@sierraservices.ch";
 
 export class EmailConfigurationError extends Error {
   constructor(message: string) {
@@ -114,7 +116,8 @@ export async function sendInvoiceEmail({
   dueDate,
   invoiceLink,
 }: SendInvoiceEmailInput) {
-  const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const parsedDueDate =
     dueDate instanceof Date ? dueDate : dueDate ? new Date(dueDate) : null;
@@ -131,6 +134,7 @@ export async function sendInvoiceEmail({
 
   const result = await getResendClient().emails.send({
     from,
+    replyTo,
     to,
     subject: `${businessName} - Invoice ${invoiceNumber}`,
     text: `${greetingLine}
@@ -203,7 +207,8 @@ export async function sendInvoiceReminderEmail({
   dueDate,
   reminderKind,
 }: SendInvoiceReminderEmailInput) {
-  const from = process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
+  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const dueDateLabel = formatDueDate(dueDate);
   const normalizedRecipientName = recipientName?.trim();
@@ -225,6 +230,7 @@ export async function sendInvoiceReminderEmail({
 
   const result = await getResendClient().emails.send({
     from,
+    replyTo,
     to,
     subject,
     text: `${greetingLine}

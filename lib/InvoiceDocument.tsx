@@ -76,17 +76,17 @@ const styles = StyleSheet.create({
     marginBottom: mm(3.5),
   },
   sellerName: {
-    fontSize: 11.8,
+    fontSize: 13.5,
     fontWeight: "bold",
-    marginBottom: mm(0.8),
+    marginBottom: mm(0.6),
   },
   sellerSecondary: {
-    fontSize: 9.3,
+    fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.2),
+    marginBottom: mm(1),
   },
   bodyLine: {
-    fontSize: 9.2,
+    fontSize: 9.4,
     lineHeight: 1.35,
     marginBottom: mm(0.55),
   },
@@ -99,47 +99,38 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   recipientName: {
-    fontSize: 11.8,
+    fontSize: 13.5,
     fontWeight: "bold",
-    marginBottom: mm(1),
+    marginBottom: mm(0.6),
   },
   recipientSecondary: {
-    fontSize: 9.3,
+    fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.8),
+    marginBottom: mm(1),
   },
   invoiceHero: {
-    marginBottom: mm(10),
+    marginBottom: mm(8),
   },
   invoiceTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: "bold",
-    marginBottom: mm(1.2),
+    marginBottom: mm(1.3),
     letterSpacing: 0.2,
   },
   invoiceDate: {
-    fontSize: 10.2,
+    fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.6),
+    marginBottom: mm(1.1),
   },
   invoiceSubject: {
-    fontSize: 8.8,
+    fontSize: 10,
     color: "#374151",
     lineHeight: 1.35,
-    marginBottom: mm(0.8),
+    marginBottom: mm(1.1),
   },
   invoiceDueDate: {
-    fontSize: 8.8,
-    color: "#6b7280",
-  },
-  introTextBlock: {
-    marginBottom: mm(10),
-    width: "78%",
-  },
-  introText: {
     fontSize: 10,
-    lineHeight: 1.45,
-    color: "#374151",
+    color: "#6b7280",
   },
   tableWrap: {
     marginTop: mm(10),
@@ -178,43 +169,43 @@ const styles = StyleSheet.create({
   colUnit: { width: "16%", textAlign: "right" },
   colTotal: { width: "18%", textAlign: "right" },
   totalsBox: {
-    marginTop: mm(10),
+    marginTop: mm(6),
     marginLeft: "auto",
-    width: mm(66),
+    width: mm(80),
   },
   totalsRule: {
     borderTopWidth: 1,
     borderTopColor: "#d1d5db",
-    paddingTop: mm(2.6),
+    paddingTop: mm(3),
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: mm(1.2),
+    marginBottom: mm(1.4),
   },
   totalsLabel: {
-    fontSize: 9.4,
+    fontSize: 10,
     color: "#374151",
   },
   totalsValue: {
-    fontSize: 9.4,
+    fontSize: 10,
     color: "#374151",
   },
   totalDueLabel: {
-    fontSize: 11,
+    fontSize: 15.5,
     fontWeight: "bold",
   },
   totalDueValue: {
-    fontSize: 11,
+    fontSize: 15.5,
     fontWeight: "bold",
   },
   closingTextBlock: {
-    marginTop: mm(15),
-    width: "72%",
+    marginTop: mm(6),
+    width: mm(120),
   },
   closingText: {
-    fontSize: 9.6,
-    lineHeight: 1.4,
+    fontSize: 10,
+    lineHeight: 1.35,
     color: "#374151",
   },
   cutLineWrap: {
@@ -428,6 +419,19 @@ function toPaymentAddressLines(address: ReturnType<typeof parsePostalAddress>): 
     .filter((line) => line && line.trim().length > 0);
 }
 
+function buildDefaultInvoiceMessage(clientName: string, senderName: string): string {
+  const firstName =
+    clientName
+      .split(" ")
+      .find((part) => part.trim().length > 0) || "there";
+  const senderFirstName =
+    senderName
+      .split(" ")
+      .find((part) => part.trim().length > 0) || senderName;
+
+  return `Hello ${firstName},\nThank you for your trust.\nPlease find the breakdown of the services below.\n\nBest regards,\n${senderFirstName}`;
+}
+
 function paginateWithoutQr<T>(items: T[]): T[][] {
   if (items.length <= FIRST_PAGE_ROWS_NO_QR) {
     return [items];
@@ -597,7 +601,7 @@ const InvoiceDocument = ({
   const paymentAccount = qrMetadata ? formatIban(qrMetadata.account) : formatIban(invoice.business.iban);
   const additionalInformation = qrMetadata?.additionalInformation || invoice.invoiceNumber;
 
-  const introText = normalizeLine(invoice.notes) ?? "Thank you for your business.";
+  const messageText = normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(clientPrimaryName, senderName);
 
   return (
     <Document>
@@ -652,12 +656,8 @@ const InvoiceDocument = ({
                   <View style={styles.invoiceHero}>
                     <Text style={styles.invoiceTitle}>Invoice: {invoice.invoiceNumber}</Text>
                     <Text style={styles.invoiceDate}>{formatDate(invoice.issueDate)}</Text>
-                    {invoice.subject ? <Text style={styles.invoiceSubject}>{invoice.subject}</Text> : null}
                     <Text style={styles.invoiceDueDate}>Due date: {formatDate(invoice.dueDate)}</Text>
-                  </View>
-
-                  <View style={styles.introTextBlock}>
-                    <Text style={styles.introText}>{introText}</Text>
+                    {invoice.subject ? <Text style={styles.invoiceSubject}>Subject: {invoice.subject}</Text> : null}
                   </View>
                 </>
               ) : null}
@@ -689,12 +689,16 @@ const InvoiceDocument = ({
                         </View>
                       ) : null}
                       <View style={styles.totalsRow}>
-                        <Text style={styles.totalDueLabel}>Total amount due</Text>
+                        <Text style={styles.totalDueLabel}>Total</Text>
                         <Text style={styles.totalDueValue}>
                           {invoice.currency} {formatMoney(totalAmountDue)}
                         </Text>
                       </View>
                     </View>
+                  </View>
+
+                  <View style={styles.closingTextBlock}>
+                    <Text style={styles.closingText}>{messageText}</Text>
                   </View>
 
                 </>
