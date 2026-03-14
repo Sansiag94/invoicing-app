@@ -21,15 +21,13 @@ function mm(value: number): number {
   return value * POINTS_PER_MM;
 }
 
-const FIRST_PAGE_ROWS_NO_QR = 15;
-const NEXT_PAGE_ROWS_NO_QR = 28;
-const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 7;
-const MIN_ROWS_ON_QR_PAGE = 4;
-const MAX_ROWS_ON_QR_PAGE = 11;
+const FIRST_PAGE_ROWS_NO_QR = 14;
+const NEXT_PAGE_ROWS_NO_QR = 24;
+const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
 
-const PAGE_TOP_MARGIN = mm(20);
+const PAGE_TOP_MARGIN = mm(25);
 const PAGE_SIDE_MARGIN = mm(20);
-const PAGE_BOTTOM_MARGIN = mm(12);
+const PAGE_BOTTOM_MARGIN = mm(25);
 const QR_BILL_HEIGHT = mm(105);
 const QR_CUT_LINE_SPACE = mm(4);
 const QR_BILL_TOTAL_SPACE = QR_BILL_HEIGHT + QR_CUT_LINE_SPACE;
@@ -49,7 +47,7 @@ const styles = StyleSheet.create({
     paddingTop: PAGE_TOP_MARGIN,
     paddingHorizontal: PAGE_SIDE_MARGIN,
     paddingBottom: PAGE_BOTTOM_MARGIN,
-    minHeight: "100%",
+    flexGrow: 1,
   },
   pageBodyWithQrSpace: {
     paddingBottom: QR_BILL_TOTAL_SPACE + PAGE_BOTTOM_MARGIN,
@@ -142,6 +140,10 @@ const styles = StyleSheet.create({
   },
   tableWrap: {
     marginTop: mm(10),
+    marginBottom: mm(4),
+  },
+  tableWrapContinuation: {
+    marginTop: 0,
     marginBottom: mm(4),
   },
   tableHeader: {
@@ -439,70 +441,45 @@ function paginateWithoutQr<T>(items: T[]): T[][] {
   return pages;
 }
 
-function paginateWithQr<T>(items: T[]): { pages: T[][]; qrPageIndex: number } {
-  if (items.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE) {
-    return { pages: [items], qrPageIndex: 0 };
-  }
-
-  const pages: T[][] = [];
-  let index = 0;
-
-  pages.push(items.slice(index, index + FIRST_PAGE_ROWS_NO_QR));
-  index += FIRST_PAGE_ROWS_NO_QR;
-
-  while (items.length - index > MAX_ROWS_ON_QR_PAGE) {
-    const remaining = items.length - index;
-
-    if (remaining <= NEXT_PAGE_ROWS_NO_QR + MAX_ROWS_ON_QR_PAGE) {
-      const rowsWithoutQr = remaining - MAX_ROWS_ON_QR_PAGE;
-      if (rowsWithoutQr > 0) {
-        pages.push(items.slice(index, index + rowsWithoutQr));
-        index += rowsWithoutQr;
-      }
-      break;
-    }
-
-    pages.push(items.slice(index, index + NEXT_PAGE_ROWS_NO_QR));
-    index += NEXT_PAGE_ROWS_NO_QR;
-  }
-
-  pages.push(items.slice(index));
-
-  const lastPage = pages[pages.length - 1];
-  const previousPage = pages[pages.length - 2];
-
-  if (previousPage && lastPage && lastPage.length < MIN_ROWS_ON_QR_PAGE) {
-    const rowsToMove = Math.min(MIN_ROWS_ON_QR_PAGE - lastPage.length, previousPage.length - 1);
-    if (rowsToMove > 0) {
-      const movedRows = previousPage.splice(previousPage.length - rowsToMove, rowsToMove);
-      lastPage.unshift(...movedRows);
-    }
-  }
-
-  return {
-    pages,
-    qrPageIndex: pages.length - 1,
-  };
-}
-
-function paginateLineItems<T>(items: T[], includeQr: boolean): { pages: T[][]; qrPageIndex: number | null } {
+function paginateLineItems<T>(
+  items: T[],
+  includeQr: boolean
+) : { pages: T[][]; qrPageIndex: number | null; closingPageIndex: number | null; standaloneQrPage: boolean } {
   if (!includeQr) {
+    const pages = paginateWithoutQr(items);
     return {
-      pages: paginateWithoutQr(items),
+      pages,
       qrPageIndex: null,
+      closingPageIndex: pages.length - 1,
+      standaloneQrPage: false,
     };
   }
 
-  const { pages, qrPageIndex } = paginateWithQr(items);
-  return { pages, qrPageIndex };
+  if (items.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE) {
+    return {
+      pages: [items],
+      qrPageIndex: 0,
+      closingPageIndex: 0,
+      standaloneQrPage: false,
+    };
+  }
+
+  const pages = paginateWithoutQr(items);
+  return {
+    pages,
+    qrPageIndex: null,
+    closingPageIndex: pages.length - 1,
+    standaloneQrPage: true,
+  };
 }
 
 function InvoiceLineItemsTable(props: {
   lineItems: InvoiceWithRelations["lineItems"];
   startIndex: number;
+  continuation?: boolean;
 }) {
   return (
-    <View style={styles.tableWrap}>
+    <View style={props.continuation ? styles.tableWrapContinuation : styles.tableWrap}>
       <View style={styles.tableHeader}>
         <Text style={[styles.tableHeaderText, styles.colPos]}>Pos.</Text>
         <Text style={[styles.tableHeaderText, styles.colDesc]}>Description</Text>
@@ -512,7 +489,7 @@ function InvoiceLineItemsTable(props: {
       </View>
 
       {props.lineItems.map((item, index) => (
-        <View key={item.id} style={styles.tableRow} wrap={false}>
+        <View key={item.id} style={styles.tableRow}>
           <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
           <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
           <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
@@ -578,7 +555,10 @@ const InvoiceDocument = ({
       : collectLines(senderBusinessName, sellerSecondaryName, ...toPaymentAddressLines(businessAddress));
   const debtorLines = collectLines(clientPrimaryName, clientSecondaryName, ...toPaymentAddressLines(clientAddress));
 
-  const { pages, qrPageIndex } = paginateLineItems(invoice.lineItems, shouldRenderQRSection);
+  const { pages, qrPageIndex, closingPageIndex, standaloneQrPage } = paginateLineItems(
+    invoice.lineItems,
+    shouldRenderQRSection
+  );
   const totals = calculateInvoiceTotals(invoice.lineItems);
   const subtotal = totals.subtotal;
   const taxAmount = totals.taxAmount;
@@ -618,8 +598,7 @@ const InvoiceDocument = ({
       {pages.map((lineItems, pageIndex) => {
         const isFirstPage = pageIndex === 0;
         const isQrPage = qrPageIndex !== null && pageIndex === qrPageIndex;
-        const isFinalPageWithoutQr = qrPageIndex === null && pageIndex === pages.length - 1;
-        const shouldRenderClosingSections = isQrPage || isFinalPageWithoutQr;
+        const shouldRenderClosingSections = pageIndex === closingPageIndex;
         const startIndex = pages.slice(0, pageIndex).reduce((sum, pageItems) => sum + pageItems.length, 1);
         const pageBodyStyles: Array<
           typeof styles.pageBody | typeof styles.pageBodyWithQrSpace
@@ -631,7 +610,7 @@ const InvoiceDocument = ({
 
         return (
           <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page}>
-            <View style={pageBodyStyles}>
+            <View style={pageBodyStyles} wrap={false}>
               {isFirstPage ? (
                 <>
                   <View style={styles.header}>
@@ -677,7 +656,13 @@ const InvoiceDocument = ({
                 </>
               ) : null}
 
-              {lineItems.length > 0 ? <InvoiceLineItemsTable lineItems={lineItems} startIndex={startIndex} /> : null}
+              {lineItems.length > 0 ? (
+                <InvoiceLineItemsTable
+                  lineItems={lineItems}
+                  startIndex={startIndex}
+                  continuation={!isFirstPage}
+                />
+              ) : null}
 
               {shouldRenderClosingSections ? (
                 <>
@@ -822,6 +807,118 @@ const InvoiceDocument = ({
           </Page>
         );
       })}
+      {standaloneQrPage ? (
+        <Page size="A4" style={styles.page}>
+          <View style={[styles.pageBody, styles.pageBodyWithQrSpace]} wrap={false} />
+          <View style={styles.qrBillSection} wrap={false}>
+            <View style={styles.cutLineWrap}>
+              <View style={styles.cutLine} />
+            </View>
+
+            <View style={styles.qrBillRow}>
+              <View style={styles.receiptCol}>
+                <Text style={styles.qrTitle}>Receipt</Text>
+
+                <View style={styles.receiptMain}>
+                  <Text style={styles.labelSmall}>Account / Payable to</Text>
+                  <Text style={styles.textSmall}>{paymentAccount}</Text>
+                  {creditorLines.map((line, index) => (
+                    <Text key={`qr-only-receipt-creditor-${index}`} style={styles.textSmall}>
+                      {line}
+                    </Text>
+                  ))}
+
+                  <Text style={[styles.labelSmall, styles.blockGap]}>Payable by</Text>
+                  {debtorLines.map((line, index) => (
+                    <Text key={`qr-only-receipt-debtor-${index}`} style={styles.textSmall}>
+                      {line}
+                    </Text>
+                  ))}
+                </View>
+
+                <View style={styles.receiptFooter}>
+                  <View style={styles.amountRow}>
+                    <View style={styles.amountCol}>
+                      <Text style={styles.amountLabel}>Currency</Text>
+                      <Text style={styles.amountValue}>{invoice.currency}</Text>
+                    </View>
+                    <View style={styles.amountCol}>
+                      <Text style={styles.amountLabel}>Amount</Text>
+                      <Text style={styles.amountValue}>{formatMoney(totalAmountDue)}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.acceptancePointWrap}>
+                    <Text style={styles.acceptancePoint}>Acceptance point</Text>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.paymentPartCol}>
+                <Text style={styles.qrTitle}>Payment part</Text>
+
+                <View style={styles.paymentPartInner}>
+                  <View style={styles.qrCol}>
+                    <View style={styles.qrBox}>
+                      {qrRects.length > 0 ? (
+                        <Svg width={122} height={122} viewBox="0 0 46 46">
+                          {qrRects.map((rect, index) => (
+                            <Rect
+                              key={`qr-only-${index}`}
+                              x={rect.x}
+                              y={rect.y}
+                              width={rect.width}
+                              height={rect.height}
+                              fill={rect.fill}
+                            />
+                          ))}
+                          <Rect x={19.3} y={19.3} width={7.4} height={7.4} fill="#000000" />
+                          <Rect x={21.95} y={20.4} width={2.1} height={5.2} fill="#ffffff" />
+                          <Rect x={20.4} y={21.95} width={5.2} height={2.1} fill="#ffffff" />
+                        </Svg>
+                      ) : (
+                        <Text style={styles.qrFallback}>QR code unavailable</Text>
+                      )}
+                    </View>
+
+                    <View style={styles.qrFooter}>
+                      <View style={styles.amountRow}>
+                        <View style={styles.amountCol}>
+                          <Text style={styles.amountLabel}>Currency</Text>
+                          <Text style={styles.amountValue}>{invoice.currency}</Text>
+                        </View>
+                        <View style={styles.amountCol}>
+                          <Text style={styles.amountLabel}>Amount</Text>
+                          <Text style={styles.amountValue}>{formatMoney(totalAmountDue)}</Text>
+                        </View>
+                      </View>
+                    </View>
+                  </View>
+
+                  <View style={styles.detailsCol}>
+                    <Text style={styles.paymentLabel}>Account / Payable to</Text>
+                    <Text style={styles.textMedium}>{paymentAccount}</Text>
+                    {creditorLines.map((line, index) => (
+                      <Text key={`qr-only-payment-creditor-${index}`} style={styles.textMedium}>
+                        {line}
+                      </Text>
+                    ))}
+
+                    <Text style={[styles.paymentLabel, styles.blockGap]}>Additional information</Text>
+                    <Text style={styles.textMedium}>{additionalInformation}</Text>
+
+                    <Text style={[styles.paymentLabel, styles.blockGap]}>Payable by</Text>
+                    {debtorLines.map((line, index) => (
+                      <Text key={`qr-only-payment-debtor-${index}`} style={styles.textMedium}>
+                        {line}
+                      </Text>
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        </Page>
+      ) : null}
     </Document>
   );
 };

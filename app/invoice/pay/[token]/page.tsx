@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { CSSProperties, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CreditCard, Download } from "lucide-react";
 import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
@@ -50,97 +50,9 @@ function toPaymentAddressLines(address: ReturnType<typeof parsePostalAddress>): 
     .filter((line) => line && line.trim().length > 0);
 }
 
-const FIRST_PAGE_ROWS_NO_QR = 18;
-const NEXT_PAGE_ROWS_NO_QR = 26;
+const FIRST_PAGE_ROWS_NO_QR = 16;
+const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
-const MAX_ROWS_ON_QR_PAGE = 6;
-
-const qrBillStyle: CSSProperties = {
-  minHeight: "105mm",
-  marginTop: "auto",
-  breakInside: "avoid-page",
-  pageBreakInside: "avoid",
-};
-
-const invoicePagePadding: CSSProperties = {
-  paddingTop: "14mm",
-  paddingRight: "14mm",
-  paddingBottom: "14mm",
-  paddingLeft: "14mm",
-};
-
-function paginateWithoutQr<T>(items: T[]): T[][] {
-  if (items.length <= FIRST_PAGE_ROWS_NO_QR) {
-    return [items];
-  }
-
-  const pages: T[][] = [];
-  let index = 0;
-
-  pages.push(items.slice(index, index + FIRST_PAGE_ROWS_NO_QR));
-  index += FIRST_PAGE_ROWS_NO_QR;
-
-  while (index < items.length) {
-    pages.push(items.slice(index, index + NEXT_PAGE_ROWS_NO_QR));
-    index += NEXT_PAGE_ROWS_NO_QR;
-  }
-
-  return pages;
-}
-
-function paginateWithQr<T>(items: T[]): { pages: T[][]; qrPageIndex: number } {
-  if (items.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE) {
-    return { pages: [items], qrPageIndex: 0 };
-  }
-
-  const pages: T[][] = [];
-  let index = 0;
-
-  pages.push(items.slice(index, index + FIRST_PAGE_ROWS_NO_QR));
-  index += FIRST_PAGE_ROWS_NO_QR;
-
-  if (index >= items.length) {
-    return {
-      pages: [items, []],
-      qrPageIndex: 1,
-    };
-  }
-
-  while (items.length - index > MAX_ROWS_ON_QR_PAGE) {
-    const remaining = items.length - index;
-
-    if (remaining <= NEXT_PAGE_ROWS_NO_QR + MAX_ROWS_ON_QR_PAGE) {
-      const rowsWithoutQr = remaining - MAX_ROWS_ON_QR_PAGE;
-      if (rowsWithoutQr > 0) {
-        pages.push(items.slice(index, index + rowsWithoutQr));
-        index += rowsWithoutQr;
-      }
-      break;
-    }
-
-    pages.push(items.slice(index, index + NEXT_PAGE_ROWS_NO_QR));
-    index += NEXT_PAGE_ROWS_NO_QR;
-  }
-
-  pages.push(items.slice(index));
-
-  return {
-    pages,
-    qrPageIndex: pages.length - 1,
-  };
-}
-
-function paginateLineItems<T>(items: T[], includeQr: boolean): { pages: T[][]; qrPageIndex: number | null } {
-  if (!includeQr) {
-    return {
-      pages: paginateWithoutQr(items),
-      qrPageIndex: null,
-    };
-  }
-
-  const { pages, qrPageIndex } = paginateWithQr(items);
-  return { pages, qrPageIndex };
-}
 
 export default function PublicInvoicePage() {
   const params = useParams<{ token: string }>();
@@ -198,11 +110,8 @@ export default function PublicInvoicePage() {
   const taxAmount = totals.taxAmount;
   const totalAmountDue = totals.totalAmount;
   const shouldRenderQRSection = Boolean(invoice?.qrBill);
-
-  const { pages, qrPageIndex } = useMemo(
-    () => paginateLineItems(lineItems, shouldRenderQRSection),
-    [lineItems, shouldRenderQRSection]
-  );
+  const shouldShareQrOnFirstPage = shouldRenderQRSection && lineItems.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE;
+  const shouldRenderStandaloneQrPage = shouldRenderQRSection && !shouldShareQrOnFirstPage;
 
   const businessAddress = useMemo(() => {
     if (!invoice) return null;
@@ -275,7 +184,7 @@ export default function PublicInvoicePage() {
   }
 
   const qrBillSection = (
-    <section className="pt-3" style={qrBillStyle}>
+    <section className="qr-bill pt-3">
       <div className="relative mb-2">
         <div className="border-t border-dashed border-black" />
         <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-white px-2 text-[10px]">{"\u2702"}</span>
@@ -411,7 +320,69 @@ export default function PublicInvoicePage() {
   );
 
   return (
-    <div className="mx-auto max-w-[210mm] space-y-4 px-4 py-6 print:px-0 print:py-0">
+    <div className="invoice-print-shell mx-auto max-w-[210mm] space-y-4 px-4 py-6 print:space-y-0 print:px-0 print:py-0">
+      <style jsx global>{`
+        @page {
+          size: A4;
+          margin: 18mm 14mm 18mm 14mm;
+        }
+
+        @media print {
+          .invoice-document {
+            padding: 0 !important;
+            box-shadow: none !important;
+          }
+        }
+
+        .invoice-document {
+          box-sizing: border-box;
+          padding: 18mm 14mm;
+        }
+
+        .invoice-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 10mm;
+        }
+
+        .invoice-table thead {
+          display: table-header-group;
+        }
+
+        .invoice-table tbody {
+          display: table-row-group;
+        }
+
+        .invoice-table tr {
+          break-inside: auto;
+          page-break-inside: auto;
+        }
+
+        .invoice-table th,
+        .invoice-table td {
+          padding: 6px 8px;
+          border-bottom: 1px solid #ddd;
+          vertical-align: top;
+        }
+
+        .invoice-table th {
+          text-align: left;
+        }
+
+        .invoice-table td.num,
+        .invoice-table th.num {
+          text-align: right;
+        }
+
+        .invoice-table tbody tr:nth-child(even) {
+          background: #fafafa;
+        }
+
+        .qr-bill {
+          break-inside: avoid-page;
+          page-break-inside: avoid;
+        }
+      `}</style>
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="flex items-center gap-2">
           <h1 className="text-xl font-semibold text-slate-900">Invoice {invoice.invoiceNumber}</h1>
@@ -449,131 +420,108 @@ export default function PublicInvoicePage() {
         </div>
       ) : null}
 
-      {pages.map((pageItems, pageIndex) => {
-        const isFirstPage = pageIndex === 0;
-        const isQrPage = qrPageIndex !== null && pageIndex === qrPageIndex;
-        const isFinalPageWithoutQr = qrPageIndex === null && pageIndex === pages.length - 1;
-        const shouldRenderTotals = isQrPage || isFinalPageWithoutQr;
-        const pageStyle: CSSProperties = {
-          ...invoicePagePadding,
-        };
-
-        if (pageIndex > 0) {
-          pageStyle.breakBefore = "page";
-          pageStyle.pageBreakBefore = "always";
-        }
-
-        return (
-          <article
-            key={`invoice-page-${pageIndex}`}
-            className="box-border flex min-h-[297mm] flex-col bg-white text-[11px] text-slate-900 shadow-sm print:shadow-none"
-            style={pageStyle}
-          >
-            {isFirstPage ? (
-              <>
-                <header className="flex items-start justify-between gap-8">
-                  <div className="max-w-[58%] space-y-1">
-                    {invoice.business.logoUrl ? (
-                      <img
-                        src={invoice.business.logoUrl}
-                        alt={`${businessDisplayName} logo`}
-                        className="mb-2 h-16 w-16 object-contain"
-                      />
-                    ) : null}
-                    <p className="text-[18px] font-semibold leading-none">{businessDisplayName}</p>
-                    {businessSecondaryName ? <p>{businessSecondaryName}</p> : null}
-                    {businessAddress.displayLines.map((line, index) => (
-                      <p key={`business-header-${index}`}>{line}</p>
-                    ))}
-                    {invoice.business.email ? <p>{invoice.business.email}</p> : null}
-                    {invoice.business.phone ? <p>{invoice.business.phone}</p> : null}
-                  </div>
-
-                  <div className="mt-1 max-w-[36%] text-[11px]">
-                    <p className="text-[18px] font-semibold leading-none">{clientName}</p>
-                    {clientAddress.displayLines.map((line, index) => (
-                      <p key={`client-address-${index}`}>{line}</p>
-                    ))}
-                  </div>
-                </header>
-
-                <section className="mt-9 space-y-1">
-                  <p className="text-[24px] font-semibold leading-none">Invoice: {invoice.invoiceNumber}</p>
-                  <p className="text-slate-700">{formatDate(invoice.issueDate)}</p>
-                  <p className="text-slate-700">Due date: {formatDate(invoice.dueDate)}</p>
-                  {invoice.subject ? <p className="text-slate-700">Subject: {invoice.subject}</p> : null}
-                  {invoice.reference ? <p className="text-slate-700">Reference: {invoice.reference}</p> : null}
-                </section>
-              </>
+      <article className="invoice-document bg-white text-[11px] text-slate-900 shadow-sm print:shadow-none">
+        <header className="flex items-start justify-between gap-8">
+          <div className="max-w-[58%] space-y-1">
+            {invoice.business.logoUrl ? (
+              <img
+                src={invoice.business.logoUrl}
+                alt={`${businessDisplayName} logo`}
+                className="mb-2 h-16 w-16 object-contain"
+              />
             ) : null}
+            <p className="text-[18px] font-semibold leading-none">{businessDisplayName}</p>
+            {businessSecondaryName ? <p>{businessSecondaryName}</p> : null}
+            {businessAddress.displayLines.map((line, index) => (
+              <p key={`business-header-${index}`}>{line}</p>
+            ))}
+            {invoice.business.email ? <p>{invoice.business.email}</p> : null}
+            {invoice.business.phone ? <p>{invoice.business.phone}</p> : null}
+          </div>
 
-            <section className={isFirstPage ? "mt-8" : "mt-0"}>
-              <table className="w-full border-collapse text-left">
-                {isFirstPage ? (
-                  <thead>
-                    <tr className="bg-slate-600 text-[11px] font-semibold text-white">
-                      <th className="px-3 py-2">Description</th>
-                      <th className="w-[20%] px-3 py-2 text-right">Price</th>
-                      <th className="w-[17%] px-3 py-2 text-right">Units</th>
-                      <th className="w-[17%] px-3 py-2 text-right">Total</th>
-                    </tr>
-                  </thead>
-                ) : null}
-                <tbody>
-                  {pageItems.map((item, index) => (
-                    <tr
-                      key={`line-item-${pageIndex}-${index}`}
-                      className="border-b border-slate-200 align-top text-[11px]"
-                    >
-                      <td className="px-3 py-2">{item.description}</td>
-                      <td className="px-3 py-2 text-right">{formatMoney(item.unitPrice)}</td>
-                      <td className="px-3 py-2 text-right">{formatQuantity(item.quantity)}</td>
-                      <td className="px-3 py-2 text-right">{formatMoney(item.lineTotal)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </section>
+          <div className="mt-1 max-w-[36%] text-[11px]">
+            <p className="text-[18px] font-semibold leading-none">{clientName}</p>
+            {clientAddress.displayLines.map((line, index) => (
+              <p key={`client-address-${index}`}>{line}</p>
+            ))}
+          </div>
+        </header>
 
-            {shouldRenderTotals ? (
-              <section className="mt-6 ml-auto w-full max-w-[80mm] text-[11px]">
-                <div className="border-t border-slate-300 pt-3">
-                  {taxAmount > 0 ? (
-                    <>
-                      <div className="mb-1 flex items-center justify-between text-slate-700">
-                        <span>Subtotal</span>
-                        <span>
-                          {invoice.currency} {formatMoney(subtotal)}
-                        </span>
-                      </div>
-                      <div className="mb-3 flex items-center justify-between text-slate-700">
-                        <span>VAT</span>
-                        <span>
-                          {invoice.currency} {formatMoney(taxAmount)}
-                        </span>
-                      </div>
-                    </>
-                  ) : null}
-                  <div className="flex items-center justify-between text-[20px] font-semibold leading-none">
-                    <span>Total</span>
-                    <span>
-                      {invoice.currency} {formatMoney(totalAmountDue)}
-                    </span>
-                  </div>
-                </div>
-              </section>
+        <section className="mt-9 space-y-1">
+          <p className="text-[24px] font-semibold leading-none">Invoice: {invoice.invoiceNumber}</p>
+          <p className="text-slate-700">{formatDate(invoice.issueDate)}</p>
+          <p className="text-slate-700">Due date: {formatDate(invoice.dueDate)}</p>
+          {invoice.subject ? <p className="text-slate-700">Subject: {invoice.subject}</p> : null}
+        </section>
+
+        <section>
+          <table className="invoice-table">
+            <thead>
+              <tr>
+                <th style={{ width: "8%" }}>Pos</th>
+                <th style={{ width: "46%" }}>Description</th>
+                <th className="num" style={{ width: "12%" }}>
+                  Qty
+                </th>
+                <th className="num" style={{ width: "16%" }}>
+                  Unit price
+                </th>
+                <th className="num" style={{ width: "18%" }}>
+                  Amount
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineItems.map((item, index) => (
+                <tr key={`line-item-${index}`}>
+                  <td>{index + 1}</td>
+                  <td>{item.description}</td>
+                  <td className="num">{formatQuantity(item.quantity)}</td>
+                  <td className="num">{formatMoney(item.unitPrice)}</td>
+                  <td className="num">{formatMoney(item.lineTotal)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+
+        <section className="mt-6 ml-auto w-full max-w-[80mm] text-[11px]">
+          <div className="border-t border-slate-300 pt-3">
+            <div className="mb-1 flex items-center justify-between text-slate-700">
+              <span>Subtotal</span>
+              <span>
+                {invoice.currency} {formatMoney(subtotal)}
+              </span>
+            </div>
+            {taxAmount > 0 ? (
+              <div className="mb-3 flex items-center justify-between text-slate-700">
+                <span>VAT</span>
+                <span>
+                  {invoice.currency} {formatMoney(taxAmount)}
+                </span>
+              </div>
             ) : null}
+            <div className="flex items-center justify-between text-[20px] font-semibold leading-none">
+              <span>Total</span>
+              <span>
+                {invoice.currency} {formatMoney(totalAmountDue)}
+              </span>
+            </div>
+          </div>
+        </section>
 
-            {shouldRenderTotals ? (
-              <section className="mt-6 max-w-[120mm] text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
-                {invoice.notes?.trim() ? invoice.notes.trim() : defaultMessage}
-              </section>
-            ) : null}
+        <section className="mt-6 max-w-[120mm] text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
+          {invoice.notes?.trim() ? invoice.notes.trim() : defaultMessage}
+        </section>
 
-            {isQrPage ? qrBillSection : null}
-          </article>
-        );
-      })}
+        {shouldShareQrOnFirstPage ? qrBillSection : null}
+      </article>
+
+      {shouldRenderStandaloneQrPage ? (
+        <article className="invoice-document bg-white text-[11px] text-slate-900 shadow-sm print:break-before-page print:shadow-none">
+          {qrBillSection}
+        </article>
+      ) : null}
     </div>
   );
 }
