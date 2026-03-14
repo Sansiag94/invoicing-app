@@ -339,6 +339,10 @@ export default function PublicInvoicePage() {
           padding: 18mm 14mm;
         }
 
+        .invoice-document--qr {
+          padding-bottom: 0;
+        }
+
         .invoice-table {
           width: 100%;
           border-collapse: collapse;
@@ -420,7 +424,11 @@ export default function PublicInvoicePage() {
         </div>
       ) : null}
 
-      <article className="invoice-document bg-white text-[11px] text-slate-900 shadow-sm print:shadow-none">
+      <article
+        className={`invoice-document bg-white text-[11px] text-slate-900 shadow-sm print:shadow-none${
+          shouldShareQrOnFirstPage ? " invoice-document--qr" : ""
+        }`}
+      >
         <header className="flex items-start justify-between gap-8">
           <div className="max-w-[58%] space-y-1">
             {invoice.business.logoUrl ? (
@@ -518,7 +526,7 @@ export default function PublicInvoicePage() {
       </article>
 
       {shouldRenderStandaloneQrPage ? (
-        <article className="invoice-document bg-white text-[11px] text-slate-900 shadow-sm print:break-before-page print:shadow-none">
+        <article className="invoice-document invoice-document--qr bg-white text-[11px] text-slate-900 shadow-sm print:break-before-page print:shadow-none">
           {qrBillSection}
         </article>
       ) : null}

@@ -52,6 +52,9 @@ const styles = StyleSheet.create({
   pageBodyWithQrSpace: {
     paddingBottom: QR_BILL_TOTAL_SPACE + PAGE_BOTTOM_MARGIN,
   },
+  pageBodyWithQrSpaceFlushBottom: {
+    paddingBottom: QR_BILL_TOTAL_SPACE,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -229,6 +232,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: PAGE_BOTTOM_MARGIN,
     height: QR_BILL_TOTAL_SPACE,
+  },
+  qrBillSectionFlushBottom: {
+    bottom: 0,
   },
   qrBillRow: {
     flexDirection: "row",
@@ -601,11 +607,11 @@ const InvoiceDocument = ({
         const shouldRenderClosingSections = pageIndex === closingPageIndex;
         const startIndex = pages.slice(0, pageIndex).reduce((sum, pageItems) => sum + pageItems.length, 1);
         const pageBodyStyles: Array<
-          typeof styles.pageBody | typeof styles.pageBodyWithQrSpace
+          typeof styles.pageBody | typeof styles.pageBodyWithQrSpace | typeof styles.pageBodyWithQrSpaceFlushBottom
         > = [styles.pageBody];
 
         if (isQrPage) {
-          pageBodyStyles.push(styles.pageBodyWithQrSpace);
+          pageBodyStyles.push(styles.pageBodyWithQrSpaceFlushBottom);
         }
 
         return (
@@ -696,7 +702,7 @@ const InvoiceDocument = ({
             </View>
 
             {isQrPage ? (
-              <View style={styles.qrBillSection} wrap={false}>
+              <View style={[styles.qrBillSection, styles.qrBillSectionFlushBottom]} wrap={false}>
                 <View style={styles.cutLineWrap}>
                   <View style={styles.cutLine} />
                 </View>
@@ -809,8 +815,8 @@ const InvoiceDocument = ({
       })}
       {standaloneQrPage ? (
         <Page size="A4" style={styles.page}>
-          <View style={[styles.pageBody, styles.pageBodyWithQrSpace]} wrap={false} />
-          <View style={styles.qrBillSection} wrap={false}>
+          <View style={[styles.pageBody, styles.pageBodyWithQrSpaceFlushBottom]} wrap={false} />
+          <View style={[styles.qrBillSection, styles.qrBillSectionFlushBottom]} wrap={false}>
             <View style={styles.cutLineWrap}>
               <View style={styles.cutLine} />
             </View>
