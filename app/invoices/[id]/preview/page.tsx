@@ -201,14 +201,8 @@ export default function InvoicePreviewPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild>
-            <Link href={`/invoices/${id}?mode=edit`}>
-              <PencilLine className="h-4 w-4" />
-              Edit Invoice
-            </Link>
-          </Button>
-          <Button variant="secondary" onClick={handleSendInvoice} disabled={isSending || isLoading}>
+        <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white/90 p-1.5 shadow-sm">
+          <Button variant="secondary" onClick={handleSendInvoice} disabled={isSending || isLoading} className="min-w-[7.5rem]">
             <Send className="h-4 w-4" />
             {isSending ? "Sending..." : "Send"}
           </Button>
@@ -216,10 +210,17 @@ export default function InvoicePreviewPage() {
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
+          <Button asChild variant="outline">
+            <Link href={`/invoices/${id}?mode=edit`}>
+              <PencilLine className="h-4 w-4" />
+              Edit Invoice
+            </Link>
+          </Button>
           <Button
-            variant="destructive"
+            variant="outline"
             onClick={() => setShowDeleteDialog(true)}
             disabled={isDeleting || isLoading}
+            className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
           >
             <Trash2 className="h-4 w-4" />
             Delete

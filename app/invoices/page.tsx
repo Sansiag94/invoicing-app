@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Eye, FilePenLine, Plus, Send, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, FilePenLine, Plus, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -81,6 +81,7 @@ function InvoicePageContent() {
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate("client_first_name", "User_name"));
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
@@ -250,6 +251,7 @@ function InvoicePageContent() {
       setSubject("");
       setNotesManuallyEdited(false);
       setNotes(buildInvoiceNotesTemplate("client_first_name", invoiceSenderName || "User_name"));
+      setIsCreateFormOpen(false);
       setSuccessMessage("Invoice created successfully.");
       await fetchInvoices();
     } catch (error) {
@@ -333,169 +335,175 @@ function InvoicePageContent() {
       ) : null}
 
       <Card ref={createInvoiceRef}>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Create Invoice</CardTitle>
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateFormOpen((current) => !current)}>
+            {isCreateFormOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isCreateFormOpen ? "Close" : "Add New"}
+          </Button>
         </CardHeader>
-        <CardContent className="space-y-5">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="client">Client</Label>
-              <Select id="client" value={clientId} onChange={(event) => setClientId(event.target.value)}>
-                <option value="">Select Client</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.companyName || client.contactName || client.email}
-                  </option>
-                ))}
-              </Select>
+        {isCreateFormOpen ? (
+          <CardContent className="space-y-5">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="client">Client</Label>
+                <Select id="client" value={clientId} onChange={(event) => setClientId(event.target.value)}>
+                  <option value="">Select Client</option>
+                  {clients.map((client) => (
+                    <option key={client.id} value={client.id}>
+                      {client.companyName || client.contactName || client.email}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="issueDate">Issue Date</Label>
+                <Input
+                  id="issueDate"
+                  type="date"
+                  value={issueDate}
+                  onChange={(event) => setIssueDate(event.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Due Date</Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  value={dueDate}
+                  onChange={(event) => setDueDate(event.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject</Label>
+                <Input
+                  id="subject"
+                  value={subject}
+                  onChange={(event) => setSubject(event.target.value)}
+                  placeholder="Optional project or invoice subject"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="issueDate">Issue Date</Label>
-              <Input
-                id="issueDate"
-                type="date"
-                value={issueDate}
-                onChange={(event) => setIssueDate(event.target.value)}
+              <Label htmlFor="notes">Message</Label>
+              <Textarea
+                id="notes"
+                rows={4}
+                value={notes}
+                onChange={(event) => {
+                  setNotes(event.target.value);
+                  setNotesManuallyEdited(true);
+                }}
+                placeholder="Add the greeting or message shown on the invoice"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="dueDate">Due Date</Label>
-              <Input
-                id="dueDate"
-                type="date"
-                value={dueDate}
-                onChange={(event) => setDueDate(event.target.value)}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-1">
-            <div className="space-y-2">
-              <Label htmlFor="subject">Subject</Label>
-              <Input
-                id="subject"
-                value={subject}
-                onChange={(event) => setSubject(event.target.value)}
-                placeholder="Optional project or invoice subject"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="notes">Message</Label>
-            <Textarea
-              id="notes"
-              rows={4}
-              value={notes}
-              onChange={(event) => {
-                setNotes(event.target.value);
-                setNotesManuallyEdited(true);
-              }}
-              placeholder="Add the greeting or message shown on the invoice"
-            />
-          </div>
-
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Description</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Unit Price</TableHead>
-                <TableHead>Tax %</TableHead>
-                <TableHead>Line Total</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {lineItems.map((item, index) => (
-                <TableRow key={`${item.id ?? "new"}-${index}`}>
-                  <TableCell>
-                    <Input
-                      value={item.description}
-                      placeholder="Description"
-                      onChange={(event) => updateLineItem(index, "description", event.target.value)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min={0.01}
-                      step="0.01"
-                      value={item.quantity}
-                      onFocus={handleNumberInputFocus}
-                      onBlur={(event) => {
-                        if (parseNumber(event.target.value) <= 0) {
-                          updateLineItem(index, "quantity", MIN_QUANTITY);
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Qty</TableHead>
+                  <TableHead>Unit Price</TableHead>
+                  <TableHead>Tax %</TableHead>
+                  <TableHead>Line Total</TableHead>
+                  <TableHead>Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lineItems.map((item, index) => (
+                  <TableRow key={`${item.id ?? "new"}-${index}`}>
+                    <TableCell>
+                      <Input
+                        value={item.description}
+                        placeholder="Description"
+                        onChange={(event) => updateLineItem(index, "description", event.target.value)}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0.01}
+                        step="0.01"
+                        value={item.quantity}
+                        onFocus={handleNumberInputFocus}
+                        onBlur={(event) => {
+                          if (parseNumber(event.target.value) <= 0) {
+                            updateLineItem(index, "quantity", MIN_QUANTITY);
+                          }
+                        }}
+                        onChange={(event) =>
+                          updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
                         }
-                      }}
-                      onChange={(event) =>
-                        updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
-                      }
-                    />
-                  </TableCell>
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={item.unitPrice}
+                        onFocus={handleNumberInputFocus}
+                        onChange={(event) =>
+                          updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.1"
+                        value={item.taxRate}
+                        onFocus={handleNumberInputFocus}
+                        onChange={(event) =>
+                          updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableRow>
                   <TableCell>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={item.unitPrice}
-                      onFocus={handleNumberInputFocus}
-                      onChange={(event) =>
-                        updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min={0}
-                      step="0.1"
-                      value={item.taxRate}
-                      onFocus={handleNumberInputFocus}
-                      onChange={(event) =>
-                        updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
-                      <Trash2 className="h-4 w-4" />
+                    <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
+                      <Plus className="h-4 w-4" />
+                      Add Line Item
                     </Button>
                   </TableCell>
+                  <TableCell colSpan={5} />
                 </TableRow>
-              ))}
-              <TableRow>
-                <TableCell>
-                  <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
-                    <Plus className="h-4 w-4" />
-                    Add Line Item
-                  </Button>
-                </TableCell>
-                <TableCell colSpan={5} />
-              </TableRow>
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
 
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="text-sm text-slate-600">
-              <p>
-                Subtotal: {businessCurrency} {totals.subtotal.toFixed(2)}
-              </p>
-              <p>
-                Tax: {businessCurrency} {totals.taxAmount.toFixed(2)}
-              </p>
-              <p className="font-semibold text-slate-900">
-                Total: {businessCurrency} {totals.totalAmount.toFixed(2)}
-              </p>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="text-sm text-slate-600">
+                <p>
+                  Subtotal: {businessCurrency} {totals.subtotal.toFixed(2)}
+                </p>
+                <p>
+                  Tax: {businessCurrency} {totals.taxAmount.toFixed(2)}
+                </p>
+                <p className="font-semibold text-slate-900">
+                  Total: {businessCurrency} {totals.totalAmount.toFixed(2)}
+                </p>
+              </div>
+              <Button onClick={handleCreateInvoice} disabled={isCreating}>
+                {isCreating ? "Creating..." : "Create Invoice"}
+              </Button>
             </div>
-            <Button onClick={handleCreateInvoice} disabled={isCreating}>
-              {isCreating ? "Creating..." : "Create Invoice"}
-            </Button>
-          </div>
-        </CardContent>
+          </CardContent>
+        ) : null}
       </Card>
 
       <Card>
@@ -508,7 +516,10 @@ function InvoicePageContent() {
               <p className="text-base font-medium text-slate-900">No invoices yet</p>
               <p className="text-sm text-slate-600">Create your first invoice to start billing clients.</p>
               <Button
-                onClick={() => createInvoiceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                onClick={() => {
+                  setIsCreateFormOpen(true);
+                  createInvoiceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
               >
                 Create Invoice
               </Button>

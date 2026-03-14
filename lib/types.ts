@@ -99,8 +99,13 @@ export interface DashboardOverview {
   currency: InvoiceCurrency;
   revenueThisMonth: number;
   totalRevenue: number;
+  prospectRevenue: number;
+  overdueAmount: number;
   openInvoices: number;
+  unpaidInvoices: number;
   paidInvoices: number;
+  draftInvoices: number;
+  sentInvoices: number;
   overdueInvoices: number;
   clientCount: number;
   invoiceCount: number;

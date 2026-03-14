@@ -31,8 +31,13 @@ export async function GET(request: Request) {
     const [
       revenueThisMonthAggregate,
       totalRevenueAggregate,
+      prospectRevenueAggregate,
+      overdueAmountAggregate,
       openInvoices,
+      unpaidInvoices,
       paidInvoices,
+      draftInvoices,
+      sentInvoices,
       overdueInvoices,
       clientCount,
       invoiceCount,
@@ -56,6 +61,22 @@ export async function GET(request: Request) {
         },
         _sum: { totalAmount: true },
       }),
+      prisma.invoice.aggregate({
+        where: {
+          businessId: business.id,
+          status: {
+            in: ["draft", "sent", "overdue"],
+          },
+        },
+        _sum: { totalAmount: true },
+      }),
+      prisma.invoice.aggregate({
+        where: {
+          businessId: business.id,
+          status: "overdue",
+        },
+        _sum: { totalAmount: true },
+      }),
       prisma.invoice.count({
         where: {
           businessId: business.id,
@@ -67,7 +88,27 @@ export async function GET(request: Request) {
       prisma.invoice.count({
         where: {
           businessId: business.id,
+          status: {
+            not: "paid",
+          },
+        },
+      }),
+      prisma.invoice.count({
+        where: {
+          businessId: business.id,
           status: "paid",
+        },
+      }),
+      prisma.invoice.count({
+        where: {
+          businessId: business.id,
+          status: "draft",
+        },
+      }),
+      prisma.invoice.count({
+        where: {
+          businessId: business.id,
+          status: "sent",
         },
       }),
       prisma.invoice.count({
@@ -123,8 +164,13 @@ export async function GET(request: Request) {
       currency: business.currency,
       revenueThisMonth: revenueThisMonthAggregate._sum.totalAmount ?? 0,
       totalRevenue: totalRevenueAggregate._sum.totalAmount ?? 0,
+      prospectRevenue: prospectRevenueAggregate._sum.totalAmount ?? 0,
+      overdueAmount: overdueAmountAggregate._sum.totalAmount ?? 0,
       openInvoices,
+      unpaidInvoices,
       paidInvoices,
+      draftInvoices,
+      sentInvoices,
       overdueInvoices,
       clientCount,
       invoiceCount,

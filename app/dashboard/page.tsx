@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
 import { DashboardOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -8,26 +8,49 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Circle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle, Clock3, Coins, FileClock, Users, Wallet } from "lucide-react";
 
 function formatMoney(value: number): string {
-  return value.toFixed(2);
+  return new Intl.NumberFormat("de-CH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
 }
 
-function StatCard(props: { label: string; value: string | number; emphasis?: "danger" }) {
+function StatCard(props: {
+  label: string;
+  value: string | number;
+  helper: string;
+  icon: ReactNode;
+  tone?: "default" | "success" | "warning" | "danger";
+}) {
+  const toneClasses =
+    props.tone === "success"
+      ? "border-emerald-200 bg-emerald-50/70"
+      : props.tone === "warning"
+        ? "border-amber-200 bg-amber-50/70"
+        : props.tone === "danger"
+          ? "border-red-200 bg-red-50/70"
+          : "border-slate-200 bg-white";
+
+  const iconClasses =
+    props.tone === "success"
+      ? "bg-emerald-100 text-emerald-700"
+      : props.tone === "warning"
+        ? "bg-amber-100 text-amber-700"
+        : props.tone === "danger"
+          ? "bg-red-100 text-red-700"
+          : "bg-slate-100 text-slate-700";
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
+    <Card className={toneClasses}>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
         <CardTitle className="text-sm font-medium text-slate-500">{props.label}</CardTitle>
+        <div className={`rounded-lg p-2 ${iconClasses}`}>{props.icon}</div>
       </CardHeader>
       <CardContent>
-        <p
-          className={`text-3xl font-semibold ${
-            props.emphasis === "danger" ? "text-red-600" : "text-slate-900"
-          }`}
-        >
-          {props.value}
-        </p>
+        <p className="text-3xl font-semibold text-slate-900">{props.value}</p>
+        <p className="mt-2 text-sm text-slate-600">{props.helper}</p>
       </CardContent>
     </Card>
   );
@@ -143,14 +166,59 @@ export default function DashboardPage() {
         <StatCard
           label="Revenue this month"
           value={`${dashboard.currency} ${formatMoney(dashboard.revenueThisMonth)}`}
+          helper="Cash collected this calendar month"
+          icon={<Wallet className="h-5 w-5" />}
         />
         <StatCard
           label="Total revenue"
           value={`${dashboard.currency} ${formatMoney(dashboard.totalRevenue)}`}
+          helper={`${dashboard.paidInvoices} paid invoices`}
+          icon={<Coins className="h-5 w-5" />}
+          tone="success"
         />
-        <StatCard label="Open invoices" value={dashboard.openInvoices} />
-        <StatCard label="Paid invoices" value={dashboard.paidInvoices} />
-        <StatCard label="Overdue invoices" value={dashboard.overdueInvoices} emphasis="danger" />
+        <StatCard
+          label="Prospect revenue"
+          value={`${dashboard.currency} ${formatMoney(dashboard.prospectRevenue)}`}
+          helper={`${dashboard.unpaidInvoices} unpaid invoices in pipeline`}
+          icon={<FileClock className="h-5 w-5" />}
+          tone="warning"
+        />
+        <StatCard
+          label="Paid invoices"
+          value={dashboard.paidInvoices}
+          helper="Settled and closed"
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          tone="success"
+        />
+        <StatCard
+          label="Unpaid invoices"
+          value={dashboard.unpaidInvoices}
+          helper={`${dashboard.draftInvoices} draft · ${dashboard.sentInvoices} sent · ${dashboard.overdueInvoices} overdue`}
+          icon={<Clock3 className="h-5 w-5" />}
+          tone="warning"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <StatCard
+          label="Overdue invoices"
+          value={dashboard.overdueInvoices}
+          helper={`${dashboard.currency} ${formatMoney(dashboard.overdueAmount)} at risk`}
+          icon={<AlertCircle className="h-5 w-5" />}
+          tone="danger"
+        />
+        <StatCard
+          label="Open invoices"
+          value={dashboard.openInvoices}
+          helper="Draft and sent, excluding overdue"
+          icon={<FileClock className="h-5 w-5" />}
+        />
+        <StatCard
+          label="Active clients"
+          value={dashboard.clientCount}
+          helper={`${dashboard.invoiceCount} invoices created`}
+          icon={<Users className="h-5 w-5" />}
+        />
       </div>
 
       <Card>

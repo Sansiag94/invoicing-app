@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Eye, Trash2, UserPlus } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, Trash2, UserPlus } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { isSupportedCountry } from "@/lib/countries";
 import { ClientSummary } from "@/lib/types";
@@ -32,6 +32,7 @@ function ClientsPageContent() {
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
   const [vatNumber, setVatNumber] = useState("");
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<ClientSummary | null>(null);
@@ -120,6 +121,7 @@ function ClientsPageContent() {
       setCity("");
       setCountry("");
       setVatNumber("");
+      setIsCreateFormOpen(false);
       setSuccessMessage("Client created successfully.");
       await fetchClients();
     } catch (error) {
@@ -201,92 +203,98 @@ function ClientsPageContent() {
       ) : null}
 
       <Card ref={createClientRef}>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Add Client</CardTitle>
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateFormOpen((current) => !current)}>
+            {isCreateFormOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isCreateFormOpen ? "Close" : "Add New"}
+          </Button>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="companyName">Company Name</Label>
-              <Input
-                id="companyName"
-                value={companyName}
-                onChange={(event) => setCompanyName(event.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contactName">Contact Name</Label>
-              <Input
-                id="contactName"
-                value={contactName}
-                onChange={(event) => setContactName(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(event) => setPhone(event.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="street">Street</Label>
-              <Input id="street" value={street} onChange={(event) => setStreet(event.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="postalCode">Postal Code</Label>
-              <Input
-                id="postalCode"
-                value={postalCode}
-                onChange={(event) => setPostalCode(event.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="city">City</Label>
-              <Input id="city" value={city} onChange={(event) => setCity(event.target.value)} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="country">Country</Label>
-              <CountryCombobox
-                id="country"
-                value={country}
-                onChange={setCountry}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="vatNumber">VAT Number</Label>
-              <Input
-                id="vatNumber"
-                value={vatNumber}
-                onChange={(event) => setVatNumber(event.target.value)}
-                placeholder="Optional"
-              />
-            </div>
+        {isCreateFormOpen ? (
+          <CardContent>
+            <form onSubmit={handleSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="companyName">Company Name</Label>
+                <Input
+                  id="companyName"
+                  value={companyName}
+                  onChange={(event) => setCompanyName(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactName">Contact Name</Label>
+                <Input
+                  id="contactName"
+                  value={contactName}
+                  onChange={(event) => setContactName(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="street">Street</Label>
+                <Input id="street" value={street} onChange={(event) => setStreet(event.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postalCode">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  value={postalCode}
+                  onChange={(event) => setPostalCode(event.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input id="city" value={city} onChange={(event) => setCity(event.target.value)} required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <CountryCombobox
+                  id="country"
+                  value={country}
+                  onChange={setCountry}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vatNumber">VAT Number</Label>
+                <Input
+                  id="vatNumber"
+                  value={vatNumber}
+                  onChange={(event) => setVatNumber(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
 
-            <div className="md:col-span-2">
-              <Button type="submit" disabled={isCreating}>
-                <UserPlus className="h-4 w-4" />
-                {isCreating ? "Saving..." : "Add Client"}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
+              <div className="md:col-span-2">
+                <Button type="submit" disabled={isCreating}>
+                  <UserPlus className="h-4 w-4" />
+                  {isCreating ? "Saving..." : "Add Client"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        ) : null}
       </Card>
 
       <Card>
@@ -299,7 +307,10 @@ function ClientsPageContent() {
               <p className="text-base font-medium text-slate-900">No clients yet</p>
               <p className="text-sm text-slate-600">Create your first client to start invoicing.</p>
               <Button
-                onClick={() => createClientRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                onClick={() => {
+                  setIsCreateFormOpen(true);
+                  createClientRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
               >
                 Create Client
               </Button>
