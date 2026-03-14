@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
+import React from "react";
+import { pdf } from "@react-pdf/renderer";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import {
   buildPublicInvoiceLink,
@@ -9,42 +11,30 @@ import {
   sendInvoiceEmail,
 } from "@/lib/email";
 import crypto from "crypto";
-import { getInvoiceSenderName } from "@/lib/business";
+import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
 import { calculateInvoiceTotals } from "@/lib/invoice";
+import InvoiceDocument from "@/lib/InvoiceDocument";
+import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 
 export const runtime = "nodejs";
+
+async function readStreamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of stream) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  return Buffer.concat(chunks);
+}
 
 async function sendInvoice(id: string, businessId: string, request: Request) {
   const existingInvoice = await prisma.invoice.findFirst({
     where: { id, businessId },
-    select: {
-      id: true,
-      invoiceNumber: true,
-      publicToken: true,
-      status: true,
-      totalAmount: true,
-      currency: true,
-      dueDate: true,
-      lineItems: {
-        select: {
-          quantity: true,
-          unitPrice: true,
-          taxRate: true,
-        },
-      },
-      business: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      client: {
-        select: {
-          companyName: true,
-          contactName: true,
-          email: true,
-        },
-      },
+    include: {
+      lineItems: true,
+      business: true,
+      client: true,
     },
   });
 
@@ -93,33 +83,23 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     invoiceLink,
   });
 
-  let senderPreferences: { ownerName: string | null; invoiceSenderType: "company" | "owner" } = {
-    ownerName: null,
-    invoiceSenderType: "company",
+  const senderPreferences = {
+    ownerName: existingInvoice.business.ownerName ?? null,
+    invoiceSenderType: normalizeInvoiceSenderType(existingInvoice.business.invoiceSenderType ?? "company"),
   };
-
-  try {
-    const rows = await prisma.$queryRaw<Array<{ ownerName: string | null; invoiceSenderType: string | null }>>`
-      SELECT "ownerName", "invoiceSenderType"
-      FROM "Business"
-      WHERE "uuid" = ${existingInvoice.business.id}
-      LIMIT 1
-    `;
-
-    const row = rows[0];
-    senderPreferences = {
-      ownerName: row?.ownerName ?? null,
-      invoiceSenderType: row?.invoiceSenderType?.toLowerCase() === "owner" ? "owner" : "company",
-    };
-  } catch (error) {
-    console.warn("Unable to load sender preferences (columns may not exist yet):", error);
-  }
 
   const computedTotals = calculateInvoiceTotals(existingInvoice.lineItems);
   const totalAmountForEmail =
     computedTotals.totalAmount > 0 ? computedTotals.totalAmount : existingInvoice.totalAmount;
   const clientDisplayName =
     existingInvoice.client.contactName || existingInvoice.client.companyName || clientEmail;
+  const pdfFilename = buildInvoicePdfFilename(invoiceNumber);
+  const pdfDocument = React.createElement(InvoiceDocument, {
+    invoice: existingInvoice,
+    senderPreferences,
+  }) as unknown as Parameters<typeof pdf>[0];
+  const pdfStream = (await pdf(pdfDocument).toBuffer()) as unknown as NodeJS.ReadableStream;
+  const pdfBuffer = await readStreamToBuffer(pdfStream);
 
   await sendInvoiceEmail({
     to: clientEmail,
@@ -132,7 +112,12 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     totalAmount: totalAmountForEmail,
     currency: existingInvoice.currency,
     dueDate: existingInvoice.dueDate,
-    invoiceLink,
+    viewLink: invoiceLink,
+    payLink: invoiceLink,
+    pdfAttachment: {
+      filename: pdfFilename,
+      content: pdfBuffer,
+    },
   });
 
   if (existingInvoice.status === "draft") {
