@@ -1,5 +1,6 @@
 import Stripe from "stripe";
 import prisma from "@/lib/prisma";
+import { logInvoiceEvent } from "@/lib/invoiceActivity";
 
 export async function recordStripePaymentFromSession(
   session: Stripe.Checkout.Session
@@ -43,6 +44,13 @@ export async function recordStripePaymentFromSession(
         },
       });
     }
+  });
+
+  await logInvoiceEvent({
+    invoiceId,
+    type: "paid",
+    actor: "Stripe",
+    details: `Stripe payment confirmed (${session.currency?.toUpperCase() ?? "USD"})`,
   });
 
   return { invoiceId, markedPaid: true };

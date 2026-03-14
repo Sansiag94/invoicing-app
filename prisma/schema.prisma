@@ -86,6 +86,7 @@ model Invoice {
   lineItems     LineItem[]    @relation("InvoiceLineItems")
   payments      Payment[]     @relation("InvoicePayments")
   reminders     InvoiceReminder[] @relation("InvoiceReminders")
+  events        InvoiceEvent[] @relation("InvoiceEvents")
 }
 
 model LineItem {
@@ -121,6 +122,18 @@ model InvoiceReminder {
 
   @@unique([invoiceId, type])
   @@index([type, sentAt])
+}
+
+model InvoiceEvent {
+  id        String   @id @default(uuid()) @map("uuid")
+  invoiceId String
+  type      String
+  actor     String?
+  details   String?
+  createdAt DateTime @default(now())
+  invoice   Invoice  @relation("InvoiceEvents", fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, createdAt])
 }
 
 enum InvoiceStatus {

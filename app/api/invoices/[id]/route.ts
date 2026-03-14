@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 import { calculateInvoiceTotals } from "@/lib/invoice";
+import { listInvoiceEvents, logInvoiceEvent } from "@/lib/invoiceActivity";
 
 type UpdateLineItemInput = {
   id?: unknown;
@@ -91,6 +92,9 @@ export async function GET(
         client: true,
         lineItems: true,
         business: true,
+        payments: {
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
 
@@ -99,12 +103,14 @@ export async function GET(
     }
 
     const computedTotals = calculateInvoiceTotals(invoice.lineItems);
+    const events = await listInvoiceEvents(invoice.id);
 
     return NextResponse.json({
       ...invoice,
       subtotal: computedTotals.subtotal,
       taxAmount: computedTotals.taxAmount,
       totalAmount: computedTotals.totalAmount,
+      events,
     });
   } catch (error) {
     if (isAuthenticationError(error)) {
@@ -289,6 +295,9 @@ export async function PATCH(
           client: true,
           lineItems: true,
           business: true,
+          payments: {
+            orderBy: { createdAt: "desc" },
+          },
         },
       });
     });
@@ -298,12 +307,20 @@ export async function PATCH(
     }
 
     const updatedTotals = calculateInvoiceTotals(updatedInvoice.lineItems);
+    await logInvoiceEvent({
+      invoiceId: updatedInvoice.id,
+      type: "edited",
+      actor: (await getAuthenticatedUser(request)).email ?? "User",
+      details: "Invoice content updated",
+    });
+    const events = await listInvoiceEvents(updatedInvoice.id);
 
     return NextResponse.json({
       ...updatedInvoice,
       subtotal: updatedTotals.subtotal,
       taxAmount: updatedTotals.taxAmount,
       totalAmount: updatedTotals.totalAmount,
+      events,
     });
   } catch (error) {
     if (isAuthenticationError(error)) {

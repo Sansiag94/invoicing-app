@@ -250,6 +250,7 @@ export default function DashboardPage() {
           </Button>
         </CardHeader>
         <CardContent>
+          <div className="hidden md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -283,12 +284,12 @@ export default function DashboardPage() {
                   key={invoice.id}
                   className="cursor-pointer"
                   onClick={() => {
-                    router.push(`/invoices/${invoice.id}/preview`);
+                    router.push(`/invoices/${invoice.id}`);
                   }}
                 >
                   <TableCell>
                     <Link
-                      href={`/invoices/${invoice.id}/preview`}
+                      href={`/invoices/${invoice.id}`}
                       className="font-medium text-slate-900 hover:underline"
                       onClick={(event) => event.stopPropagation()}
                     >
@@ -309,6 +310,43 @@ export default function DashboardPage() {
             )}
             </TableBody>
           </Table>
+          </div>
+
+          <div className="space-y-3 md:hidden">
+            {dashboard.recentInvoices.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center">
+                <p className="text-base font-medium text-slate-900">No invoice activity yet</p>
+                <p className="text-sm text-slate-600">Create an invoice or add a client to start building revenue.</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild size="sm">
+                    <Link href="/invoices">Create Invoice</Link>
+                  </Button>
+                  <Button asChild size="sm" variant="outline">
+                    <Link href="/clients">Add Client</Link>
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              dashboard.recentInvoices.map((invoice) => (
+                <Link
+                  key={invoice.id}
+                  href={`/invoices/${invoice.id}`}
+                  className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-slate-900">{invoice.invoiceNumber}</p>
+                      <p className="text-sm text-slate-600">{invoice.clientName}</p>
+                      <p className="mt-1 text-sm text-slate-700">
+                        {invoice.currency} {formatMoney(invoice.totalAmount)}
+                      </p>
+                    </div>
+                    <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                  </div>
+                </Link>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Copy, Download, Eye, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, CheckCircle2, Copy, Download, Eye, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { InvoiceDetails, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -60,6 +60,39 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
   return "default";
 }
 
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString();
+}
+
+function formatMoney(value: number): string {
+  return value.toFixed(2);
+}
+
+function formatEventLabel(type: string): string {
+  switch (type) {
+    case "created":
+      return "Created";
+    case "edited":
+      return "Edited";
+    case "sent":
+      return "Sent";
+    case "reminder_sent":
+      return "Reminder sent";
+    case "viewed":
+      return "Viewed";
+    case "paid":
+      return "Paid";
+    case "reopened":
+      return "Reopened";
+    case "duplicated":
+      return "Duplicated";
+    default:
+      return type;
+  }
+}
+
 export default function InvoiceDetailPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -70,12 +103,14 @@ export default function InvoiceDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [issueDate, setIssueDate] = useState("");
@@ -186,6 +221,10 @@ export default function InvoiceDetailPage() {
       return;
     }
 
+    if (invoice.status === "draft" && !window.confirm(`Send invoice ${invoice.invoiceNumber} now?`)) {
+      return;
+    }
+
     try {
       setIsSending(true);
       const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, {
@@ -231,6 +270,33 @@ export default function InvoiceDetailPage() {
       alert("Failed to duplicate invoice");
     } finally {
       setIsDuplicating(false);
+    }
+  };
+
+  const handleSendReminder = async () => {
+    if (!invoice || isSendingReminder) {
+      return;
+    }
+
+    try {
+      setIsSendingReminder(true);
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/reminder`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as InvoiceDetails & { error?: string; message?: string };
+
+      if (!response.ok) {
+        alert(result?.error ?? "Failed to send reminder");
+        return;
+      }
+
+      await fetchInvoice(invoice.id);
+      setSuccessMessage(result?.message ?? "Reminder sent.");
+    } catch (error) {
+      console.error("Error sending reminder:", error);
+      alert("Failed to send reminder");
+    } finally {
+      setIsSendingReminder(false);
     }
   };
 
@@ -302,6 +368,19 @@ export default function InvoiceDetailPage() {
 
     loadInvoiceIntoForm(invoice);
     router.replace(`/invoices/${invoice.id}`);
+  };
+
+  const handleOpenEdit = () => {
+    if (!invoice) {
+      return;
+    }
+
+    if (invoice.status === "draft") {
+      router.push(`/invoices/${invoice.id}?mode=edit`);
+      return;
+    }
+
+    setShowReopenEditDialog(true);
   };
 
   const handleSaveInvoice = async () => {
@@ -495,9 +574,9 @@ export default function InvoiceDetailPage() {
             </Button>
           ) : null}
           {!isEditing ? (
-            <Button variant="outline" onClick={() => router.push(`/invoices/${invoice.id}?mode=edit`)}>
+            <Button variant="outline" onClick={handleOpenEdit}>
               <PencilLine className="h-4 w-4" />
-              Edit Invoice
+              {invoice.status === "draft" ? "Edit Invoice" : "Reopen & Edit"}
             </Button>
           ) : (
             <>
@@ -514,6 +593,16 @@ export default function InvoiceDetailPage() {
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
+          {!isEditing ? (
+            <Button
+              variant="outline"
+              onClick={handleSendReminder}
+              disabled={isSendingReminder || invoice.status === "paid" || invoice.status === "draft"}
+            >
+              <BellRing className="h-4 w-4" />
+              {isSendingReminder ? "Sending..." : "Send Reminder"}
+            </Button>
+          ) : null}
           {!isEditing ? (
             invoice.status === "paid" ? (
               <Button
@@ -602,6 +691,68 @@ export default function InvoiceDetailPage() {
         </Card>
       ) : null}
 
+      {!isEditing ? (
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment History</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {invoice.payments.length === 0 ? (
+                <p className="text-slate-500">No payments recorded yet.</p>
+              ) : (
+                invoice.payments.map((payment) => (
+                  <div key={payment.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-900">
+                          {payment.provider === "stripe"
+                            ? "Paid via Stripe"
+                            : payment.reference === "manual-status"
+                              ? "Marked paid manually"
+                              : "Bank transfer payment"}
+                        </p>
+                        <p className="text-slate-600">{formatDateTime(payment.createdAt)}</p>
+                      </div>
+                      <p className="font-semibold text-slate-900">
+                        {payment.currency} {formatMoney(payment.amount)}
+                      </p>
+                    </div>
+                    {payment.reference ? (
+                      <p className="mt-2 text-xs text-slate-500">Reference: {payment.reference}</p>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Activity History</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {invoice.events.length === 0 ? (
+                <p className="text-slate-500">No activity recorded yet.</p>
+              ) : (
+                invoice.events.map((event) => (
+                  <div key={event.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-slate-900">{formatEventLabel(event.type)}</p>
+                        {event.details ? <p className="text-slate-600">{event.details}</p> : null}
+                        {event.actor ? <p className="text-xs text-slate-500">By {event.actor}</p> : null}
+                      </div>
+                      <p className="text-xs text-slate-500">{formatDateTime(event.createdAt)}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Invoice Summary</CardTitle>
@@ -675,6 +826,7 @@ export default function InvoiceDetailPage() {
           <CardTitle>Line Items</CardTitle>
         </CardHeader>
         <CardContent>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -795,6 +947,7 @@ export default function InvoiceDetailPage() {
               )}
             </TableBody>
           </Table>
+          </div>
 
           <div className="mt-6 space-y-1 text-right text-sm text-slate-700">
             <p>
@@ -827,6 +980,30 @@ export default function InvoiceDetailPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteInvoice} disabled={isDeleting}>
               {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReopenEditDialog} onOpenChange={setShowReopenEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reopen Invoice for Editing</DialogTitle>
+            <DialogDescription>
+              This invoice has already moved beyond draft. Reopen it only if you need to change financial details before sending or sharing an updated version.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReopenEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowReopenEditDialog(false);
+                router.push(`/invoices/${invoice.id}?mode=edit`);
+              }}
+            >
+              Reopen & Edit
             </Button>
           </DialogFooter>
         </DialogContent>

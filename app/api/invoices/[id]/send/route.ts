@@ -15,6 +15,7 @@ import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business
 import { calculateInvoiceTotals } from "@/lib/invoice";
 import InvoiceDocument from "@/lib/InvoiceDocument";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
+import { logInvoiceEvent } from "@/lib/invoiceActivity";
 
 export const runtime = "nodejs";
 
@@ -126,6 +127,14 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
       data: { status: "sent" },
     });
   }
+
+  const user = await getAuthenticatedUser(request);
+  await logInvoiceEvent({
+    invoiceId: existingInvoice.id,
+    type: "sent",
+    actor: user.email ?? "User",
+    details: `Invoice emailed to ${clientEmail}`,
+  });
 
   console.log("[invoice-send] Invoice email sent and status updated", {
     invoiceId: existingInvoice.id,

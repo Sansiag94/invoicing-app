@@ -10,6 +10,7 @@ import {
   sendInvoiceReminderEmail,
 } from "@/lib/email";
 import { getInvoiceSenderName } from "@/lib/business";
+import { logInvoiceEvent } from "@/lib/invoiceActivity";
 
 export const runtime = "nodejs";
 
@@ -184,6 +185,12 @@ async function processReminderBatch(
         invoiceLink,
         dueDate,
         reminderKind: reminderType,
+      });
+      await logInvoiceEvent({
+        invoiceId: candidate.id,
+        type: "reminder_sent",
+        actor: "System",
+        details: `Scheduled reminder sent (${reminderType})`,
       });
       sent += 1;
     } catch (error) {

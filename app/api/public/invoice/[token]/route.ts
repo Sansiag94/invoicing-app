@@ -5,6 +5,7 @@ import { calculateInvoiceTotals, normalizeInvoiceCurrency } from "@/lib/invoice"
 import { generateSwissQRCodeRects, generateSwissQRPayload, getSwissQRBillMetadata } from "@/lib/qrbill";
 import { getInvoiceSenderName } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
+import { hasRecentInvoiceEvent, logInvoiceEvent } from "@/lib/invoiceActivity";
 
 export async function GET(
   request: Request,
@@ -64,6 +65,20 @@ export async function GET(
 
     if (!invoice) {
       return apiError("Invoice not found", 404);
+    }
+
+    const alreadyLoggedRecently = await hasRecentInvoiceEvent({
+      invoiceId: invoice.id,
+      type: "viewed",
+      sinceMinutes: 60,
+    });
+    if (!alreadyLoggedRecently) {
+      await logInvoiceEvent({
+        invoiceId: invoice.id,
+        type: "viewed",
+        actor: "Public link",
+        details: "Invoice viewed online",
+      });
     }
 
     const computedTotals = calculateInvoiceTotals(invoice.lineItems);

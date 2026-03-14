@@ -78,10 +78,30 @@ export interface InvoiceSummary {
   publicToken: string | null;
 }
 
+export interface InvoicePaymentRecord {
+  id: string;
+  provider: string;
+  amount: number;
+  currency: string;
+  status: string;
+  reference: string | null;
+  createdAt: string;
+}
+
+export interface InvoiceEventRecord {
+  id: string;
+  type: string;
+  actor: string | null;
+  details: string | null;
+  createdAt: string;
+}
+
 export interface InvoiceDetails extends InvoiceSummary {
   client: ClientSummary;
   lineItems: LineItemData[];
   business: BusinessSettingsData;
+  payments: InvoicePaymentRecord[];
+  events: InvoiceEventRecord[];
 }
 
 export interface ClientDetails extends ClientSummary {

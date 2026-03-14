@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { apiError } from "@/lib/api-response";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { getOpenInvoiceStatus } from "@/lib/invoiceStatus";
+import { listInvoiceEvents, logInvoiceEvent } from "@/lib/invoiceActivity";
 
 type UpdateInvoiceStatusBody = {
   status?: unknown;
@@ -12,23 +13,18 @@ function asStatus(value: unknown): "paid" | "unpaid" | null {
   return value === "paid" || value === "unpaid" ? value : null;
 }
 
-async function getBusinessId(request: Request): Promise<string | null> {
-  const user = await getAuthenticatedUser(request);
-  const business = await prisma.business.findFirst({
-    where: { userId: user.id },
-    select: { id: true },
-  });
-
-  return business?.id ?? null;
-}
-
 export async function PATCH(
   request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id } = await context.params;
-    const businessId = await getBusinessId(request);
+    const user = await getAuthenticatedUser(request);
+    const business = await prisma.business.findFirst({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+    const businessId = business?.id ?? null;
 
     if (!businessId) {
       return apiError("Invoice not found", 404);
@@ -90,11 +86,24 @@ export async function PATCH(
             client: true,
             lineItems: true,
             business: true,
+            payments: {
+              orderBy: { createdAt: "desc" },
+            },
           },
         });
       });
 
-      return NextResponse.json(updated);
+      if (updated) {
+        await logInvoiceEvent({
+          invoiceId: invoice.id,
+          type: "paid",
+          actor: user.email ?? "User",
+          details: "Marked paid manually",
+        });
+      }
+
+      const events = updated ? await listInvoiceEvents(updated.id) : [];
+      return NextResponse.json(updated ? { ...updated, events } : updated);
     }
 
     const hasExternalSettledPayment = invoice.payments.some(
@@ -129,11 +138,23 @@ export async function PATCH(
           client: true,
           lineItems: true,
           business: true,
+          payments: {
+            orderBy: { createdAt: "desc" },
+          },
         },
       });
     });
 
-    return NextResponse.json(updated);
+    if (updated) {
+      await logInvoiceEvent({
+        invoiceId: invoice.id,
+        type: "reopened",
+        actor: user.email ?? "User",
+        details: `Invoice reopened as ${reopenedStatus}`,
+      });
+    }
+    const events = updated ? await listInvoiceEvents(updated.id) : [];
+    return NextResponse.json(updated ? { ...updated, events } : updated);
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);

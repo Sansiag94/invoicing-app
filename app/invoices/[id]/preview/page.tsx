@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, CheckCircle2, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { InvoiceDetails } from "@/lib/types";
 import { Button } from "@/components/ui/button";
@@ -39,10 +39,12 @@ export default function InvoicePreviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const activePdfUrlRef = useRef<string | null>(null);
 
@@ -146,6 +148,10 @@ export default function InvoicePreviewPage() {
       return;
     }
 
+    if (invoice?.status === "draft" && !window.confirm(`Send invoice ${invoice.invoiceNumber} now?`)) {
+      return;
+    }
+
     try {
       setIsSending(true);
       const response = await authenticatedFetch(`/api/invoices/${id}/send`, {
@@ -196,6 +202,32 @@ export default function InvoicePreviewPage() {
       alert("Failed to update invoice status");
     } finally {
       setIsUpdatingStatus(false);
+    }
+  };
+
+  const handleSendReminder = async () => {
+    if (!id || isSendingReminder) {
+      return;
+    }
+
+    try {
+      setIsSendingReminder(true);
+      const response = await authenticatedFetch(`/api/invoices/${id}/reminder`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        alert(result?.error ?? "Failed to send reminder");
+        return;
+      }
+
+      setSuccessMessage(result?.message ?? "Reminder sent.");
+    } catch (error) {
+      console.error("Error sending reminder:", error);
+      alert("Failed to send reminder");
+    } finally {
+      setIsSendingReminder(false);
     }
   };
 
@@ -281,6 +313,14 @@ export default function InvoicePreviewPage() {
             <Send className="h-4 w-4" />
             {isSending ? "Sending..." : "Send"}
           </Button>
+          <Button
+            variant="outline"
+            onClick={handleSendReminder}
+            disabled={isSendingReminder || isLoading || invoice?.status === "paid" || invoice?.status === "draft"}
+          >
+            <BellRing className="h-4 w-4" />
+            {isSendingReminder ? "Sending..." : "Send Reminder"}
+          </Button>
           <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading}>
             <Download className="h-4 w-4" />
             Download PDF
@@ -309,11 +349,18 @@ export default function InvoicePreviewPage() {
             <Copy className="h-4 w-4" />
             {isDuplicating ? "Duplicating..." : "Duplicate"}
           </Button>
-          <Button asChild variant="outline">
-            <Link href={`/invoices/${id}?mode=edit`}>
-              <PencilLine className="h-4 w-4" />
-              Edit Invoice
-            </Link>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (invoice?.status && invoice.status !== "draft") {
+                setShowReopenEditDialog(true);
+                return;
+              }
+              router.push(`/invoices/${id}?mode=edit`);
+            }}
+          >
+            <PencilLine className="h-4 w-4" />
+            {invoice?.status === "draft" ? "Edit Invoice" : "Reopen & Edit"}
           </Button>
           <Button
             variant="outline"
@@ -363,6 +410,30 @@ export default function InvoicePreviewPage() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteInvoice} disabled={isDeleting}>
               {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showReopenEditDialog} onOpenChange={setShowReopenEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reopen Invoice for Editing</DialogTitle>
+            <DialogDescription>
+              This invoice is no longer a draft. Reopen it only if you need to update the billed details before sharing a new version.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReopenEditDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowReopenEditDialog(false);
+                router.push(`/invoices/${id}?mode=edit`);
+              }}
+            >
+              Reopen & Edit
             </Button>
           </DialogFooter>
         </DialogContent>

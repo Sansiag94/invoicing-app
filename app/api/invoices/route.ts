@@ -5,6 +5,7 @@ import crypto from "crypto";
 import { InvoiceStatus } from "@prisma/client";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
+import { logInvoiceEvent } from "@/lib/invoiceActivity";
 import {
   calculateInvoiceTotals,
   deriveClientInvoicePrefix,
@@ -268,6 +269,13 @@ export async function POST(request: Request) {
           lineItems: true,
         },
       });
+    });
+
+    await logInvoiceEvent({
+      invoiceId: invoice.id,
+      type: "created",
+      actor: user.email ?? "User",
+      details: `Invoice ${invoice.invoiceNumber} created`,
     });
 
     return NextResponse.json(invoice, { status: 201 });

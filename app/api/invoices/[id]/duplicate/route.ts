@@ -9,6 +9,7 @@ import {
   deriveClientInvoicePrefix,
   formatSequentialInvoiceNumber,
 } from "@/lib/invoice";
+import { logInvoiceEvent } from "@/lib/invoiceActivity";
 
 function addDays(date: Date, days: number): Date {
   const next = new Date(date);
@@ -117,6 +118,13 @@ export async function POST(
           lineItems: true,
         },
       });
+    });
+
+    await logInvoiceEvent({
+      invoiceId: duplicatedInvoice.id,
+      type: "duplicated",
+      actor: user.email ?? "User",
+      details: `Duplicated from ${sourceInvoice.invoiceNumber}`,
     });
 
     return NextResponse.json(duplicatedInvoice, { status: 201 });

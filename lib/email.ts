@@ -31,6 +31,17 @@ type SendInvoiceReminderEmailInput = {
   reminderKind: InvoiceReminderKind;
 };
 
+type SendManualInvoiceReminderEmailInput = {
+  to: string;
+  businessName: string;
+  recipientName?: string | null;
+  invoiceNumber: string;
+  totalAmount: number;
+  currency: string;
+  invoiceLink: string;
+  dueDate: Date;
+};
+
 let resendClient: Resend | null = null;
 const DEFAULT_RESEND_FROM_EMAIL = "Sierra Services <invoices@sierraservices.ch>";
 const DEFAULT_RESEND_REPLY_TO_EMAIL = "santiago@sierraservices.ch";
@@ -321,6 +332,76 @@ ${invoiceLink}`,
     reminderKind,
     emailId: result.data?.id,
   });
+
+  return result;
+}
+
+export async function sendManualInvoiceReminderEmail({
+  to,
+  businessName,
+  recipientName,
+  invoiceNumber,
+  totalAmount,
+  currency,
+  invoiceLink,
+  dueDate,
+}: SendManualInvoiceReminderEmailInput) {
+  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
+  const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
+  const dueDateLabel = formatDueDate(dueDate);
+  const normalizedRecipientName = recipientName?.trim();
+  const greetingLine = normalizedRecipientName ? `Hello ${normalizedRecipientName},` : "Hello,";
+  const safeBusinessName = escapeHtml(businessName);
+  const safeGreetingLine = escapeHtml(greetingLine);
+  const safeInvoiceNumber = escapeHtml(invoiceNumber);
+  const safeFormattedTotal = escapeHtml(formattedTotal);
+  const safeDueDateLabel = escapeHtml(dueDateLabel);
+  const safeInvoiceLink = escapeHtml(invoiceLink);
+
+  const result = await getResendClient().emails.send({
+    from,
+    replyTo,
+    to,
+    subject: `${businessName} - Reminder for invoice ${invoiceNumber}`,
+    text: `${greetingLine}
+
+This is a reminder for invoice ${invoiceNumber}.
+Amount: ${formattedTotal}
+Due date: ${dueDateLabel}
+
+View or pay online:
+${invoiceLink}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
+        <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 16px; padding: 28px;">
+          <p style="margin: 0 0 14px; color: #334155;">${safeGreetingLine}</p>
+          <h2 style="margin: 0 0 10px; color: #0f172a; font-size: 22px;">Reminder from ${safeBusinessName}</h2>
+          <p style="margin: 0 0 22px; color: #475569; line-height: 1.6;">
+            This is a reminder for invoice <strong>${safeInvoiceNumber}</strong>.
+          </p>
+          <div style="margin: 0 0 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 18px;">
+            <div style="margin: 0 0 10px; color: #475569;">Invoice number: <strong style="color:#0f172a;">${safeInvoiceNumber}</strong></div>
+            <div style="margin: 0 0 10px; color: #475569;">Total amount: <strong style="color:#0f172a;">${safeFormattedTotal}</strong></div>
+            <div style="margin: 0; color: #475569;">Due date: <strong style="color:#0f172a;">${safeDueDateLabel}</strong></div>
+          </div>
+          <div style="margin: 0 0 18px;">
+            <a href="${safeInvoiceLink}" style="display: inline-block; padding: 13px 18px; background: #0f172a; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600;">
+              View / Pay Invoice Online
+            </a>
+          </div>
+          <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+            If the button does not work, copy and paste this link into your browser:<br />
+            <span>${safeInvoiceLink}</span>
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  if (result.error) {
+    throw new EmailDeliveryError("Failed to send invoice reminder email");
+  }
 
   return result;
 }

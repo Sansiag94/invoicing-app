@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Eye, FilePenLine, FileText, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { BellRing, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Copy, Eye, FilePenLine, FileText, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -86,9 +86,12 @@ function InvoicePageContent() {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
+  const [isSendingReminderId, setIsSendingReminderId] = useState<string | null>(null);
   const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+  const [bulkActionLabel, setBulkActionLabel] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const createInvoiceRef = useRef<HTMLDivElement | null>(null);
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
@@ -138,12 +141,22 @@ function InvoicePageContent() {
       })
       .sort((left, right) => new Date(left.dueDate).getTime() - new Date(right.dueDate).getTime());
   }, [invoices, searchQuery, statusFilter]);
+  const selectedInvoices = useMemo(
+    () => filteredInvoices.filter((invoice) => selectedInvoiceIds.includes(invoice.id)),
+    [filteredInvoices, selectedInvoiceIds]
+  );
+  const allVisibleSelected =
+    filteredInvoices.length > 0 && filteredInvoices.every((invoice) => selectedInvoiceIds.includes(invoice.id));
 
   async function fetchInvoices() {
     const res = await authenticatedFetch("/api/invoices");
     const data = (await res.json()) as InvoiceRow[];
     setInvoices(Array.isArray(data) ? data : []);
   }
+
+  useEffect(() => {
+    setSelectedInvoiceIds((current) => current.filter((id) => invoices.some((invoice) => invoice.id === id)));
+  }, [invoices]);
 
   useEffect(() => {
     let mounted = true;
@@ -334,6 +347,11 @@ function InvoicePageContent() {
   };
 
   const handleSendInvoice = async (invoiceId: string) => {
+    const invoice = invoices.find((entry) => entry.id === invoiceId);
+    if (invoice?.status === "draft" && !window.confirm(`Send invoice ${invoice.invoiceNumber} now?`)) {
+      return;
+    }
+
     setIsSendingId(invoiceId);
 
     try {
@@ -354,6 +372,45 @@ function InvoicePageContent() {
       alert("Failed to send invoice");
     } finally {
       setIsSendingId(null);
+    }
+  };
+
+  const handleOpenEdit = (invoice: InvoiceRow) => {
+    if (invoice.status === "draft") {
+      router.push(`/invoices/${invoice.id}?mode=edit`);
+      return;
+    }
+
+    if (
+      window.confirm(
+        `Reopen invoice ${invoice.invoiceNumber} for editing? Use this only if you need to change billed details.`
+      )
+    ) {
+      router.push(`/invoices/${invoice.id}?mode=edit`);
+    }
+  };
+
+  const handleSendReminder = async (invoiceId: string) => {
+    setIsSendingReminderId(invoiceId);
+
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoiceId}/reminder`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        alert(result.error ?? "Failed to send reminder");
+        return;
+      }
+
+      setSuccessMessage(result.message ?? "Reminder sent.");
+      await fetchInvoices();
+    } catch (error) {
+      console.error("Error sending reminder:", error);
+      alert("Failed to send reminder");
+    } finally {
+      setIsSendingReminderId(null);
     }
   };
 
@@ -387,6 +444,124 @@ function InvoicePageContent() {
       alert("Failed to update invoice status");
     } finally {
       setIsUpdatingStatusId(null);
+    }
+  };
+
+  const handleDuplicateInvoice = async (invoiceId: string) => {
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoiceId}/duplicate`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as { id?: string; error?: string };
+
+      if (!response.ok || !result.id) {
+        alert(result.error ?? "Failed to duplicate invoice");
+        return;
+      }
+
+      router.push(`/invoices/${result.id}/preview`);
+    } catch (error) {
+      console.error("Error duplicating invoice:", error);
+      alert("Failed to duplicate invoice");
+    }
+  };
+
+  const toggleInvoiceSelection = (invoiceId: string) => {
+    setSelectedInvoiceIds((current) =>
+      current.includes(invoiceId)
+        ? current.filter((id) => id !== invoiceId)
+        : [...current, invoiceId]
+    );
+  };
+
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedInvoiceIds((current) =>
+        current.filter((id) => !filteredInvoices.some((invoice) => invoice.id === id))
+      );
+      return;
+    }
+
+    setSelectedInvoiceIds((current) => {
+      const visibleIds = filteredInvoices.map((invoice) => invoice.id);
+      return Array.from(new Set([...current, ...visibleIds]));
+    });
+  };
+
+  const handleExportSelected = () => {
+    const exportInvoices = selectedInvoices.length > 0 ? selectedInvoices : filteredInvoices;
+    if (exportInvoices.length === 0) {
+      return;
+    }
+
+    const header = ["Invoice Number", "Client", "Status", "Issue Date", "Due Date", "Currency", "Total"];
+    const rows = exportInvoices.map((invoice) => [
+      invoice.invoiceNumber,
+      getInvoiceClientName(invoice),
+      invoice.status,
+      invoice.issueDate,
+      invoice.dueDate,
+      invoice.currency,
+      invoice.totalAmount.toFixed(2),
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map((value) => `"${String(value).replaceAll('"', '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "invoices-export.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleBulkAction = async (action: "send" | "paid" | "delete") => {
+    if (selectedInvoices.length === 0) {
+      return;
+    }
+
+    if (action === "delete" && !window.confirm(`Delete ${selectedInvoices.length} selected invoices?`)) {
+      return;
+    }
+
+    setBulkActionLabel(action);
+
+    try {
+      for (const invoice of selectedInvoices) {
+        if (action === "send" && invoice.status !== "paid") {
+          await authenticatedFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" });
+        }
+
+        if (action === "paid") {
+          await authenticatedFetch(`/api/invoices/${invoice.id}/status`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "paid" }),
+          });
+        }
+
+        if (action === "delete") {
+          await authenticatedFetch(`/api/invoices/${invoice.id}`, { method: "DELETE" });
+        }
+      }
+
+      setSuccessMessage(
+        action === "send"
+          ? "Selected invoices sent."
+          : action === "paid"
+            ? "Selected invoices marked as paid."
+            : "Selected invoices deleted."
+      );
+      setSelectedInvoiceIds([]);
+      await fetchInvoices();
+    } catch (error) {
+      console.error(`Error running bulk ${action}:`, error);
+      alert(`Failed to complete bulk ${action}`);
+    } finally {
+      setBulkActionLabel(null);
     }
   };
 
@@ -483,6 +658,7 @@ function InvoicePageContent() {
                   />
                 </div>
 
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -564,6 +740,7 @@ function InvoicePageContent() {
                     </TableRow>
                   </TableBody>
                 </Table>
+                </div>
 
                 <div className="flex justify-end">
                   <Button onClick={handleCreateInvoice} disabled={isCreating} className="min-w-[10rem]">
@@ -672,6 +849,23 @@ function InvoicePageContent() {
           </div>
         </CardHeader>
         <CardContent>
+          {selectedInvoiceIds.length > 0 ? (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-sm text-slate-700">{selectedInvoiceIds.length} selected</p>
+              <Button size="sm" variant="outline" onClick={() => handleBulkAction("send")} disabled={bulkActionLabel !== null}>
+                {bulkActionLabel === "send" ? "Sending..." : "Send"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleBulkAction("paid")} disabled={bulkActionLabel !== null}>
+                {bulkActionLabel === "paid" ? "Updating..." : "Mark Paid"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleExportSelected} disabled={bulkActionLabel !== null}>
+                Export CSV
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => handleBulkAction("delete")} disabled={bulkActionLabel !== null} className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800">
+                {bulkActionLabel === "delete" ? "Deleting..." : "Delete"}
+              </Button>
+            </div>
+          ) : null}
           {invoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
               <p className="text-base font-medium text-slate-900">No invoices yet</p>
@@ -713,9 +907,19 @@ function InvoicePageContent() {
               </div>
             </div>
           ) : (
+            <>
+            <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleSelectAllVisible}
+                      aria-label="Select all visible invoices"
+                    />
+                  </TableHead>
                   <TableHead>Invoice Number</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Total</TableHead>
@@ -726,6 +930,14 @@ function InvoicePageContent() {
               <TableBody>
                 {filteredInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedInvoiceIds.includes(invoice.id)}
+                        onChange={() => toggleInvoiceSelection(invoice.id)}
+                        aria-label={`Select ${invoice.invoiceNumber}`}
+                      />
+                    </TableCell>
                     <TableCell>{invoice.invoiceNumber}</TableCell>
                     <TableCell>{getInvoiceClientName(invoice)}</TableCell>
                     <TableCell>
@@ -737,24 +949,10 @@ function InvoicePageContent() {
                     <TableCell>
                       <div className="flex flex-wrap gap-2">
                         <Button asChild variant="outline" size="sm">
-                          <Link href={`/invoices/${invoice.id}/preview`}>
+                          <Link href={`/invoices/${invoice.id}`}>
                             <Eye className="h-4 w-4" />
                             View
                           </Link>
-                        </Button>
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/invoices/${invoice.id}?mode=edit`}>
-                            <FilePenLine className="h-4 w-4" />
-                            Edit
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => setDeleteTarget(invoice)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
                         </Button>
                         <Button
                           variant="secondary"
@@ -764,6 +962,19 @@ function InvoicePageContent() {
                         >
                           <Send className="h-4 w-4" />
                           {isSendingId === invoice.id ? "Sending..." : "Send"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            invoice.status === "paid" ||
+                            invoice.status === "draft" ||
+                            isSendingReminderId === invoice.id
+                          }
+                          onClick={() => handleSendReminder(invoice.id)}
+                        >
+                          <BellRing className="h-4 w-4" />
+                          {isSendingReminderId === invoice.id ? "Sending..." : "Reminder"}
                         </Button>
                         {invoice.status === "paid" ? (
                           <Button
@@ -788,12 +999,130 @@ function InvoicePageContent() {
                             {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
                           </Button>
                         )}
+                        <Button variant="outline" size="sm" onClick={() => handleOpenEdit(invoice)}>
+                          <FilePenLine className="h-4 w-4" />
+                          {invoice.status === "draft" ? "Edit" : "Reopen"}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => handleDuplicateInvoice(invoice.id)}>
+                          <Copy className="h-4 w-4" />
+                          Duplicate
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeleteTarget(invoice)}
+                          className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {filteredInvoices.map((invoice) => (
+                <div key={invoice.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="mb-3 flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedInvoiceIds.includes(invoice.id)}
+                          onChange={() => toggleInvoiceSelection(invoice.id)}
+                          aria-label={`Select ${invoice.invoiceNumber}`}
+                        />
+                        <p className="font-semibold text-slate-900">{invoice.invoiceNumber}</p>
+                      </div>
+                      <p className="text-sm text-slate-600">{getInvoiceClientName(invoice)}</p>
+                      <p className="text-sm text-slate-600">
+                        {invoice.currency} {invoice.totalAmount.toFixed(2)}
+                      </p>
+                    </div>
+                    <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/invoices/${invoice.id}`}>
+                        <Eye className="h-4 w-4" />
+                        View
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={invoice.status === "paid" || isSendingId === invoice.id}
+                      onClick={() => handleSendInvoice(invoice.id)}
+                    >
+                      <Send className="h-4 w-4" />
+                      {isSendingId === invoice.id ? "Sending..." : "Send"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={
+                        invoice.status === "paid" ||
+                        invoice.status === "draft" ||
+                        isSendingReminderId === invoice.id
+                      }
+                      onClick={() => handleSendReminder(invoice.id)}
+                    >
+                      <BellRing className="h-4 w-4" />
+                      {isSendingReminderId === invoice.id ? "Sending..." : "Reminder"}
+                    </Button>
+                    {invoice.status === "paid" ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isUpdatingStatusId === invoice.id}
+                        onClick={() => handleManualStatusChange(invoice.id, "unpaid")}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Unpaid"}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isUpdatingStatusId === invoice.id}
+                        onClick={() => handleManualStatusChange(invoice.id, "paid")}
+                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenEdit(invoice)}
+                    >
+                      <FilePenLine className="h-4 w-4" />
+                      {invoice.status === "draft" ? "Edit" : "Reopen"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => handleDuplicateInvoice(invoice.id)}>
+                      <Copy className="h-4 w-4" />
+                      Duplicate
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDeleteTarget(invoice)}
+                      className="col-span-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
