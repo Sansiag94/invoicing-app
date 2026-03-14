@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DashboardOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,6 +76,7 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -277,9 +279,21 @@ export default function DashboardPage() {
               </TableRow>
             ) : (
               dashboard.recentInvoices.map((invoice) => (
-                <TableRow key={invoice.id}>
+                <TableRow
+                  key={invoice.id}
+                  className="cursor-pointer"
+                  onClick={() => {
+                    router.push(`/invoices/${invoice.id}/preview`);
+                  }}
+                >
                   <TableCell>
-                    {invoice.invoiceNumber}
+                    <Link
+                      href={`/invoices/${invoice.id}/preview`}
+                      className="font-medium text-slate-900 hover:underline"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      {invoice.invoiceNumber}
+                    </Link>
                   </TableCell>
                   <TableCell>
                     {invoice.clientName}

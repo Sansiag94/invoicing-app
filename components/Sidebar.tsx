@@ -13,15 +13,38 @@ const sidebarLinks = [
 
 type SidebarProps = {
   onNavigate?: () => void;
+  businessBrand?: {
+    name: string;
+    logoUrl: string | null;
+  } | null;
 };
 
-export default function Sidebar({ onNavigate }: SidebarProps) {
+function getBrandInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return (words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "I");
+}
+
+export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
   const pathname = usePathname();
+  const brandName = businessBrand?.name || "Sierra Invoices";
 
   return (
     <div className="h-full overflow-y-auto bg-white">
       <div className="border-b border-slate-200 px-5 py-6">
-        <h1 className="text-lg font-bold tracking-tight text-slate-900">Sierra Invoices</h1>
+        <div className="mb-3">
+          {businessBrand?.logoUrl ? (
+            <img
+              src={businessBrand.logoUrl}
+              alt={`${brandName} logo`}
+              className="h-12 w-12 rounded-xl border border-slate-200 object-cover"
+            />
+          ) : (
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white">
+              {getBrandInitials(brandName).toUpperCase()}
+            </div>
+          )}
+        </div>
+        <h1 className="text-lg font-bold tracking-tight text-slate-900">{brandName}</h1>
         <p className="mt-1 text-xs text-slate-500">Invoicing solutions for freelancers</p>
       </div>
 

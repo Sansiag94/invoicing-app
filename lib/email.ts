@@ -139,7 +139,6 @@ export async function sendInvoiceEmail({
   const safeInvoiceNumber = escapeHtml(invoiceNumber);
   const safeFormattedTotal = escapeHtml(formattedTotal);
   const safeDueDateLabel = dueDateLabel ? escapeHtml(dueDateLabel) : null;
-  const safeViewLink = escapeHtml(viewLink);
   const safePayLink = escapeHtml(effectivePayLink);
 
   const result = await getResendClient().emails.send({
@@ -155,11 +154,9 @@ Invoice number: ${invoiceNumber}
 Total amount: ${formattedTotal}
 ${dueDateLabel ? `Due date: ${dueDateLabel}\n` : ""}A PDF copy is attached for your records.
 
-Pay online:
+View or pay online:
 ${effectivePayLink}
-
-View invoice online:
-${viewLink}`,
+`,
     html: `
       <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
         <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 16px; padding: 28px;">
@@ -179,12 +176,9 @@ ${viewLink}`,
           </div>
           <div style="margin: 0 0 18px;">
             <a href="${safePayLink}" style="display: inline-block; padding: 13px 18px; background: #0f172a; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600;">
-              Pay Invoice Online
+              View / Pay Invoice Online
             </a>
           </div>
-          <p style="margin: 0 0 20px; color: #475569; font-size: 14px;">
-            Prefer to review first? <a href="${safeViewLink}" style="color: #0f172a; font-weight: 600;">View invoice online</a>.
-          </p>
           <p style="margin: 0 0 18px; color: #64748b; font-size: 13px;">
             A PDF copy of the invoice is attached for your records.
           </p>
@@ -194,9 +188,8 @@ ${viewLink}`,
               : ""
           }
           <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
-            If the buttons do not work, copy and paste these links into your browser:<br />
-            Pay online: <span>${safePayLink}</span><br />
-            View online: <span>${safeViewLink}</span>
+            If the button does not work, copy and paste this link into your browser:<br />
+            <span>${safePayLink}</span>
           </p>
         </div>
       </div>

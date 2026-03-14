@@ -68,7 +68,7 @@ export async function POST(
       return apiError("Invoice total must be greater than 0", 400);
     }
 
-    const successUrl = new URL(`/invoice/pay/${invoice.publicToken}?success=true`, request.url).toString();
+    const successUrl = new URL(`/invoice/pay/${invoice.publicToken}?success=true&session_id={CHECKOUT_SESSION_ID}`, request.url).toString();
     const cancelUrl = new URL(`/invoice/pay/${invoice.publicToken}?cancel=true`, request.url).toString();
 
     const stripe = getStripeClient();

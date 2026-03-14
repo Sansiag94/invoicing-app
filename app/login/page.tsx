@@ -61,39 +61,41 @@ export default function LoginPage() {
       alternateLabel="Create account"
       alternateHref="/signup"
     >
-      <div className="space-y-4">
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void handleLogin();
+        }}
+      >
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-            />
-          </div>
-          <Button
-            className="w-full"
-            onClick={handleLogin}
-            disabled={isLoading || !email.trim() || !password.trim()}
-          >
-            {isLoading ? "Logging in..." : "Log in"}
-          </Button>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                autoComplete="email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+            <Button className="w-full" type="submit" disabled={isLoading || !email.trim() || !password.trim()}>
+              {isLoading ? "Logging in..." : "Log in"}
+            </Button>
           </div>
         </div>
-      </div>
+      </form>
     </AuthSplitShell>
   );
 }

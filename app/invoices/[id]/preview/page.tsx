@@ -3,8 +3,9 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Copy, Download, PencilLine, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { InvoiceDetails } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -34,10 +35,12 @@ export default function InvoicePreviewPage() {
   const id = params?.id;
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string | null>(null);
+  const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -54,14 +57,26 @@ export default function InvoicePreviewPage() {
         setIsLoading(true);
         setLoadError(null);
 
-        const response = await authenticatedFetch(`/api/invoices/${id}/pdf`);
-        if (!response.ok) {
-          const result = (await response.json().catch(() => null)) as { error?: string } | null;
+        const [invoiceResponse, pdfResponse] = await Promise.all([
+          authenticatedFetch(`/api/invoices/${id}`),
+          authenticatedFetch(`/api/invoices/${id}/pdf`),
+        ]);
+
+        if (!invoiceResponse.ok) {
+          const result = (await invoiceResponse.json().catch(() => null)) as { error?: string } | null;
+          throw new Error(result?.error ?? "Failed to load invoice");
+        }
+
+        if (!pdfResponse.ok) {
+          const result = (await pdfResponse.json().catch(() => null)) as { error?: string } | null;
           throw new Error(result?.error ?? "Failed to load invoice preview");
         }
 
-        const blob = await response.blob();
-        const filename = extractPdfFilename(response.headers.get("Content-Disposition"));
+        const [invoiceData, blob] = await Promise.all([
+          invoiceResponse.json() as Promise<InvoiceDetails>,
+          pdfResponse.blob(),
+        ]);
+        const filename = extractPdfFilename(pdfResponse.headers.get("Content-Disposition"));
         const namedBlob = filename ? new File([blob], filename, { type: "application/pdf" }) : blob;
         objectUrl = URL.createObjectURL(namedBlob);
 
@@ -74,6 +89,7 @@ export default function InvoicePreviewPage() {
           URL.revokeObjectURL(activePdfUrlRef.current);
         }
         activePdfUrlRef.current = objectUrl;
+        setInvoice(invoiceData);
         setPdfUrl(objectUrl);
         setPdfFilename(filename);
       } catch (error) {
@@ -142,12 +158,44 @@ export default function InvoicePreviewPage() {
         return;
       }
 
-      setSuccessMessage(result?.message ?? "Invoice sent");
+      setInvoice((current) => (current ? { ...current, status: "sent" } : current));
+      router.push("/invoices");
     } catch (error) {
       console.error("Error sending invoice:", error);
       alert("Failed to send invoice");
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleManualStatusChange = async (nextStatus: "paid" | "unpaid") => {
+    if (!id || isUpdatingStatus) {
+      return;
+    }
+
+    try {
+      setIsUpdatingStatus(true);
+      const response = await authenticatedFetch(`/api/invoices/${id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const result = (await response.json()) as (InvoiceDetails & { error?: string });
+
+      if (!response.ok) {
+        alert(result?.error ?? "Failed to update invoice status");
+        return;
+      }
+
+      setInvoice(result);
+      setSuccessMessage(nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid.");
+    } catch (error) {
+      console.error("Error updating invoice status:", error);
+      alert("Failed to update invoice status");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -237,6 +285,26 @@ export default function InvoicePreviewPage() {
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
+          {invoice?.status === "paid" ? (
+            <Button
+              variant="outline"
+              onClick={() => void handleManualStatusChange("unpaid")}
+              disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
+            >
+              <RotateCcw className="h-4 w-4" />
+              {isUpdatingStatus ? "Updating..." : "Mark Unpaid"}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              onClick={() => void handleManualStatusChange("paid")}
+              disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
+              className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {isUpdatingStatus ? "Updating..." : "Mark Paid"}
+            </Button>
+          )}
           <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isLoading || isDeleting}>
             <Copy className="h-4 w-4" />
             {isDuplicating ? "Duplicating..." : "Duplicate"}

@@ -17,6 +17,10 @@ const navLinks = [
 
 type NavbarProps = {
   onOpenMenu?: () => void;
+  businessBrand?: {
+    name: string;
+    logoUrl: string | null;
+  } | null;
 };
 
 type ClientSearchResult = {
@@ -77,7 +81,12 @@ function formatShortDate(value: string): string {
   });
 }
 
-export default function Navbar({ onOpenMenu }: NavbarProps) {
+function getBrandInitials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  return ((words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "I")).toUpperCase();
+}
+
+export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   const seenNotificationsStorageKey = "sierra-invoices-seen-notifications";
   const pathname = usePathname();
   const router = useRouter();
@@ -103,6 +112,8 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const brandName = businessBrand?.name || "Sierra Invoices";
+  const brandInitials = getBrandInitials(brandName);
 
   useEffect(() => {
     if (pathname.startsWith("/clients") || pathname.startsWith("/invoices")) {
@@ -419,9 +430,20 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
 
           <Link
             href="/dashboard"
-            className="text-sm font-semibold tracking-tight text-slate-900 sm:text-base"
+            className="flex items-center gap-3 text-sm font-semibold tracking-tight text-slate-900 sm:text-base"
           >
-            Sierra Invoices
+            {businessBrand?.logoUrl ? (
+              <img
+                src={businessBrand.logoUrl}
+                alt={`${brandName} logo`}
+                className="h-9 w-9 rounded-xl border border-slate-200 object-cover"
+              />
+            ) : (
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-xs font-semibold text-white">
+                {brandInitials}
+              </span>
+            )}
+            <span>{brandName}</span>
           </Link>
         </div>
 
@@ -588,11 +610,19 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
           <div ref={accountRef} className="relative">
             <button
               type="button"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100"
+              className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-100"
               aria-label="Open account menu"
               onClick={() => setIsAccountOpen((current) => !current)}
             >
-              <Settings className="h-4 w-4" />
+              {businessBrand?.logoUrl ? (
+                <img
+                  src={businessBrand.logoUrl}
+                  alt={`${brandName} avatar`}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <span className="text-xs font-semibold text-slate-900">{brandInitials}</span>
+              )}
             </button>
 
             {isAccountOpen ? (

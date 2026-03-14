@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-response";
 import Stripe from "stripe";
-import prisma from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
+import { recordStripePaymentFromSession } from "@/lib/stripePayments";
 
 export const runtime = "nodejs";
 
@@ -33,44 +33,7 @@ export async function POST(request: Request) {
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      const invoiceId = session.metadata?.invoiceId ?? session.client_reference_id;
-
-      if (invoiceId && session.payment_status === "paid") {
-        const reference =
-          typeof session.payment_intent === "string" ? session.payment_intent : session.id;
-
-        await prisma.$transaction(async (tx) => {
-          const updatedInvoice = await tx.invoice.updateMany({
-            where: { id: invoiceId },
-            data: { status: "paid" },
-          });
-
-          if (updatedInvoice.count === 0) {
-            return;
-          }
-
-          const existingPayment = await tx.payment.findFirst({
-            where: {
-              invoiceId,
-              reference,
-            },
-            select: { id: true },
-          });
-
-          if (!existingPayment) {
-            await tx.payment.create({
-              data: {
-                invoiceId,
-                provider: "stripe",
-                amount: typeof session.amount_total === "number" ? session.amount_total / 100 : 0,
-                currency: session.currency?.toUpperCase() ?? "USD",
-                status: session.payment_status,
-                reference,
-              },
-            });
-          }
-        });
-      }
+      await recordStripePaymentFromSession(session);
     }
 
     return NextResponse.json({ received: true });

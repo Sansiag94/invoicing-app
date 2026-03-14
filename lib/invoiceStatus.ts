@@ -1,5 +1,9 @@
 import prisma from "@/lib/prisma";
 
+export function getOpenInvoiceStatus(dueDate: Date): "sent" | "overdue" {
+  return dueDate.getTime() < Date.now() ? "overdue" : "sent";
+}
+
 export async function markOverdueInvoicesForBusiness(
   businessId: string,
   invoiceId?: string

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Copy, Download, Eye, PencilLine, Plus, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Copy, Download, Eye, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { InvoiceDetails, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -71,6 +71,7 @@ export default function InvoiceDetailPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -230,6 +231,39 @@ export default function InvoiceDetailPage() {
       alert("Failed to duplicate invoice");
     } finally {
       setIsDuplicating(false);
+    }
+  };
+
+  const handleManualStatusChange = async (nextStatus: "paid" | "unpaid") => {
+    if (!invoice || isUpdatingStatus || isEditing) {
+      return;
+    }
+
+    try {
+      setIsUpdatingStatus(true);
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+
+      const result = (await response.json()) as (InvoiceDetails & { error?: string });
+
+      if (!response.ok) {
+        alert(result?.error ?? "Failed to update invoice status");
+        return;
+      }
+
+      setInvoice(result);
+      loadInvoiceIntoForm(result);
+      setSuccessMessage(nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid.");
+    } catch (error) {
+      console.error("Error updating invoice status:", error);
+      alert("Failed to update invoice status");
+    } finally {
+      setIsUpdatingStatus(false);
     }
   };
 
@@ -480,6 +514,28 @@ export default function InvoiceDetailPage() {
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
+          {!isEditing ? (
+            invoice.status === "paid" ? (
+              <Button
+                variant="outline"
+                onClick={() => void handleManualStatusChange("unpaid")}
+                disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
+              >
+                <RotateCcw className="h-4 w-4" />
+                {isUpdatingStatus ? "Updating..." : "Mark Unpaid"}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => void handleManualStatusChange("paid")}
+                disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
+                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {isUpdatingStatus ? "Updating..." : "Mark Paid"}
+              </Button>
+            )
+          ) : null}
           {!isEditing ? (
             <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isDeleting}>
               <Copy className="h-4 w-4" />

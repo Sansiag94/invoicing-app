@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Building2, CalendarDays, ChevronDown, ChevronUp, Eye, FilePenLine, FileText, Plus, Send, Trash2 } from "lucide-react";
+import { Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Eye, FilePenLine, FileText, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -86,6 +86,7 @@ function InvoicePageContent() {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
+  const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -353,6 +354,39 @@ function InvoicePageContent() {
       alert("Failed to send invoice");
     } finally {
       setIsSendingId(null);
+    }
+  };
+
+  const handleManualStatusChange = async (
+    invoiceId: string,
+    nextStatus: "paid" | "unpaid"
+  ) => {
+    setIsUpdatingStatusId(invoiceId);
+
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoiceId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ status: nextStatus }),
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        alert(result.error ?? "Failed to update invoice status");
+        return;
+      }
+
+      setSuccessMessage(
+        nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid."
+      );
+      await fetchInvoices();
+    } catch (error) {
+      console.error("Error updating invoice status:", error);
+      alert("Failed to update invoice status");
+    } finally {
+      setIsUpdatingStatusId(null);
     }
   };
 
@@ -731,6 +765,29 @@ function InvoicePageContent() {
                           <Send className="h-4 w-4" />
                           {isSendingId === invoice.id ? "Sending..." : "Send"}
                         </Button>
+                        {invoice.status === "paid" ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isUpdatingStatusId === invoice.id}
+                            onClick={() => handleManualStatusChange(invoice.id, "unpaid")}
+                            className="min-w-[8.75rem]"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                            {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Unpaid"}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={isUpdatingStatusId === invoice.id}
+                            onClick={() => handleManualStatusChange(invoice.id, "paid")}
+                            className="min-w-[8.75rem] border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

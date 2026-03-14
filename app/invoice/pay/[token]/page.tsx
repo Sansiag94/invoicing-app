@@ -61,6 +61,7 @@ export default function PublicInvoicePage() {
   const [invoice, setInvoice] = useState<PublicInvoiceDetails | null>(null);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [isConfirmingPayment, setIsConfirmingPayment] = useState(false);
 
   useEffect(() => {
     if (!token) return;
@@ -92,6 +93,49 @@ export default function PublicInvoicePage() {
 
   const paymentSuccess = searchParams.get("success") === "true";
   const paymentCancelled = searchParams.get("cancel") === "true";
+  const stripeSessionId = searchParams.get("session_id");
+
+  useEffect(() => {
+    if (!token || !paymentSuccess || !stripeSessionId || !invoice || invoice.status === "paid") {
+      return;
+    }
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        setIsConfirmingPayment(true);
+        const response = await fetch(`/api/public/invoice/${token}/stripe/confirm`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sessionId: stripeSessionId }),
+        });
+
+        if (!response.ok) {
+          const result = (await response.json()) as { error?: string };
+          throw new Error(result.error ?? "Could not confirm payment");
+        }
+
+        if (!mounted) {
+          return;
+        }
+
+        setInvoice((current) => (current ? { ...current, status: "paid" } : current));
+      } catch (error) {
+        console.error("Error confirming payment:", error);
+      } finally {
+        if (mounted) {
+          setIsConfirmingPayment(false);
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [invoice, paymentSuccess, stripeSessionId, token]);
 
   const lineItems = useMemo(() => {
     if (!invoice) return [];
@@ -410,7 +454,7 @@ export default function PublicInvoicePage() {
 
       {paymentSuccess ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 print:hidden">
-          Payment completed. Thank you.
+          {isConfirmingPayment ? "Payment received. Updating invoice status..." : "Payment completed. Thank you."}
         </div>
       ) : null}
       {paymentCancelled ? (
