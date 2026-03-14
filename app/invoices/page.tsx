@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, Eye, FilePenLine, Plus, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -67,6 +67,7 @@ ${senderName}`;
 }
 
 function InvoicePageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
@@ -253,6 +254,12 @@ function InvoicePageContent() {
       setNotes(buildInvoiceNotesTemplate("client_first_name", invoiceSenderName || "User_name"));
       setIsCreateFormOpen(false);
       setSuccessMessage("Invoice created successfully.");
+
+      if (result?.id) {
+        router.push(`/invoices/${result.id}/preview`);
+        return;
+      }
+
       await fetchInvoices();
     } catch (error) {
       console.error("Error creating invoice:", error);

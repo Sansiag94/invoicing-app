@@ -322,7 +322,7 @@ export default function InvoiceDetailPage() {
       setInvoice(result);
       loadInvoiceIntoForm(result);
       setIsEditing(false);
-      router.replace(`/invoices/${id}`);
+      router.replace(`/invoices/${id}/preview`);
       setSuccessMessage("Invoice updated successfully.");
     } catch (error) {
       console.error("Error updating invoice:", error);

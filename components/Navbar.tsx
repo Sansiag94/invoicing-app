@@ -78,6 +78,7 @@ function formatShortDate(value: string): string {
 }
 
 export default function Navbar({ onOpenMenu }: NavbarProps) {
+  const seenNotificationsStorageKey = "sierra-invoice-seen-notifications";
   const pathname = usePathname();
   const router = useRouter();
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
@@ -97,6 +98,7 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
+  const [seenNotificationIds, setSeenNotificationIds] = useState<string[]>([]);
 
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -129,6 +131,26 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
       subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    try {
+      const stored = window.localStorage.getItem(seenNotificationsStorageKey);
+      if (!stored) {
+        return;
+      }
+
+      const parsed = JSON.parse(stored) as unknown;
+      if (Array.isArray(parsed)) {
+        setSeenNotificationIds(parsed.filter((value): value is string => typeof value === "string"));
+      }
+    } catch (error) {
+      console.error("Unable to restore seen notifications:", error);
+    }
+  }, [seenNotificationsStorageKey]);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -181,6 +203,18 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
     } finally {
       setIsSearchLoading(false);
     }
+  }
+
+  function markNotificationsSeen(items: NotificationItem[]) {
+    if (items.length === 0 || typeof window === "undefined") {
+      return;
+    }
+
+    setSeenNotificationIds((current) => {
+      const next = Array.from(new Set([...current, ...items.map((item) => item.id)]));
+      window.localStorage.setItem(seenNotificationsStorageKey, JSON.stringify(next));
+      return next;
+    });
   }
 
   async function loadNotifications() {
@@ -269,10 +303,12 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
         .slice(0, 8);
 
       setNotifications(nextNotifications);
+      return nextNotifications;
     } catch (error) {
       console.error("Unable to load notifications:", error);
       setNotificationsError("Unable to load notifications.");
       setNotifications([]);
+      return [];
     } finally {
       setIsNotificationsLoading(false);
     }
@@ -321,7 +357,9 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
       .slice(0, 5);
   }, [searchData, normalizedSearchQuery]);
 
-  const actionableNotificationCount = notifications.filter((item) => item.priority < 2).length;
+  const actionableNotificationCount = notifications.filter(
+    (item) => item.priority < 2 && !seenNotificationIds.includes(item.id)
+  ).length;
 
   function handleNavigate(href: string) {
     setIsSearchOpen(false);
@@ -495,14 +533,17 @@ export default function Navbar({ onOpenMenu }: NavbarProps) {
               type="button"
               className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100"
               aria-label="Open notifications"
-              onClick={() => {
+              onClick={async () => {
                 setIsNotificationsOpen((current) => {
                   const nextValue = !current;
-                  if (nextValue) {
-                    void loadNotifications();
-                  }
                   return nextValue;
                 });
+
+                if (!isNotificationsOpen) {
+                  markNotificationsSeen(notifications);
+                  const loadedNotifications = await loadNotifications();
+                  markNotificationsSeen(loadedNotifications);
+                }
               }}
             >
               <Bell className="h-4 w-4" />
