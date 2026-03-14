@@ -58,7 +58,6 @@ export interface BusinessSettingsData {
   bankName?: string | null;
   bic?: string | null;
   logoUrl: string | null;
-  invoicePrefix: string;
 }
 
 export interface InvoiceSummary {

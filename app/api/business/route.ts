@@ -23,7 +23,6 @@ type UpdateBusinessBody = {
   currency: unknown;
   vatNumber?: unknown;
   iban?: unknown;
-  invoicePrefix?: unknown;
   logoUrl?: unknown;
 };
 
@@ -126,7 +125,6 @@ export async function PATCH(request: Request) {
         currency: normalizedCurrency,
         vatNumber: asString(body.vatNumber),
         iban: asString(body.iban),
-        invoicePrefix: asString(body.invoicePrefix) ?? business.invoicePrefix,
         logoUrl: body.logoUrl === undefined ? business.logoUrl : asString(body.logoUrl),
       },
     });

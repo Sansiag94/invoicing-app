@@ -6,6 +6,7 @@ import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
 import { generateSwissQRCodeRects, getSwissQRBillMetadata, type SwissQRBillMetadata } from "@/lib/qrbill";
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
+import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 
 type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
@@ -165,7 +166,7 @@ const styles = StyleSheet.create({
   },
   colPos: { width: "8%" },
   colDesc: { width: "46%" },
-  colQty: { width: "12%", textAlign: "right" },
+  colQty: { width: "12%", textAlign: "left" },
   colUnit: { width: "16%", textAlign: "right" },
   colTotal: { width: "18%", textAlign: "right" },
   totalsBox: {
@@ -602,9 +603,10 @@ const InvoiceDocument = ({
   const additionalInformation = qrMetadata?.additionalInformation || invoice.invoiceNumber;
 
   const messageText = normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(clientPrimaryName, senderName);
+  const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
 
   return (
-    <Document>
+    <Document title={pdfTitle}>
       {pages.map((lineItems, pageIndex) => {
         const isFirstPage = pageIndex === 0;
         const isQrPage = qrPageIndex !== null && pageIndex === qrPageIndex;

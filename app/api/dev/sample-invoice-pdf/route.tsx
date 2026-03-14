@@ -110,10 +110,7 @@ export async function GET(request: Request) {
 
     const doc = <InvoiceDocument invoice={sampleInvoice} senderPreferences={senderPreferences} />;
     const pdfBuffer = (await pdf(doc).toBuffer()) as unknown as BodyInit;
-    const filename = buildInvoicePdfFilename(
-      sampleInvoice.invoiceNumber,
-      sampleInvoice.client.companyName || sampleInvoice.client.contactName || sampleInvoice.client.email
-    );
+    const filename = buildInvoicePdfFilename(sampleInvoice.invoiceNumber);
 
     return new Response(pdfBuffer, {
       status: 200,

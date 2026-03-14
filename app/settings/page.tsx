@@ -30,7 +30,6 @@ export default function SettingsPage() {
   const [currency, setCurrency] = useState("CHF");
   const [vatNumber, setVatNumber] = useState("");
   const [iban, setIban] = useState("");
-  const [invoicePrefix, setInvoicePrefix] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
@@ -76,7 +75,6 @@ export default function SettingsPage() {
         currency,
         vatNumber,
         iban,
-        invoicePrefix,
         logoUrl: options?.logoUrlOverride ?? logoUrl,
       }),
     });
@@ -104,7 +102,6 @@ export default function SettingsPage() {
     setCurrency(updatedBusiness.currency || "CHF");
     setVatNumber(updatedBusiness.vatNumber || "");
     setIban(updatedBusiness.iban || "");
-    setInvoicePrefix(updatedBusiness.invoicePrefix || "INV");
     setLogoUrl(updatedBusiness.logoUrl || "");
     setIsSaving(false);
 
@@ -198,7 +195,6 @@ export default function SettingsPage() {
         setCurrency(data?.currency || "CHF");
         setVatNumber(data?.vatNumber || "");
         setIban(data?.iban || "");
-        setInvoicePrefix(data?.invoicePrefix || "INV");
         setLogoUrl(data?.logoUrl || "");
       }
     })();
@@ -358,15 +354,6 @@ export default function SettingsPage() {
               placeholder="Optional"
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="invoicePrefix">Invoice Prefix</Label>
-            <Input
-              id="invoicePrefix"
-              value={invoicePrefix}
-              onChange={(event) => setInvoicePrefix(event.target.value)}
-            />
-          </div>
-
           <div className="md:col-span-2">
             <Button onClick={handleSave} disabled={isSaving || isUploadingLogo}>
               <Save className="h-4 w-4" />

@@ -55,10 +55,7 @@ export async function GET(
     const doc = <InvoiceDocument invoice={invoice} senderPreferences={senderPreferences} />;
     const asPdf = pdf(doc);
     const pdfBuffer = (await asPdf.toBuffer()) as unknown as BodyInit;
-    const filename = buildInvoicePdfFilename(
-      invoice.invoiceNumber,
-      invoice.client.companyName || invoice.client.contactName || invoice.client.email
-    );
+    const filename = buildInvoicePdfFilename(invoice.invoiceNumber);
 
     return new Response(pdfBuffer, {
       status: 200,

@@ -93,8 +93,26 @@ export function calculateInvoiceTotals(lineItems: LineItemAmounts[]) {
   };
 }
 
-export function formatSequentialInvoiceNumber(issueDate: Date, sequence: number): string {
+export function deriveClientInvoicePrefix(value: string | null | undefined): string {
+  const normalized = (value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z]/g, "")
+    .toUpperCase();
+
+  if (normalized.length >= 2) {
+    return normalized.slice(0, 2);
+  }
+
+  if (normalized.length === 1) {
+    return `${normalized}X`;
+  }
+
+  return "IN";
+}
+
+export function formatSequentialInvoiceNumber(prefix: string, issueDate: Date, sequence: number): string {
   const year = issueDate.getUTCFullYear();
   const normalizedSequence = Number.isFinite(sequence) ? Math.max(1, Math.floor(sequence)) : 1;
-  return `${year}-${String(normalizedSequence).padStart(3, "0")}`;
+  return `${prefix}${year}-${String(normalizedSequence).padStart(3, "0")}`;
 }

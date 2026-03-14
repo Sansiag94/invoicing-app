@@ -468,7 +468,7 @@ export default function PublicInvoicePage() {
               <tr>
                 <th style={{ width: "8%" }}>Pos</th>
                 <th style={{ width: "46%" }}>Description</th>
-                <th className="num" style={{ width: "12%" }}>
+                <th style={{ width: "12%" }}>
                   Qty
                 </th>
                 <th className="num" style={{ width: "16%" }}>
@@ -484,7 +484,7 @@ export default function PublicInvoicePage() {
                 <tr key={`line-item-${index}`}>
                   <td>{index + 1}</td>
                   <td>{item.description}</td>
-                  <td className="num">{formatQuantity(item.quantity)}</td>
+                  <td>{formatQuantity(item.quantity)}</td>
                   <td className="num">{formatMoney(item.unitPrice)}</td>
                   <td className="num">{formatMoney(item.lineTotal)}</td>
                 </tr>

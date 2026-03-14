@@ -168,10 +168,7 @@ export default function InvoiceDetailPage() {
       const downloadUrl = window.URL.createObjectURL(pdfBlob);
       const link = document.createElement("a");
       link.href = downloadUrl;
-      link.download = buildInvoicePdfFilename(
-        invoice.invoiceNumber,
-        invoice.client.companyName || invoice.client.contactName || invoice.client.email
-      );
+      link.download = buildInvoicePdfFilename(invoice.invoiceNumber);
       document.body.appendChild(link);
       link.click();
       link.remove();

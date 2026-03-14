@@ -7,6 +7,7 @@ import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 import {
   calculateInvoiceTotals,
+  deriveClientInvoicePrefix,
   formatSequentialInvoiceNumber,
   isSupportedInvoiceCurrency,
   normalizeInvoiceCurrency,
@@ -191,7 +192,12 @@ export async function POST(request: Request) {
         id: clientId,
         businessId: business.id,
       },
-      select: { id: true },
+      select: {
+        id: true,
+        companyName: true,
+        contactName: true,
+        email: true,
+      },
     });
 
     if (!client) {
@@ -224,7 +230,13 @@ export async function POST(request: Request) {
         },
       });
 
-      const invoiceNumber = formatSequentialInvoiceNumber(issueDate, updatedBusiness.invoiceCounter);
+      const clientDisplayName = client.companyName || client.contactName || client.email;
+      const invoicePrefix = deriveClientInvoicePrefix(clientDisplayName);
+      const invoiceNumber = formatSequentialInvoiceNumber(
+        invoicePrefix,
+        issueDate,
+        updatedBusiness.invoiceCounter
+      );
 
       return tx.invoice.create({
         data: {
