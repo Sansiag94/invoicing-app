@@ -27,6 +27,7 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [website, setWebsite] = useState("");
   const [bankName, setBankName] = useState("");
+  const [bic, setBic] = useState("");
   const [country, setCountry] = useState("");
   const [currency, setCurrency] = useState("CHF");
   const [vatNumber, setVatNumber] = useState("");
@@ -73,6 +74,7 @@ export default function SettingsPage() {
         email,
         website,
         bankName,
+        bic,
         country,
         currency,
         vatNumber,
@@ -104,6 +106,7 @@ export default function SettingsPage() {
     setEmail(updatedBusiness.email || "");
     setWebsite(updatedBusiness.website || "");
     setBankName(updatedBusiness.bankName || "");
+    setBic(updatedBusiness.bic || "");
     setCountry(updatedBusiness.country || "");
     setCurrency(updatedBusiness.currency || "CHF");
     setVatNumber(updatedBusiness.vatNumber || "");
@@ -219,6 +222,7 @@ export default function SettingsPage() {
         setEmail(data?.email || "");
         setWebsite(data?.website || "");
         setBankName(data?.bankName || "");
+        setBic(data?.bic || "");
         setCountry(data?.country || "");
         setCurrency(data?.currency || "CHF");
         setVatNumber(data?.vatNumber || "");
@@ -382,6 +386,15 @@ export default function SettingsPage() {
               placeholder="Optional"
             />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="bic">BIC / SWIFT</Label>
+            <Input
+              id="bic"
+              value={bic}
+              onChange={(event) => setBic(event.target.value)}
+              placeholder="Optional"
+            />
+          </div>
           <div className="md:col-span-2">
             <Button onClick={handleSave} disabled={isSaving || isUploadingLogo}>
               <Save className="h-4 w-4" />
@@ -420,6 +433,7 @@ export default function SettingsPage() {
             ))}
             {iban ? <p className="mt-2 text-sm text-slate-700">{iban}</p> : null}
             {bankName ? <p className="text-sm text-slate-700">{bankName}</p> : null}
+            {bic ? <p className="text-sm text-slate-700">BIC / SWIFT: {bic}</p> : null}
           </div>
         </CardContent>
       </Card>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { FocusEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -26,6 +27,14 @@ type InvoiceRow = InvoiceSummary & {
     contactName: string | null;
     email: string;
   };
+};
+
+type ConfirmDialogState = {
+  title: string;
+  description: ReactNode;
+  confirmLabel: string;
+  confirmVariant?: "default" | "secondary" | "outline" | "destructive" | "ghost";
+  onConfirm: () => void;
 };
 
 function statusVariant(status: string): "default" | "success" | "warning" | "danger" {
@@ -98,6 +107,7 @@ function InvoicePageContent() {
   const [bulkActionLabel, setBulkActionLabel] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [openActionsInvoiceId, setOpenActionsInvoiceId] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const createInvoiceRef = useRef<HTMLDivElement | null>(null);
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
   const statusFilter = (searchParams.get("status") ?? "").trim().toLowerCase();
@@ -370,12 +380,7 @@ function InvoicePageContent() {
     }
   };
 
-  const handleSendInvoice = async (invoiceId: string) => {
-    const invoice = invoices.find((entry) => entry.id === invoiceId);
-    if (invoice?.status === "draft" && !window.confirm(`Send invoice ${invoice.invoiceNumber} now?`)) {
-      return;
-    }
-
+  const sendInvoiceNow = async (invoiceId: string) => {
     setIsSendingId(invoiceId);
 
     try {
@@ -399,26 +404,56 @@ function InvoicePageContent() {
     }
   };
 
+  const handleSendInvoice = (invoiceId: string) => {
+    const invoice = invoices.find((entry) => entry.id === invoiceId);
+
+    if (invoice?.status === "draft") {
+      setConfirmDialog({
+        title: "Send Invoice",
+        description: (
+          <>
+            Send invoice <strong>{invoice.invoiceNumber}</strong> now?
+          </>
+        ),
+        confirmLabel: "Send Invoice",
+        onConfirm: () => {
+          setConfirmDialog(null);
+          void sendInvoiceNow(invoiceId);
+        },
+      });
+      return;
+    }
+
+    void sendInvoiceNow(invoiceId);
+  };
+
   const handleOpenEdit = (invoice: InvoiceRow) => {
     if (invoice.status === "draft") {
       router.push(`/invoices/${invoice.id}?mode=edit`);
       return;
     }
 
-    if (
-      window.confirm(
-        `Reopen invoice ${invoice.invoiceNumber} for editing? Use this only if you need to change billed details.`
-      )
-    ) {
-      router.push(`/invoices/${invoice.id}?mode=edit`);
-    }
+    setConfirmDialog({
+      title: "Reopen Invoice",
+      description: (
+        <>
+          Reopen invoice <strong>{invoice.invoiceNumber}</strong> for editing? Use this only if you
+          need to change billed details.
+        </>
+      ),
+      confirmLabel: "Reopen & Edit",
+      onConfirm: () => {
+        setConfirmDialog(null);
+        router.push(`/invoices/${invoice.id}?mode=edit`);
+      },
+    });
   };
 
   const handleOpenInvoice = (invoiceId: string) => {
     router.push(`/invoices/${invoiceId}`);
   };
 
-  const handleSendReminder = async (invoiceId: string) => {
+  const sendReminderNow = async (invoiceId: string) => {
     setIsSendingReminderId(invoiceId);
 
     try {
@@ -440,6 +475,24 @@ function InvoicePageContent() {
     } finally {
       setIsSendingReminderId(null);
     }
+  };
+
+  const handleSendReminder = (invoiceId: string) => {
+    const invoice = invoices.find((entry) => entry.id === invoiceId);
+
+    setConfirmDialog({
+      title: "Send Reminder",
+      description: (
+        <>
+          Send a reminder for invoice <strong>{invoice?.invoiceNumber ?? "this invoice"}</strong> now?
+        </>
+      ),
+      confirmLabel: "Send Reminder",
+      onConfirm: () => {
+        setConfirmDialog(null);
+        void sendReminderNow(invoiceId);
+      },
+    });
   };
 
   const handleManualStatusChange = async (
@@ -546,12 +599,22 @@ function InvoicePageContent() {
     URL.revokeObjectURL(url);
   };
 
-  const handleBulkAction = async (action: "send" | "paid" | "delete") => {
+  const handleBulkAction = async (action: "send" | "paid" | "delete", skipConfirmation = false) => {
     if (selectedInvoices.length === 0) {
       return;
     }
 
-    if (action === "delete" && !window.confirm(`Delete ${selectedInvoices.length} selected invoices?`)) {
+    if (action === "delete" && !skipConfirmation) {
+      setConfirmDialog({
+        title: "Delete Invoices",
+        description: `Delete ${selectedInvoices.length} selected invoices? This action cannot be undone.`,
+        confirmLabel: "Delete Invoices",
+        confirmVariant: "destructive",
+        onConfirm: () => {
+          setConfirmDialog(null);
+          void handleBulkAction("delete", true);
+        },
+      });
       return;
     }
 
@@ -1169,6 +1232,20 @@ function InvoicePageContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(confirmDialog)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setConfirmDialog(null);
+          }
+        }}
+        title={confirmDialog?.title ?? ""}
+        description={confirmDialog?.description ?? ""}
+        confirmLabel={confirmDialog?.confirmLabel}
+        confirmVariant={confirmDialog?.confirmVariant}
+        onConfirm={() => confirmDialog?.onConfirm()}
+      />
     </div>
   );
 }

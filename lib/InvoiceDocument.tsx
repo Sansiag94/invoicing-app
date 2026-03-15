@@ -1,12 +1,13 @@
 import React from "react";
 /* eslint-disable jsx-a11y/alt-text */
-import { Document, Image, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Link, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { Prisma } from "@prisma/client";
 import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
 import { generateSwissQRCodeRects, getSwissQRBillMetadata, type SwissQRBillMetadata } from "@/lib/qrbill";
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
+import { buildPublicInvoiceLinkFromToken } from "@/lib/publicInvoiceLink";
 
 type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
@@ -209,6 +210,69 @@ const styles = StyleSheet.create({
     lineHeight: 1.35,
     color: "#374151",
   },
+  manualPaymentSection: {
+    marginTop: mm(8),
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    padding: mm(4),
+  },
+  manualPaymentTitle: {
+    fontSize: 11.5,
+    fontWeight: "bold",
+    marginBottom: mm(3),
+    color: "#111827",
+  },
+  manualPaymentGrid: {
+    flexDirection: "row",
+  },
+  manualPaymentCard: {
+    flexGrow: 1,
+    flexBasis: 0,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    padding: mm(3),
+  },
+  manualPaymentCardWithGap: {
+    marginRight: mm(4),
+  },
+  manualPaymentCardTitle: {
+    fontSize: 10,
+    fontWeight: "bold",
+    marginBottom: mm(2),
+    color: "#111827",
+  },
+  manualPaymentBody: {
+    fontSize: 9,
+    lineHeight: 1.35,
+    color: "#374151",
+    marginBottom: mm(2),
+  },
+  manualPaymentLink: {
+    fontSize: 8.8,
+    color: "#0f172a",
+    textDecoration: "underline",
+    lineHeight: 1.3,
+  },
+  manualPaymentDetails: {
+  },
+  manualPaymentRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: mm(1.6),
+  },
+  manualPaymentLabel: {
+    width: "36%",
+    fontSize: 8.5,
+    fontWeight: "bold",
+    color: "#6b7280",
+  },
+  manualPaymentValue: {
+    width: "64%",
+    fontSize: 9,
+    color: "#111827",
+    lineHeight: 1.3,
+    textAlign: "right",
+  },
   cutLineWrap: {
     position: "relative",
     marginBottom: mm(1.5),
@@ -374,6 +438,18 @@ function formatIban(value: string | null | undefined): string {
   if (!value) return "-";
   const compact = value.replace(/\s+/g, "").toUpperCase();
   return compact.match(/.{1,4}/g)?.join(" ") ?? compact;
+}
+
+function buildPublicPaymentLink(publicToken: string | null | undefined): string | null {
+  const normalizedToken = publicToken?.trim();
+  if (!normalizedToken) return null;
+
+  try {
+    return buildPublicInvoiceLinkFromToken(normalizedToken);
+  } catch (error) {
+    console.error("Failed to build public invoice link:", error);
+    return null;
+  }
 }
 
 function normalizeLine(value: string | null | undefined): string | null {
@@ -601,6 +677,13 @@ const InvoiceDocument = ({
 
   const paymentAccount = qrMetadata ? formatIban(qrMetadata.account) : formatIban(invoice.business.iban);
   const additionalInformation = qrMetadata?.additionalInformation || invoice.invoiceNumber;
+  const paymentReference = normalizeLine(invoice.reference) ?? invoice.invoiceNumber;
+  const onlinePaymentLink = buildPublicPaymentLink(invoice.publicToken);
+  const bankName = normalizeLine(invoice.business.bankName);
+  const bic = normalizeLine(invoice.business.bic);
+  const shouldRenderManualTransferSection =
+    !shouldRenderQRSection &&
+    Boolean(onlinePaymentLink || invoice.business.iban || bic || bankName);
 
   const messageText = normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(clientPrimaryName, senderName);
   const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
@@ -702,6 +785,61 @@ const InvoiceDocument = ({
                   <View style={styles.closingTextBlock}>
                     <Text style={styles.closingText}>{messageText}</Text>
                   </View>
+
+                  {shouldRenderManualTransferSection ? (
+                    <View style={styles.manualPaymentSection}>
+                      <Text style={styles.manualPaymentTitle}>Payment options</Text>
+                      <View style={styles.manualPaymentGrid}>
+                        {onlinePaymentLink ? (
+                          <View style={[styles.manualPaymentCard, styles.manualPaymentCardWithGap]}>
+                            <Text style={styles.manualPaymentCardTitle}>Pay online</Text>
+                            <Text style={styles.manualPaymentBody}>
+                              Review this invoice and pay online through the secure payment page.
+                            </Text>
+                            <Link src={onlinePaymentLink} style={styles.manualPaymentLink}>
+                              {onlinePaymentLink}
+                            </Link>
+                          </View>
+                        ) : null}
+
+                        <View style={styles.manualPaymentCard}>
+                          <Text style={styles.manualPaymentCardTitle}>International bank transfer</Text>
+                          <View style={styles.manualPaymentDetails}>
+                            <View style={styles.manualPaymentRow}>
+                              <Text style={styles.manualPaymentLabel}>Account holder</Text>
+                              <Text style={styles.manualPaymentValue}>{paymentRecipientName}</Text>
+                            </View>
+                            {bankName ? (
+                              <View style={styles.manualPaymentRow}>
+                                <Text style={styles.manualPaymentLabel}>Bank</Text>
+                                <Text style={styles.manualPaymentValue}>{bankName}</Text>
+                              </View>
+                            ) : null}
+                            <View style={styles.manualPaymentRow}>
+                              <Text style={styles.manualPaymentLabel}>IBAN</Text>
+                              <Text style={styles.manualPaymentValue}>{formatIban(invoice.business.iban)}</Text>
+                            </View>
+                            {bic ? (
+                              <View style={styles.manualPaymentRow}>
+                                <Text style={styles.manualPaymentLabel}>BIC / SWIFT</Text>
+                                <Text style={styles.manualPaymentValue}>{bic}</Text>
+                              </View>
+                            ) : null}
+                            <View style={styles.manualPaymentRow}>
+                              <Text style={styles.manualPaymentLabel}>Amount</Text>
+                              <Text style={styles.manualPaymentValue}>
+                                {invoice.currency} {formatMoney(totalAmountDue)}
+                              </Text>
+                            </View>
+                            <View style={styles.manualPaymentRow}>
+                              <Text style={styles.manualPaymentLabel}>Reference / message</Text>
+                              <Text style={styles.manualPaymentValue}>{paymentReference}</Text>
+                            </View>
+                          </View>
+                        </View>
+                      </View>
+                    </View>
+                  ) : null}
 
                 </>
               ) : null}

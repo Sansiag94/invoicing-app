@@ -7,6 +7,7 @@ import { CreditCard, Download } from "lucide-react";
 import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
 import { PublicInvoiceDetails } from "@/lib/types";
+import { buildPublicInvoiceLinkFromToken } from "@/lib/publicInvoiceLink";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -195,6 +196,26 @@ export default function PublicInvoicePage() {
 
     return `Hello ${firstName},\nThank you for your trust.\nPlease find here the breakdown of the services.\n\nBest regards,\n${senderFirstName}`;
   }, [clientName, invoice?.client.companyName, invoice?.client.contactName, senderName]);
+  const onlinePaymentLink = useMemo(() => {
+    if (!token) return null;
+
+    try {
+      return buildPublicInvoiceLinkFromToken(token);
+    } catch (error) {
+      console.error("Error building public invoice link:", error);
+      return null;
+    }
+  }, [token]);
+  const paymentReference = invoice?.reference?.trim() || invoice?.invoiceNumber || "";
+  const shouldRenderManualTransferSection =
+    Boolean(invoice) &&
+    !shouldRenderQRSection &&
+    Boolean(
+      onlinePaymentLink ||
+        invoice?.business.iban ||
+        invoice?.business.bic ||
+        invoice?.business.bankName
+    );
 
   const handleCheckout = async () => {
     if (!invoice || !token) return;
@@ -430,6 +451,11 @@ export default function PublicInvoicePage() {
           break-inside: avoid-page;
           page-break-inside: avoid;
         }
+
+        .manual-payment {
+          break-inside: avoid-page;
+          page-break-inside: avoid;
+        }
       `}</style>
       <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="flex items-center gap-2">
@@ -565,6 +591,61 @@ export default function PublicInvoicePage() {
         <section className="mt-6 max-w-[120mm] text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
           {invoice.notes?.trim() ? invoice.notes.trim() : defaultMessage}
         </section>
+
+        {shouldRenderManualTransferSection ? (
+          <section className="manual-payment mt-8 border border-slate-300 p-4">
+            <h2 className="mb-3 text-[14px] font-semibold text-slate-900">Payment options</h2>
+            <div className="grid gap-4 md:grid-cols-2">
+              {onlinePaymentLink ? (
+                <div className="border border-slate-200 p-3">
+                  <p className="mb-2 text-[12px] font-semibold text-slate-900">Pay online</p>
+                  <p className="mb-2 text-[10px] leading-[1.4] text-slate-700">
+                    Use the secure payment page to review this invoice and pay online.
+                  </p>
+                  <p className="break-all text-[10px] leading-[1.4] text-slate-900 underline">
+                    {onlinePaymentLink}
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="border border-slate-200 p-3">
+                <p className="mb-2 text-[12px] font-semibold text-slate-900">International bank transfer</p>
+                <dl className="space-y-2 text-[10px] leading-[1.4] text-slate-700">
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="font-semibold text-slate-500">Account holder</dt>
+                    <dd className="text-right text-slate-900">{senderName}</dd>
+                  </div>
+                  {invoice.business.bankName ? (
+                    <div className="flex items-start justify-between gap-3">
+                      <dt className="font-semibold text-slate-500">Bank</dt>
+                      <dd className="text-right text-slate-900">{invoice.business.bankName}</dd>
+                    </div>
+                  ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="font-semibold text-slate-500">IBAN</dt>
+                    <dd className="text-right text-slate-900">{formatIban(invoice.business.iban)}</dd>
+                  </div>
+                  {invoice.business.bic ? (
+                    <div className="flex items-start justify-between gap-3">
+                      <dt className="font-semibold text-slate-500">BIC / SWIFT</dt>
+                      <dd className="text-right text-slate-900">{invoice.business.bic}</dd>
+                    </div>
+                  ) : null}
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="font-semibold text-slate-500">Amount</dt>
+                    <dd className="text-right text-slate-900">
+                      {invoice.currency} {formatMoney(totalAmountDue)}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-3">
+                    <dt className="font-semibold text-slate-500">Reference / message</dt>
+                    <dd className="text-right text-slate-900">{paymentReference}</dd>
+                  </div>
+                </dl>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         {shouldShareQrOnFirstPage ? qrBillSection : null}
       </article>

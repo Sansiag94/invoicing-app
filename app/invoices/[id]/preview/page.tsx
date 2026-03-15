@@ -8,6 +8,7 @@ import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { InvoiceDetails } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import {
   Dialog,
   DialogContent,
@@ -45,6 +46,8 @@ export default function InvoicePreviewPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
+  const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
+  const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const activePdfUrlRef = useRef<string | null>(null);
 
@@ -143,12 +146,8 @@ export default function InvoicePreviewPage() {
     link.remove();
   };
 
-  const handleSendInvoice = async () => {
+  const sendInvoiceNow = async () => {
     if (!id) {
-      return;
-    }
-
-    if (invoice?.status === "draft" && !window.confirm(`Send invoice ${invoice.invoiceNumber} now?`)) {
       return;
     }
 
@@ -172,6 +171,15 @@ export default function InvoicePreviewPage() {
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleSendInvoice = () => {
+    if (invoice?.status === "draft") {
+      setShowSendConfirmDialog(true);
+      return;
+    }
+
+    void sendInvoiceNow();
   };
 
   const handleManualStatusChange = async (nextStatus: "paid" | "unpaid") => {
@@ -205,7 +213,7 @@ export default function InvoicePreviewPage() {
     }
   };
 
-  const handleSendReminder = async () => {
+  const sendReminderNow = async () => {
     if (!id || isSendingReminder) {
       return;
     }
@@ -229,6 +237,14 @@ export default function InvoicePreviewPage() {
     } finally {
       setIsSendingReminder(false);
     }
+  };
+
+  const handleSendReminder = () => {
+    if (!id || isSendingReminder) {
+      return;
+    }
+
+    setShowReminderConfirmDialog(true);
   };
 
   const handleDuplicateInvoice = async () => {
@@ -420,6 +436,40 @@ export default function InvoicePreviewPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={showSendConfirmDialog}
+        onOpenChange={setShowSendConfirmDialog}
+        title="Send Invoice"
+        description={
+          <>
+            Send invoice <strong>{invoice?.invoiceNumber}</strong> now?
+          </>
+        }
+        confirmLabel="Send Invoice"
+        isConfirming={isSending}
+        onConfirm={() => {
+          setShowSendConfirmDialog(false);
+          void sendInvoiceNow();
+        }}
+      />
+
+      <ConfirmDialog
+        open={showReminderConfirmDialog}
+        onOpenChange={setShowReminderConfirmDialog}
+        title="Send Reminder"
+        description={
+          <>
+            Send a reminder for invoice <strong>{invoice?.invoiceNumber}</strong> now?
+          </>
+        }
+        confirmLabel="Send Reminder"
+        isConfirming={isSendingReminder}
+        onConfirm={() => {
+          setShowReminderConfirmDialog(false);
+          void sendReminderNow();
+        }}
+      />
 
       <Dialog open={showReopenEditDialog} onOpenChange={setShowReopenEditDialog}>
         <DialogContent>

@@ -84,10 +84,37 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     invoiceLink,
   });
 
-  const senderPreferences = {
+  let senderPreferences: {
+    ownerName: string | null;
+    invoiceSenderType: "company" | "owner";
+    bic: string | null;
+  } = {
     ownerName: existingInvoice.business.ownerName ?? null,
     invoiceSenderType: normalizeInvoiceSenderType(existingInvoice.business.invoiceSenderType ?? "company"),
+    bic: (existingInvoice.business as { bic?: string | null }).bic ?? null,
   };
+
+  try {
+    const rows = await prisma.$queryRaw<
+      Array<{ ownerName: string | null; invoiceSenderType: string | null; bic: string | null }>
+    >`
+      SELECT "ownerName", "invoiceSenderType", "bic"
+      FROM "Business"
+      WHERE "uuid" = ${existingInvoice.businessId}
+      LIMIT 1
+    `;
+
+    const row = rows[0];
+    senderPreferences = {
+      ownerName: row?.ownerName ?? existingInvoice.business.ownerName ?? null,
+      invoiceSenderType: normalizeInvoiceSenderType(
+        row?.invoiceSenderType ?? existingInvoice.business.invoiceSenderType ?? "company"
+      ),
+      bic: row?.bic ?? (existingInvoice.business as { bic?: string | null }).bic ?? null,
+    };
+  } catch (error) {
+    console.warn("Unable to load business extras for invoice email PDF:", error);
+  }
 
   const computedTotals = calculateInvoiceTotals(existingInvoice.lineItems);
   const totalAmountForEmail =
@@ -96,7 +123,13 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     existingInvoice.client.contactName || existingInvoice.client.companyName || clientEmail;
   const pdfFilename = buildInvoicePdfFilename(invoiceNumber);
   const pdfDocument = React.createElement(InvoiceDocument, {
-    invoice: existingInvoice,
+    invoice: {
+      ...existingInvoice,
+      business: {
+        ...existingInvoice.business,
+        bic: senderPreferences.bic,
+      },
+    },
     senderPreferences,
   }) as unknown as Parameters<typeof pdf>[0];
   const pdfStream = (await pdf(pdfDocument).toBuffer()) as unknown as NodeJS.ReadableStream;

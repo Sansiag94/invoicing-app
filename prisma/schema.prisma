@@ -30,6 +30,7 @@ model Business {
   email          String?
   website        String?
   bankName       String?
+  bic            String?
   country        String
   currency       String
   vatNumber      String?

@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { getResendApiKey } from "@/lib/env";
+import { buildPublicInvoiceLink as buildPublicInvoiceLinkValue } from "@/lib/publicInvoiceLink";
 
 type SendInvoiceEmailInput = {
   to: string;
@@ -45,7 +46,6 @@ type SendManualInvoiceReminderEmailInput = {
 let resendClient: Resend | null = null;
 const DEFAULT_RESEND_FROM_EMAIL = "Sierra Services <invoices@sierraservices.ch>";
 const DEFAULT_RESEND_REPLY_TO_EMAIL = "santiago@sierraservices.ch";
-const DEFAULT_PUBLIC_APP_URL = "https://invoices.sierraservices.ch";
 
 export class EmailConfigurationError extends Error {
   constructor(message: string) {
@@ -70,24 +70,10 @@ export function isEmailDeliveryError(error: unknown): error is EmailDeliveryErro
 }
 
 export function buildPublicInvoiceLink(publicToken: string, requestUrl?: string): string {
-  const normalizedToken = publicToken.trim();
-  if (!normalizedToken) {
+  if (!publicToken.trim()) {
     throw new EmailConfigurationError("Missing public invoice token");
   }
-  const encodedToken = encodeURIComponent(normalizedToken);
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || DEFAULT_PUBLIC_APP_URL;
-
-  if (appUrl) {
-    return new URL(`/invoice/pay/${encodedToken}`, appUrl).toString();
-  }
-
-  if (requestUrl) {
-    const origin = new URL(requestUrl).origin;
-    return new URL(`/invoice/pay/${encodedToken}`, origin).toString();
-  }
-
-  throw new EmailConfigurationError("Missing NEXT_PUBLIC_APP_URL for public invoice links");
+  return buildPublicInvoiceLinkValue(publicToken, requestUrl);
 }
 
 function getResendClient(): Resend {

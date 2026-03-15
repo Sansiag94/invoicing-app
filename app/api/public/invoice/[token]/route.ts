@@ -83,14 +83,21 @@ export async function GET(
 
     const computedTotals = calculateInvoiceTotals(invoice.lineItems);
 
-    let senderPreferences: { ownerName: string | null; invoiceSenderType: "company" | "owner" } = {
+    let senderPreferences: {
+      ownerName: string | null;
+      invoiceSenderType: "company" | "owner";
+      bic: string | null;
+    } = {
       ownerName: null,
       invoiceSenderType: "company",
+      bic: null,
     };
 
     try {
-      const rows = await prisma.$queryRaw<Array<{ ownerName: string | null; invoiceSenderType: string | null }>>`
-        SELECT "ownerName", "invoiceSenderType"
+      const rows = await prisma.$queryRaw<
+        Array<{ ownerName: string | null; invoiceSenderType: string | null; bic: string | null }>
+      >`
+        SELECT "ownerName", "invoiceSenderType", "bic"
         FROM "Business"
         WHERE "uuid" = ${invoice.business.id}
         LIMIT 1
@@ -100,6 +107,7 @@ export async function GET(
       senderPreferences = {
         ownerName: row?.ownerName ?? null,
         invoiceSenderType: row?.invoiceSenderType?.toLowerCase() === "owner" ? "owner" : "company",
+        bic: row?.bic ?? null,
       };
     } catch (error) {
       console.warn("Unable to load sender preferences (columns may not exist yet):", error);

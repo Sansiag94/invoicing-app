@@ -19,6 +19,7 @@ type UpdateBusinessBody = {
   email?: unknown;
   website?: unknown;
   bankName?: unknown;
+  bic?: unknown;
   country: unknown;
   currency: unknown;
   vatNumber?: unknown;
@@ -33,12 +34,13 @@ function asString(value: unknown): string | null {
 type SenderPreferencesRow = {
   ownerName: string | null;
   invoiceSenderType: string | null;
+  bic: string | null;
 };
 
 async function loadSenderPreferences(businessId: string) {
   try {
     const rows = await prisma.$queryRaw<SenderPreferencesRow[]>`
-      SELECT "ownerName", "invoiceSenderType"
+      SELECT "ownerName", "invoiceSenderType", "bic"
       FROM "Business"
       WHERE "uuid" = ${businessId}
       LIMIT 1
@@ -48,12 +50,14 @@ async function loadSenderPreferences(businessId: string) {
     return {
       ownerName: row?.ownerName ?? null,
       invoiceSenderType: normalizeInvoiceSenderType(row?.invoiceSenderType ?? null),
+      bic: row?.bic ?? null,
     };
   } catch (error) {
     console.warn("Unable to load sender preferences (columns may not exist yet):", error);
     return {
       ownerName: null,
       invoiceSenderType: "company" as const,
+      bic: null,
     };
   }
 }
@@ -134,7 +138,8 @@ export async function PATCH(request: Request) {
         UPDATE "Business"
         SET
           "ownerName" = ${ownerName},
-          "invoiceSenderType" = ${invoiceSenderType}
+          "invoiceSenderType" = ${invoiceSenderType},
+          "bic" = ${asString(body.bic)}
         WHERE "uuid" = ${business.id}
       `;
     } catch (error) {
