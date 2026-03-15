@@ -1,6 +1,17 @@
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue";
 export type InvoiceCurrency = "CHF" | "EUR";
 export type InvoiceSenderType = "company" | "owner";
+export type ExpenseCategory =
+  | "software"
+  | "office"
+  | "travel"
+  | "equipment"
+  | "tax"
+  | "subcontractor"
+  | "marketing"
+  | "meals"
+  | "education"
+  | "other";
 
 export interface InvoicePartyData {
   name: string;
@@ -120,7 +131,11 @@ export interface DashboardRecentInvoice {
 export interface DashboardOverview {
   currency: InvoiceCurrency;
   revenueThisMonth: number;
+  expensesThisMonth: number;
+  netProfitThisMonth: number;
   totalRevenue: number;
+  totalExpenses: number;
+  totalProfit: number;
   prospectRevenue: number;
   overdueAmount: number;
   openInvoices: number;
@@ -132,6 +147,70 @@ export interface DashboardOverview {
   clientCount: number;
   invoiceCount: number;
   recentInvoices: DashboardRecentInvoice[];
+}
+
+export interface ExpenseRecord {
+  id: string;
+  vendor: string | null;
+  description: string;
+  category: ExpenseCategory;
+  amount: number;
+  currency: InvoiceCurrency;
+  expenseDate: string;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpensesOverview {
+  currency: InvoiceCurrency;
+  thisMonthTotal: number;
+  last30DaysTotal: number;
+  yearToDateTotal: number;
+  totalExpenses: number;
+  recentExpenses: ExpenseRecord[];
+}
+
+export interface ExpensesPageData {
+  overview: ExpensesOverview;
+  expenses: ExpenseRecord[];
+}
+
+export interface AnalyticsSeriesPoint {
+  label: string;
+  revenue: number;
+  expenses: number;
+  profit: number;
+}
+
+export interface AnalyticsClientBreakdown {
+  clientId: string;
+  clientName: string;
+  revenue: number;
+  invoiceCount: number;
+}
+
+export interface AnalyticsExpenseBreakdown {
+  category: ExpenseCategory;
+  amount: number;
+}
+
+export interface AnalyticsOverview {
+  currency: InvoiceCurrency;
+  revenueThisMonth: number;
+  expensesThisMonth: number;
+  netProfitThisMonth: number;
+  totalRevenue: number;
+  totalExpenses: number;
+  totalProfit: number;
+  prospectRevenue: number;
+  overdueAmount: number;
+  paidInvoices: number;
+  unpaidInvoices: number;
+  averageDaysToPay: number | null;
+  monthlySeries: AnalyticsSeriesPoint[];
+  topClients: AnalyticsClientBreakdown[];
+  expenseBreakdown: AnalyticsExpenseBreakdown[];
 }
 
 export interface InvoiceLineItemModel {

@@ -30,7 +30,9 @@ export async function GET(request: Request) {
 
     const [
       revenueThisMonthAggregate,
+      expensesThisMonthAggregate,
       totalRevenueAggregate,
+      totalExpensesAggregate,
       prospectRevenueAggregate,
       overdueAmountAggregate,
       openInvoices,
@@ -54,12 +56,28 @@ export async function GET(request: Request) {
         },
         _sum: { totalAmount: true },
       }),
+      prisma.expense.aggregate({
+        where: {
+          businessId: business.id,
+          expenseDate: {
+            gte: startOfMonth,
+            lt: startOfNextMonth,
+          },
+        },
+        _sum: { amount: true },
+      }),
       prisma.invoice.aggregate({
         where: {
           businessId: business.id,
           status: "paid",
         },
         _sum: { totalAmount: true },
+      }),
+      prisma.expense.aggregate({
+        where: {
+          businessId: business.id,
+        },
+        _sum: { amount: true },
       }),
       prisma.invoice.aggregate({
         where: {
@@ -163,7 +181,13 @@ export async function GET(request: Request) {
     return NextResponse.json({
       currency: business.currency,
       revenueThisMonth: revenueThisMonthAggregate._sum.totalAmount ?? 0,
+      expensesThisMonth: expensesThisMonthAggregate._sum.amount ?? 0,
+      netProfitThisMonth:
+        (revenueThisMonthAggregate._sum.totalAmount ?? 0) - (expensesThisMonthAggregate._sum.amount ?? 0),
       totalRevenue: totalRevenueAggregate._sum.totalAmount ?? 0,
+      totalExpenses: totalExpensesAggregate._sum.amount ?? 0,
+      totalProfit:
+        (totalRevenueAggregate._sum.totalAmount ?? 0) - (totalExpensesAggregate._sum.amount ?? 0),
       prospectRevenue: prospectRevenueAggregate._sum.totalAmount ?? 0,
       overdueAmount: overdueAmountAggregate._sum.totalAmount ?? 0,
       openInvoices,

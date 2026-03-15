@@ -42,6 +42,7 @@ model Business {
   user           User      @relation(fields: [userId], references: [id])
   clients        Client[]  @relation("BusinessClients")
   invoices       Invoice[] @relation("BusinessInvoices")
+  expenses       Expense[] @relation("BusinessExpenses")
 }
 
 model Client {
@@ -136,6 +137,24 @@ model InvoiceEvent {
   @@index([invoiceId, createdAt])
 }
 
+model Expense {
+  id          String          @id @default(uuid()) @map("uuid")
+  businessId  String
+  vendor      String?
+  description String
+  category    ExpenseCategory
+  amount      Float
+  currency    String
+  expenseDate DateTime
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  business    Business        @relation("BusinessExpenses", fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, expenseDate])
+  @@index([businessId, category])
+}
+
 enum InvoiceStatus {
   draft
   sent
@@ -151,4 +170,17 @@ enum PaymentProvider {
 enum InvoiceReminderType {
   before_due_3_days
   after_due_7_days
+}
+
+enum ExpenseCategory {
+  software
+  office
+  travel
+  equipment
+  tax
+  subcontractor
+  marketing
+  meals
+  education
+  other
 }

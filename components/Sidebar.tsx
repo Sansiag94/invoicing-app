@@ -2,13 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, FileText } from "lucide-react";
+import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
   { href: "/invoices", label: "Invoices", icon: FileText },
+  { href: "/expenses", label: "Expenses", icon: ReceiptText },
+  { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
 type SidebarProps = {

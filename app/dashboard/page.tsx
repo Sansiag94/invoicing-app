@@ -9,7 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, Circle, Clock3, Coins, FileClock, Users, Wallet } from "lucide-react";
+import {
+  AlertCircle,
+  Circle,
+  Clock3,
+  FileClock,
+  TrendingDown,
+  TrendingUp,
+  Users,
+  Wallet,
+} from "lucide-react";
 
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("de-CH", {
@@ -126,16 +135,14 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-sm text-slate-500">Financial overview and recent activity</p>
+        <p className="text-sm text-slate-500">What needs attention now, without the extra reporting noise.</p>
       </div>
 
       {showOnboarding ? (
         <Card className="border-blue-200 bg-blue-50/60">
           <CardHeader>
             <CardTitle>Welcome to your invoicing workspace</CardTitle>
-            <p className="text-sm text-slate-600">
-              Complete the setup below to send your first invoice.
-            </p>
+            <p className="text-sm text-slate-600">Complete the setup below to send your first invoice.</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <ol className="space-y-3 text-sm text-slate-700">
@@ -153,7 +160,7 @@ export default function DashboardPage() {
               </li>
               <li className="flex items-start gap-2">
                 <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
-                <span>4. Send invoice</span>
+                <span>4. Add first expense</span>
               </li>
             </ol>
             <div className="flex flex-wrap gap-2">
@@ -166,16 +173,15 @@ export default function DashboardPage() {
               <Button asChild size="sm" variant="outline">
                 <Link href="/invoices">Create invoice</Link>
               </Button>
-              <div className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-                <CheckCircle2 className="h-3.5 w-3.5 text-slate-500" />
-                Send from invoice actions once created
-              </div>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/expenses">Track expenses</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>
       ) : null}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Revenue this month"
           value={`${dashboard.currency} ${formatMoney(dashboard.revenueThisMonth)}`}
@@ -184,40 +190,40 @@ export default function DashboardPage() {
           href="/invoices?status=paid"
         />
         <StatCard
-          label="Total revenue"
-          value={`${dashboard.currency} ${formatMoney(dashboard.totalRevenue)}`}
-          helper={`${dashboard.paidInvoices} paid invoices`}
-          icon={<Coins className="h-5 w-5" />}
-          tone="success"
-          href="/invoices?status=paid"
-        />
-        <StatCard
-          label="Prospect revenue"
-          value={`${dashboard.currency} ${formatMoney(dashboard.prospectRevenue)}`}
-          helper={`${dashboard.unpaidInvoices} unpaid invoices in pipeline`}
-          icon={<FileClock className="h-5 w-5" />}
+          label="Expenses this month"
+          value={`${dashboard.currency} ${formatMoney(dashboard.expensesThisMonth)}`}
+          helper="Booked costs in the current month"
+          icon={<TrendingDown className="h-5 w-5" />}
           tone="warning"
-          href="/invoices?status=unpaid"
+          href="/expenses"
         />
         <StatCard
-          label="Paid invoices"
-          value={dashboard.paidInvoices}
-          helper="Settled and closed"
-          icon={<CheckCircle2 className="h-5 w-5" />}
-          tone="success"
-          href="/invoices?status=paid"
+          label="Net this month"
+          value={`${dashboard.currency} ${formatMoney(dashboard.netProfitThisMonth)}`}
+          helper="Collected revenue minus expenses"
+          icon={<TrendingUp className="h-5 w-5" />}
+          tone={dashboard.netProfitThisMonth >= 0 ? "success" : "danger"}
+          href="/analytics"
         />
         <StatCard
           label="Unpaid invoices"
           value={dashboard.unpaidInvoices}
-          helper={`${dashboard.draftInvoices} draft · ${dashboard.sentInvoices} sent · ${dashboard.overdueInvoices} overdue`}
+          helper={`${dashboard.draftInvoices} draft / ${dashboard.sentInvoices} sent / ${dashboard.overdueInvoices} overdue`}
           icon={<Clock3 className="h-5 w-5" />}
           tone="warning"
           href="/invoices?status=unpaid"
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <StatCard
+          label="Prospect revenue"
+          value={`${dashboard.currency} ${formatMoney(dashboard.prospectRevenue)}`}
+          helper="Open invoice value still in the pipeline"
+          icon={<FileClock className="h-5 w-5" />}
+          tone="warning"
+          href="/invoices?status=unpaid"
+        />
         <StatCard
           label="Overdue invoices"
           value={dashboard.overdueInvoices}
@@ -227,19 +233,58 @@ export default function DashboardPage() {
           href="/invoices?status=overdue"
         />
         <StatCard
-          label="Open invoices"
-          value={dashboard.openInvoices}
-          helper="Draft and sent, excluding overdue"
-          icon={<FileClock className="h-5 w-5" />}
-          href="/invoices?status=open"
-        />
-        <StatCard
           label="Active clients"
           value={dashboard.clientCount}
           helper={`${dashboard.invoiceCount} invoices created`}
           icon={<Users className="h-5 w-5" />}
           href="/clients"
         />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Business View</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total revenue</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {dashboard.currency} {formatMoney(dashboard.totalRevenue)}
+              </p>
+              <p className="text-sm text-slate-600">{dashboard.paidInvoices} paid invoices</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total profit</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {dashboard.currency} {formatMoney(dashboard.totalProfit)}
+              </p>
+              <p className="text-sm text-slate-600">
+                {dashboard.currency} {formatMoney(dashboard.totalExpenses)} booked expenses
+              </p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Focus</p>
+              <p className="mt-2 text-sm text-slate-600">Use Analytics for trends. Use this page to watch pipeline, overdue risk, and current-month performance.</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Priority</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-slate-600">
+            <p>
+              {dashboard.overdueInvoices > 0
+                ? `You have ${dashboard.overdueInvoices} overdue invoice${dashboard.overdueInvoices === 1 ? "" : "s"} that need follow-up.`
+                : "No overdue invoices right now."}
+            </p>
+            <Button asChild className="w-full">
+              <Link href="/invoices?status=overdue">Review overdue invoices</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <Card>
@@ -251,65 +296,63 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent>
           <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Invoice</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-            {dashboard.recentInvoices.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4}>
-                  <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center">
-                    <p className="text-base font-medium text-slate-900">No invoice activity yet</p>
-                    <p className="text-sm text-slate-600">Create an invoice or add a client to start building revenue.</p>
-                    <div className="flex flex-wrap gap-2">
-                      <Button asChild size="sm">
-                        <Link href="/invoices">Create Invoice</Link>
-                      </Button>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href="/clients">Add Client</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ) : (
-              dashboard.recentInvoices.map((invoice) => (
-                <TableRow
-                  key={invoice.id}
-                  className="cursor-pointer"
-                  onClick={() => {
-                    router.push(`/invoices/${invoice.id}`);
-                  }}
-                >
-                  <TableCell>
-                    <Link
-                      href={`/invoices/${invoice.id}`}
-                      className="font-medium text-slate-900 hover:underline"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      {invoice.invoiceNumber}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    {invoice.clientName}
-                  </TableCell>
-                  <TableCell>
-                    {invoice.currency} {formatMoney(invoice.totalAmount)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
-                  </TableCell>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))
-            )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {dashboard.recentInvoices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4}>
+                      <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center">
+                        <p className="text-base font-medium text-slate-900">No invoice activity yet</p>
+                        <p className="text-sm text-slate-600">Create an invoice or add a client to start building revenue.</p>
+                        <div className="flex flex-wrap gap-2">
+                          <Button asChild size="sm">
+                            <Link href="/invoices">Create Invoice</Link>
+                          </Button>
+                          <Button asChild size="sm" variant="outline">
+                            <Link href="/clients">Add Client</Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  dashboard.recentInvoices.map((invoice) => (
+                    <TableRow
+                      key={invoice.id}
+                      className="cursor-pointer"
+                      onClick={() => {
+                        router.push(`/invoices/${invoice.id}`);
+                      }}
+                    >
+                      <TableCell>
+                        <Link
+                          href={`/invoices/${invoice.id}`}
+                          className="font-medium text-slate-900 hover:underline"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {invoice.invoiceNumber}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{invoice.clientName}</TableCell>
+                      <TableCell>
+                        {invoice.currency} {formatMoney(invoice.totalAmount)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
 
           <div className="space-y-3 md:hidden">

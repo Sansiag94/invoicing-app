@@ -13,6 +13,8 @@ const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
   { href: "/invoices", label: "Invoices" },
+  { href: "/expenses", label: "Expenses" },
+  { href: "/analytics", label: "Analytics" },
 ];
 
 type NavbarProps = {
@@ -418,7 +420,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-7xl items-center gap-3 px-4 md:px-6">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <button
             type="button"
             onClick={onOpenMenu}
@@ -468,92 +470,92 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
           })}
         </nav>
 
-        <div ref={searchContainerRef} className="relative hidden w-full max-w-sm lg:block">
-          <form onSubmit={handleSearchSubmit}>
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <Input
-              value={searchQuery}
-              placeholder="Search clients or invoices..."
-              className="pl-9"
-              onFocus={() => {
-                setIsSearchOpen(true);
-                if (!searchData && !isSearchLoading) {
-                  void loadSearchData();
-                }
-              }}
-              onChange={(event) => {
-                setSearchQuery(event.target.value);
-                setIsSearchOpen(true);
-                if (!searchData && !isSearchLoading) {
-                  void loadSearchData();
-                }
-              }}
-            />
-          </form>
+        <div className="ml-auto flex min-w-0 items-center gap-2 text-sm text-slate-600">
+          <div ref={searchContainerRef} className="relative hidden w-full max-w-sm lg:block">
+            <form onSubmit={handleSearchSubmit}>
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={searchQuery}
+                placeholder="Search clients or invoices..."
+                className="pl-9"
+                onFocus={() => {
+                  setIsSearchOpen(true);
+                  if (!searchData && !isSearchLoading) {
+                    void loadSearchData();
+                  }
+                }}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setIsSearchOpen(true);
+                  if (!searchData && !isSearchLoading) {
+                    void loadSearchData();
+                  }
+                }}
+              />
+            </form>
 
-          {isSearchOpen ? (
-            <div className="absolute right-0 z-30 mt-2 w-full rounded-md border border-slate-200 bg-white p-2 shadow-lg">
-              {normalizedSearchQuery.length < 2 ? (
-                <p className="px-2 py-1.5 text-xs text-slate-500">Type at least 2 characters to search.</p>
-              ) : isSearchLoading ? (
-                <p className="px-2 py-1.5 text-xs text-slate-500">Searching...</p>
-              ) : searchError ? (
-                <p className="px-2 py-1.5 text-xs text-red-600">{searchError}</p>
-              ) : filteredClients.length === 0 && filteredInvoices.length === 0 ? (
-                <p className="px-2 py-1.5 text-xs text-slate-500">No matches found.</p>
-              ) : (
-                <div className="space-y-2">
-                  {filteredClients.length > 0 ? (
-                    <div className="space-y-1">
-                      <p className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Clients
-                      </p>
-                      {filteredClients.map((client) => (
-                        <button
-                          key={client.id}
-                          type="button"
-                          onClick={() => handleNavigate(`/clients/${client.id}`)}
-                          className="w-full rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                        >
-                          <p className="font-medium text-slate-900">{getClientDisplayName(client)}</p>
-                          <p className="text-xs text-slate-500">{client.email}</p>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
+            {isSearchOpen ? (
+              <div className="absolute right-0 z-30 mt-2 w-full rounded-md border border-slate-200 bg-white p-2 shadow-lg">
+                {normalizedSearchQuery.length < 2 ? (
+                  <p className="px-2 py-1.5 text-xs text-slate-500">Type at least 2 characters to search.</p>
+                ) : isSearchLoading ? (
+                  <p className="px-2 py-1.5 text-xs text-slate-500">Searching...</p>
+                ) : searchError ? (
+                  <p className="px-2 py-1.5 text-xs text-red-600">{searchError}</p>
+                ) : filteredClients.length === 0 && filteredInvoices.length === 0 ? (
+                  <p className="px-2 py-1.5 text-xs text-slate-500">No matches found.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredClients.length > 0 ? (
+                      <div className="space-y-1">
+                        <p className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Clients
+                        </p>
+                        {filteredClients.map((client) => (
+                          <button
+                            key={client.id}
+                            type="button"
+                            onClick={() => handleNavigate(`/clients/${client.id}`)}
+                            className="w-full rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                          >
+                            <p className="font-medium text-slate-900">{getClientDisplayName(client)}</p>
+                            <p className="text-xs text-slate-500">{client.email}</p>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
 
-                  {filteredInvoices.length > 0 ? (
-                    <div className="space-y-1">
-                      <p className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        Invoices
-                      </p>
-                      {filteredInvoices.map((invoice) => (
-                        <button
-                          key={invoice.id}
-                          type="button"
-                          onClick={() => handleNavigate(`/invoices/${invoice.id}`)}
-                          className="w-full rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
-                        >
-                          <p className="font-medium text-slate-900">{invoice.invoiceNumber}</p>
-                          <p className="text-xs text-slate-500">
-                            {(invoice.client && getClientDisplayName(invoice.client)) || "Client"} - due{" "}
-                            {formatShortDate(invoice.dueDate)}
-                          </p>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          ) : null}
-        </div>
+                    {filteredInvoices.length > 0 ? (
+                      <div className="space-y-1">
+                        <p className="px-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          Invoices
+                        </p>
+                        {filteredInvoices.map((invoice) => (
+                          <button
+                            key={invoice.id}
+                            type="button"
+                            onClick={() => handleNavigate(`/invoices/${invoice.id}`)}
+                            className="w-full rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
+                          >
+                            <p className="font-medium text-slate-900">{invoice.invoiceNumber}</p>
+                            <p className="text-xs text-slate-500">
+                              {(invoice.client && getClientDisplayName(invoice.client)) || "Client"} - due{" "}
+                              {formatShortDate(invoice.dueDate)}
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
 
-        <div className="ml-auto flex items-center gap-2 text-sm text-slate-600 lg:ml-0">
           <div ref={notificationsRef} className="relative">
             <button
               type="button"
-              className="relative inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100"
+              className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100"
               aria-label="Open notifications"
               onClick={async () => {
                 setIsNotificationsOpen((current) => {
@@ -610,7 +612,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
           <div ref={accountRef} className="relative">
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-100"
+              className="inline-flex h-10 w-10 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-100"
               aria-label="Open account menu"
               onClick={() => setIsAccountOpen((current) => !current)}
             >
