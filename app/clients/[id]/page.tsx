@@ -468,7 +468,15 @@ export default function ClientDetailPage() {
                       <TableRow
                         key={invoice.id}
                         className="cursor-pointer hover:bg-slate-50"
+                        role="link"
+                        tabIndex={0}
                         onClick={() => router.push(`/invoices/${invoice.id}`)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            router.push(`/invoices/${invoice.id}`);
+                          }
+                        }}
                       >
                         <TableCell className="font-medium">
                           <Link

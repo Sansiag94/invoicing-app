@@ -3,6 +3,7 @@ import "./globals.css";
 import React from "react";
 import { validateRequiredEnv } from "@/lib/env";
 import AppFrame from "@/components/AppFrame";
+import { ToastProvider } from "@/components/ui/toast";
 
 validateRequiredEnv();
 
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <AppFrame>{children}</AppFrame>
+        <ToastProvider>
+          <AppFrame>{children}</AppFrame>
+        </ToastProvider>
       </body>
     </html>
   );

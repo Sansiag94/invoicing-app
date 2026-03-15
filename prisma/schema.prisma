@@ -147,6 +147,11 @@ model Expense {
   currency    String
   expenseDate DateTime
   notes       String?
+  receiptUrl  String?
+  isRecurring Boolean         @default(false)
+  taxDeductible Boolean       @default(true)
+  vatReclaimable Boolean      @default(false)
+  vatAmount   Float?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   business    Business        @relation("BusinessExpenses", fields: [businessId], references: [id], onDelete: Cascade)

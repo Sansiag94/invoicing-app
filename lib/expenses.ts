@@ -1,4 +1,4 @@
-import { ExpenseCategory, InvoiceCurrency } from "@/lib/types";
+import { ExpenseCategory, ExpenseRecord, InvoiceCurrency } from "@/lib/types";
 
 export const expenseCategoryOptions: Array<{ value: ExpenseCategory; label: string }> = [
   { value: "software", label: "Software" },
@@ -25,4 +25,32 @@ export function getExpenseCategoryLabel(category: ExpenseCategory): string {
 
 export function normalizeExpenseCurrency(value: string | null | undefined, fallback: InvoiceCurrency): InvoiceCurrency {
   return value === "EUR" ? "EUR" : fallback;
+}
+
+type ExpenseDbRecord = {
+  id: string;
+  vendor: string | null;
+  description: string;
+  category: ExpenseCategory;
+  amount: number;
+  currency: string;
+  expenseDate: Date;
+  notes: string | null;
+  receiptUrl: string | null;
+  isRecurring: boolean;
+  taxDeductible: boolean;
+  vatReclaimable: boolean;
+  vatAmount: number | null;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+export function toExpenseRecord(expense: ExpenseDbRecord): ExpenseRecord {
+  return {
+    ...expense,
+    currency: normalizeExpenseCurrency(expense.currency, "CHF"),
+    expenseDate: expense.expenseDate.toISOString(),
+    createdAt: expense.createdAt.toISOString(),
+    updatedAt: expense.updatedAt.toISOString(),
+  };
 }

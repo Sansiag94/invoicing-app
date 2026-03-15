@@ -317,7 +317,15 @@ function ClientsPageContent() {
                   <TableRow
                     key={client.id}
                     className="cursor-pointer"
+                    role="link"
+                    tabIndex={0}
                     onClick={() => handleOpenClient(client.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleOpenClient(client.id);
+                      }
+                    }}
                   >
                     <TableCell>
                       <Link
@@ -349,7 +357,15 @@ function ClientsPageContent() {
                 <div
                   key={client.id}
                   className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+                  role="link"
+                  tabIndex={0}
                   onClick={() => handleOpenClient(client.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleOpenClient(client.id);
+                    }
+                  }}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">

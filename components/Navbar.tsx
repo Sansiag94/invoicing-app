@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, LogOut, Menu, Search, Settings } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/toast";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { supabase } from "@/utils/supabase";
 import { cn } from "@/lib/utils";
@@ -55,6 +56,13 @@ type NotificationItem = {
   dueDateTs: number;
 };
 
+type QuickAction = {
+  id: string;
+  label: string;
+  description: string;
+  href: string;
+};
+
 function normalizeSearchValue(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -93,8 +101,10 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchContainerRef = useRef<HTMLDivElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const accountRef = useRef<HTMLDivElement | null>(null);
+  const { toast } = useToast();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -116,6 +126,41 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const brandName = businessBrand?.name || "Sierra Invoices";
   const brandInitials = getBrandInitials(brandName);
+  const quickActions = useMemo<QuickAction[]>(
+    () => [
+      {
+        id: "create-invoice",
+        label: "Create invoice",
+        description: "Open the invoice builder",
+        href: "/invoices",
+      },
+      {
+        id: "add-client",
+        label: "Add client",
+        description: "Create a new client profile",
+        href: "/clients",
+      },
+      {
+        id: "add-expense",
+        label: "Add expense",
+        description: "Track a new business cost",
+        href: "/expenses",
+      },
+      {
+        id: "overdue",
+        label: "Review overdue invoices",
+        description: "Jump straight to collections work",
+        href: "/invoices?status=overdue",
+      },
+      {
+        id: "analytics",
+        label: "Open analytics",
+        description: "Review performance and profitability",
+        href: "/analytics",
+      },
+    ],
+    []
+  );
 
   useEffect(() => {
     if (pathname.startsWith("/clients") || pathname.startsWith("/invoices")) {
@@ -186,38 +231,6 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  async function loadSearchData() {
-    setIsSearchLoading(true);
-    setSearchError(null);
-
-    try {
-      const [clientsResponse, invoicesResponse] = await Promise.all([
-        authenticatedFetch("/api/clients"),
-        authenticatedFetch("/api/invoices"),
-      ]);
-
-      if (!clientsResponse.ok || !invoicesResponse.ok) {
-        throw new Error("Search data request failed");
-      }
-
-      const [clientsData, invoicesData] = await Promise.all([
-        clientsResponse.json(),
-        invoicesResponse.json(),
-      ]);
-
-      setSearchData({
-        clients: Array.isArray(clientsData) ? (clientsData as ClientSearchResult[]) : [],
-        invoices: Array.isArray(invoicesData) ? (invoicesData as InvoiceSearchResult[]) : [],
-      });
-    } catch (error) {
-      console.error("Unable to load search data:", error);
-      setSearchError("Unable to load search right now.");
-      setSearchData({ clients: [], invoices: [] });
-    } finally {
-      setIsSearchLoading(false);
-    }
-  }
-
   function markNotificationsSeen(items: NotificationItem[]) {
     if (items.length === 0 || typeof window === "undefined") {
       return;
@@ -235,18 +248,12 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     setNotificationsError(null);
 
     try {
-      let invoices = searchData?.invoices ?? null;
-
-      if (!invoices) {
-        const response = await authenticatedFetch("/api/invoices");
-
-        if (!response.ok) {
-          throw new Error("Notifications request failed");
-        }
-
-        const payload = (await response.json()) as InvoiceSearchResult[];
-        invoices = Array.isArray(payload) ? payload : [];
+      const response = await authenticatedFetch("/api/invoices");
+      if (!response.ok) {
+        throw new Error("Notifications request failed");
       }
+      const payload = (await response.json()) as InvoiceSearchResult[];
+      const invoices = Array.isArray(payload) ? payload : [];
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);
@@ -328,47 +335,8 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   }
 
   const normalizedSearchQuery = normalizeSearchValue(searchQuery);
-
-  const filteredClients = useMemo(() => {
-    if (!searchData || normalizedSearchQuery.length < 2) return [];
-
-    return searchData.clients
-      .filter((client) => {
-        const searchable = [
-          client.companyName ?? "",
-          client.contactName ?? "",
-          client.email,
-          client.country,
-        ].join(" ");
-
-        return searchable.toLowerCase().includes(normalizedSearchQuery);
-      })
-      .sort((left, right) =>
-        getClientDisplayName(left).localeCompare(getClientDisplayName(right), undefined, {
-          sensitivity: "base",
-        })
-      )
-      .slice(0, 5);
-  }, [searchData, normalizedSearchQuery]);
-
-  const filteredInvoices = useMemo(() => {
-    if (!searchData || normalizedSearchQuery.length < 2) return [];
-
-    return searchData.invoices
-      .filter((invoice) => {
-        const searchable = [
-          invoice.invoiceNumber,
-          invoice.status,
-          invoice.client?.companyName ?? "",
-          invoice.client?.contactName ?? "",
-          invoice.client?.email ?? "",
-        ].join(" ");
-
-        return searchable.toLowerCase().includes(normalizedSearchQuery);
-      })
-      .sort((left, right) => getTimestamp(left.dueDate) - getTimestamp(right.dueDate))
-      .slice(0, 5);
-  }, [searchData, normalizedSearchQuery]);
+  const filteredClients = searchData?.clients ?? [];
+  const filteredInvoices = searchData?.invoices ?? [];
 
   const actionableNotificationCount = notifications.filter(
     (item) => item.priority < 2 && !seenNotificationIds.includes(item.id)
@@ -405,7 +373,11 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
-        alert(error.message);
+        toast({
+          title: "Unable to sign out",
+          description: error.message,
+          variant: "error",
+        });
         return;
       }
 
@@ -416,6 +388,73 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
       setIsAccountOpen(false);
     }
   }
+
+  useEffect(() => {
+    if (!isSearchOpen) {
+      return;
+    }
+
+    if (normalizedSearchQuery.length < 2) {
+      setSearchData({ clients: [], invoices: [] });
+      setSearchError(null);
+      setIsSearchLoading(false);
+      return;
+    }
+
+    let active = true;
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setIsSearchLoading(true);
+        setSearchError(null);
+        const response = await authenticatedFetch(`/api/search?q=${encodeURIComponent(normalizedSearchQuery)}`);
+        const result = (await response.json()) as
+          | { clients?: ClientSearchResult[]; invoices?: InvoiceSearchResult[]; error?: string }
+          | undefined;
+
+        if (!response.ok) {
+          throw new Error(result?.error ?? "Search failed");
+        }
+
+        if (!active) {
+          return;
+        }
+
+        setSearchData({
+          clients: Array.isArray(result?.clients) ? result.clients : [],
+          invoices: Array.isArray(result?.invoices) ? result.invoices : [],
+        });
+      } catch (error) {
+        console.error("Unable to load search data:", error);
+        if (!active) {
+          return;
+        }
+        setSearchError("Unable to load search right now.");
+        setSearchData({ clients: [], invoices: [] });
+      } finally {
+        if (active) {
+          setIsSearchLoading(false);
+        }
+      }
+    }, 220);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeoutId);
+    };
+  }, [isSearchOpen, normalizedSearchQuery]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setIsSearchOpen(true);
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
@@ -475,21 +514,16 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
             <form onSubmit={handleSearchSubmit}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
+                ref={searchInputRef}
                 value={searchQuery}
-                placeholder="Search clients or invoices..."
+                placeholder="Search or jump to..."
                 className="pl-9"
                 onFocus={() => {
                   setIsSearchOpen(true);
-                  if (!searchData && !isSearchLoading) {
-                    void loadSearchData();
-                  }
                 }}
                 onChange={(event) => {
                   setSearchQuery(event.target.value);
                   setIsSearchOpen(true);
-                  if (!searchData && !isSearchLoading) {
-                    void loadSearchData();
-                  }
                 }}
               />
             </form>
@@ -497,7 +531,23 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
             {isSearchOpen ? (
               <div className="absolute right-0 z-30 mt-2 w-full rounded-md border border-slate-200 bg-white p-2 shadow-lg">
                 {normalizedSearchQuery.length < 2 ? (
-                  <p className="px-2 py-1.5 text-xs text-slate-500">Type at least 2 characters to search.</p>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-2 py-1">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Quick Actions</p>
+                      <span className="text-[11px] text-slate-400">Ctrl/Cmd + K</span>
+                    </div>
+                    {quickActions.map((action) => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => handleNavigate(action.href)}
+                        className="w-full rounded-md px-2 py-2 text-left transition-colors hover:bg-slate-100"
+                      >
+                        <p className="text-sm font-medium text-slate-900">{action.label}</p>
+                        <p className="text-xs text-slate-500">{action.description}</p>
+                      </button>
+                    ))}
+                  </div>
                 ) : isSearchLoading ? (
                   <p className="px-2 py-1.5 text-xs text-slate-500">Searching...</p>
                 ) : searchError ? (

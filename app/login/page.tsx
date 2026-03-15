@@ -7,12 +7,14 @@ import AuthSplitShell from "@/components/AuthSplitShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -23,13 +25,21 @@ export default function LoginPage() {
       });
 
       if (error) {
-        alert(error.message);
+        toast({
+          title: "Unable to log in",
+          description: error.message,
+          variant: "error",
+        });
         return;
       }
 
       const accessToken = data.session?.access_token;
       if (!accessToken) {
-        alert("Login succeeded, but no session token is available.");
+        toast({
+          title: "Login incomplete",
+          description: "Login succeeded, but no session token is available.",
+          variant: "error",
+        });
         return;
       }
 
@@ -42,7 +52,11 @@ export default function LoginPage() {
 
       if (!syncResponse.ok) {
         const result = (await syncResponse.json()) as { error?: string };
-        alert(result?.error ?? "Failed to initialize account");
+        toast({
+          title: "Account setup failed",
+          description: result?.error ?? "Failed to initialize account",
+          variant: "error",
+        });
         return;
       }
 

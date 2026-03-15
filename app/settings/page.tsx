@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { useToast } from "@/components/ui/toast";
 
 export default function SettingsPage() {
   const [businessId, setBusinessId] = useState("");
@@ -33,6 +34,7 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const { toast } = useToast();
 
   const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
   const previewAddressLines = [
@@ -82,7 +84,11 @@ export default function SettingsPage() {
     if (!response.ok) {
       const result = await response.json();
       setIsSaving(false);
-      alert(result?.error ?? "Failed to update business settings");
+      toast({
+        title: "Unable to save settings",
+        description: result?.error ?? "Failed to update business settings",
+        variant: "error",
+      });
       return null;
     }
 
@@ -106,7 +112,10 @@ export default function SettingsPage() {
     setIsSaving(false);
 
     if (options?.successMessage) {
-      alert(options.successMessage);
+      toast({
+        title: options.successMessage,
+        variant: "success",
+      });
     }
 
     return updatedBusiness;
@@ -123,12 +132,19 @@ export default function SettingsPage() {
     if (!file) return;
 
     if (!businessId) {
-      alert("Load business settings first.");
+      toast({
+        title: "Load business settings first",
+        variant: "error",
+      });
       return;
     }
 
     if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file.");
+      toast({
+        title: "Invalid file",
+        description: "Please upload an image file.",
+        variant: "error",
+      });
       return;
     }
 
@@ -150,12 +166,21 @@ export default function SettingsPage() {
       };
 
       if (!uploadResponse.ok || !uploadResult.logoUrl) {
-        alert(uploadResult.error ?? `Failed to upload logo to bucket "${logosBucket}".`);
+        toast({
+          title: "Logo upload failed",
+          description:
+            uploadResult.error ?? `Failed to upload logo to bucket "${logosBucket}".`,
+          variant: "error",
+        });
         return;
       }
 
       setLogoUrl(uploadResult.logoUrl);
-      alert("Logo uploaded and saved.");
+      toast({
+        title: "Logo uploaded",
+        description: "The business logo was uploaded successfully.",
+        variant: "success",
+      });
     } finally {
       setIsUploadingLogo(false);
     }
@@ -167,7 +192,10 @@ export default function SettingsPage() {
     });
 
     if (updatedBusiness) {
-      alert("Logo removed.");
+      toast({
+        title: "Logo removed",
+        variant: "success",
+      });
     }
   }
 

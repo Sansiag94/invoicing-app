@@ -1,0 +1,6 @@
+ALTER TABLE "public"."Expense"
+ADD COLUMN "receiptUrl" TEXT,
+ADD COLUMN "isRecurring" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "taxDeductible" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN "vatReclaimable" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN "vatAmount" DOUBLE PRECISION;

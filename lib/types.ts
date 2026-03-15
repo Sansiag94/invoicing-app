@@ -158,6 +158,11 @@ export interface ExpenseRecord {
   currency: InvoiceCurrency;
   expenseDate: string;
   notes: string | null;
+  receiptUrl: string | null;
+  isRecurring: boolean;
+  taxDeductible: boolean;
+  vatReclaimable: boolean;
+  vatAmount: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -168,6 +173,9 @@ export interface ExpensesOverview {
   last30DaysTotal: number;
   yearToDateTotal: number;
   totalExpenses: number;
+  deductibleTotal: number;
+  reclaimableVatTotal: number;
+  recurringMonthlyTotal: number;
   recentExpenses: ExpenseRecord[];
 }
 
@@ -208,6 +216,7 @@ export interface AnalyticsOverview {
   paidInvoices: number;
   unpaidInvoices: number;
   averageDaysToPay: number | null;
+  averagePaidInvoiceValue: number;
   monthlySeries: AnalyticsSeriesPoint[];
   topClients: AnalyticsClientBreakdown[];
   expenseBreakdown: AnalyticsExpenseBreakdown[];

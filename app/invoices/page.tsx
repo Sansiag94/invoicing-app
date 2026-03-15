@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BellRing, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, FileText, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
+import { getDefaultDueDate, getTodayDateInputValue } from "@/lib/invoiceDates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import InvoiceCreateSidebar from "@/components/invoices/InvoiceCreateSidebar";
 
 type InvoiceRow = InvoiceSummary & {
   client?: {
@@ -67,29 +69,6 @@ Kind regards,
 ${senderName}`;
 }
 
-function getTodayDateInputValue(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getDefaultDueDate(issueDateValue: string): string {
-  if (!issueDateValue) return "";
-
-  const [year, month, day] = issueDateValue.split("-").map(Number);
-  if (!year || !month || !day) return "";
-
-  const targetMonthIndex = month;
-  const targetYear = year + Math.floor(targetMonthIndex / 12);
-  const normalizedMonthIndex = targetMonthIndex % 12;
-  const lastDayOfTargetMonth = new Date(targetYear, normalizedMonthIndex + 1, 0).getDate();
-  const clampedDay = Math.min(day, lastDayOfTargetMonth);
-
-  return `${targetYear}-${String(normalizedMonthIndex + 1).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
-}
-
 function InvoicePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -135,10 +114,15 @@ function InvoicePageContent() {
     if (statusFilter === "sent") return "Sent";
     if (statusFilter === "open") return "Open";
     if (statusFilter === "unpaid") return "Unpaid";
+    if (statusFilter === "needs-action") return "Needs Action";
+    if (statusFilter === "awaiting-payment") return "Awaiting Payment";
+    if (statusFilter === "paid-recently") return "Paid Recently";
     return statusFilter;
   }, [statusFilter]);
 
   const filteredInvoices = useMemo(() => {
+    const paidRecentlyCutoff = Date.now() - 30 * 24 * 60 * 60 * 1000;
+
     const statusMatches = (status: string) => {
       if (!statusFilter) return true;
       if (statusFilter === "paid") return status === "paid";
@@ -147,10 +131,18 @@ function InvoicePageContent() {
       if (statusFilter === "sent") return status === "sent";
       if (statusFilter === "open") return status === "draft" || status === "sent";
       if (statusFilter === "unpaid") return status !== "paid";
+      if (statusFilter === "needs-action") return status === "draft" || status === "overdue";
+      if (statusFilter === "awaiting-payment") return status === "sent" || status === "overdue";
       return true;
     };
 
-    const baseInvoices = invoices.filter((invoice) => statusMatches(invoice.status));
+    const baseInvoices = invoices.filter((invoice) => {
+      if (statusFilter === "paid-recently") {
+        return invoice.status === "paid" && new Date(invoice.updatedAt).getTime() >= paidRecentlyCutoff;
+      }
+
+      return statusMatches(invoice.status);
+    });
     if (!searchQuery) return baseInvoices;
 
     return baseInvoices
@@ -882,68 +874,15 @@ function InvoicePageContent() {
                 </div>
               </div>
 
-              <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-                <Card className="border-slate-200 bg-slate-50/80 shadow-none">
-                  <CardHeader>
-                    <CardTitle className="text-base">Quick Summary</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-sm">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-slate-500">
-                        <Building2 className="h-4 w-4" />
-                        <span className="text-xs font-semibold uppercase tracking-wide">Client</span>
-                      </div>
-                      {selectedClient ? (
-                        <div className="space-y-1 text-slate-700">
-                          <p className="font-medium text-slate-900">
-                            {selectedClient.companyName || selectedClient.contactName || selectedClient.email}
-                          </p>
-                          {selectedClient.contactName && selectedClient.companyName ? (
-                            <p>{selectedClient.contactName}</p>
-                          ) : null}
-                          <p>{selectedClient.email}</p>
-                          {selectedClient.phone ? <p>{selectedClient.phone}</p> : null}
-                          <p>{selectedClient.country}</p>
-                        </div>
-                      ) : (
-                        <p className="text-slate-500">Select a client to see billing details.</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-slate-500">
-                        <CalendarDays className="h-4 w-4" />
-                        <span className="text-xs font-semibold uppercase tracking-wide">Schedule</span>
-                      </div>
-                      <div className="space-y-1 text-slate-700">
-                        <p>Issue date: {issueDate || "-"}</p>
-                        <p>Due date: {dueDate || "-"}</p>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2 text-slate-500">
-                        <FileText className="h-4 w-4" />
-                        <span className="text-xs font-semibold uppercase tracking-wide">Totals</span>
-                      </div>
-                      <div className="rounded-lg border border-slate-200 bg-white p-3">
-                        <div className="mb-2 flex items-center justify-between text-slate-600">
-                          <span>Subtotal</span>
-                          <span>{businessCurrency} {totals.subtotal.toFixed(2)}</span>
-                        </div>
-                        <div className="mb-2 flex items-center justify-between text-slate-600">
-                          <span>Tax</span>
-                          <span>{businessCurrency} {totals.taxAmount.toFixed(2)}</span>
-                        </div>
-                        <div className="flex items-center justify-between border-t border-slate-200 pt-2 font-semibold text-slate-900">
-                          <span>Total</span>
-                          <span>{businessCurrency} {totals.totalAmount.toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <InvoiceCreateSidebar
+                client={selectedClient}
+                issueDate={issueDate}
+                dueDate={dueDate}
+                currency={businessCurrency}
+                subtotal={totals.subtotal}
+                taxAmount={totals.taxAmount}
+                totalAmount={totals.totalAmount}
+              />
             </div>
           </CardContent>
         ) : null}
@@ -970,14 +909,14 @@ function InvoicePageContent() {
             ) : null}
           </div>
           <div className="hidden md:flex flex-wrap gap-2">
-            <Button asChild size="sm" variant={statusFilter === "unpaid" ? "default" : "outline"}>
-              <Link href="/invoices?status=unpaid">Unpaid</Link>
+            <Button asChild size="sm" variant={statusFilter === "needs-action" ? "default" : "outline"}>
+              <Link href="/invoices?status=needs-action">Needs Action</Link>
             </Button>
-            <Button asChild size="sm" variant={statusFilter === "overdue" ? "default" : "outline"}>
-              <Link href="/invoices?status=overdue">Overdue</Link>
+            <Button asChild size="sm" variant={statusFilter === "awaiting-payment" ? "default" : "outline"}>
+              <Link href="/invoices?status=awaiting-payment">Awaiting Payment</Link>
             </Button>
-            <Button asChild size="sm" variant={statusFilter === "paid" ? "default" : "outline"}>
-              <Link href="/invoices?status=paid">Paid</Link>
+            <Button asChild size="sm" variant={statusFilter === "paid-recently" ? "default" : "outline"}>
+              <Link href="/invoices?status=paid-recently">Paid Recently</Link>
             </Button>
           </div>
         </CardHeader>
@@ -1065,7 +1004,15 @@ function InvoicePageContent() {
                   <TableRow
                     key={invoice.id}
                     className="cursor-pointer"
+                    role="link"
+                    tabIndex={0}
                     onClick={() => handleOpenInvoice(invoice.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleOpenInvoice(invoice.id);
+                      }
+                    }}
                   >
                     <TableCell>
                       <input
@@ -1131,7 +1078,15 @@ function InvoicePageContent() {
                 <div
                   key={invoice.id}
                   className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+                  role="link"
+                  tabIndex={0}
                   onClick={() => handleOpenInvoice(invoice.id)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      handleOpenInvoice(invoice.id);
+                    }
+                  }}
                 >
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="space-y-1">

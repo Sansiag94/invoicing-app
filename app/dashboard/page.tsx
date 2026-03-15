@@ -10,14 +10,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  AlertCircle,
   Circle,
   Clock3,
-  FileClock,
-  TrendingDown,
   TrendingUp,
-  Users,
   Wallet,
+  TrendingDown,
 } from "lucide-react";
 
 function formatMoney(value: number): string {
@@ -215,77 +212,42 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <StatCard
-          label="Prospect revenue"
-          value={`${dashboard.currency} ${formatMoney(dashboard.prospectRevenue)}`}
-          helper="Open invoice value still in the pipeline"
-          icon={<FileClock className="h-5 w-5" />}
-          tone="warning"
-          href="/invoices?status=unpaid"
-        />
-        <StatCard
-          label="Overdue invoices"
-          value={dashboard.overdueInvoices}
-          helper={`${dashboard.currency} ${formatMoney(dashboard.overdueAmount)} at risk`}
-          icon={<AlertCircle className="h-5 w-5" />}
-          tone="danger"
-          href="/invoices?status=overdue"
-        />
-        <StatCard
-          label="Active clients"
-          value={dashboard.clientCount}
-          helper={`${dashboard.invoiceCount} invoices created`}
-          icon={<Users className="h-5 w-5" />}
-          href="/clients"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Business View</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total revenue</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                {dashboard.currency} {formatMoney(dashboard.totalRevenue)}
-              </p>
-              <p className="text-sm text-slate-600">{dashboard.paidInvoices} paid invoices</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total profit</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
-                {dashboard.currency} {formatMoney(dashboard.totalProfit)}
-              </p>
-              <p className="text-sm text-slate-600">
-                {dashboard.currency} {formatMoney(dashboard.totalExpenses)} booked expenses
-              </p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Focus</p>
-              <p className="mt-2 text-sm text-slate-600">Use Analytics for trends. Use this page to watch pipeline, overdue risk, and current-month performance.</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Priority</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-slate-600">
-            <p>
-              {dashboard.overdueInvoices > 0
-                ? `You have ${dashboard.overdueInvoices} overdue invoice${dashboard.overdueInvoices === 1 ? "" : "s"} that need follow-up.`
-                : "No overdue invoices right now."}
+      <Card>
+        <CardHeader>
+          <CardTitle>Priority</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Overdue now</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">{dashboard.overdueInvoices}</p>
+            <p className="text-sm text-slate-600">
+              {dashboard.currency} {formatMoney(dashboard.overdueAmount)} currently overdue
             </p>
-            <Button asChild className="w-full">
-              <Link href="/invoices?status=overdue">Review overdue invoices</Link>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pipeline</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">
+              {dashboard.currency} {formatMoney(dashboard.prospectRevenue)}
+            </p>
+            <p className="text-sm text-slate-600">{dashboard.sentInvoices} sent invoices still awaiting payment</p>
+          </div>
+          <div className="flex flex-col justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Next action</p>
+              <p className="mt-2 text-sm text-slate-600">
+                {dashboard.overdueInvoices > 0
+                  ? `Review overdue invoices first, then follow up on ${dashboard.sentInvoices} sent invoice${dashboard.sentInvoices === 1 ? "" : "s"}.`
+                  : "No overdue invoices right now. Focus on turning sent invoices into paid revenue."}
+              </p>
+            </div>
+            <Button asChild className="mt-4 w-full">
+              <Link href={dashboard.overdueInvoices > 0 ? "/invoices?status=overdue" : "/invoices?status=sent"}>
+                {dashboard.overdueInvoices > 0 ? "Review overdue invoices" : "Review sent invoices"}
+              </Link>
             </Button>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -328,8 +290,16 @@ export default function DashboardPage() {
                     <TableRow
                       key={invoice.id}
                       className="cursor-pointer"
+                      role="link"
+                      tabIndex={0}
                       onClick={() => {
                         router.push(`/invoices/${invoice.id}`);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          router.push(`/invoices/${invoice.id}`);
+                        }
                       }}
                     >
                       <TableCell>

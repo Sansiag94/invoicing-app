@@ -1,18 +1,35 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown, ChevronUp, PencilLine, Plus, ReceiptText, Search, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  LinkIcon,
+  PencilLine,
+  Plus,
+  ReceiptText,
+  Search,
+  Trash2,
+  Upload,
+} from "lucide-react";
 import { ExpenseRecord, ExpensesPageData, InvoiceCurrency } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { expenseCategoryOptions, getExpenseCategoryLabel } from "@/lib/expenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
+import ExpenseFormFields, { ExpenseFormState } from "@/components/expenses/ExpenseFormFields";
 
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("de-CH", {
@@ -29,16 +46,6 @@ function getTodayDateInputValue(): string {
   return `${year}-${month}-${day}`;
 }
 
-type ExpenseFormState = {
-  vendor: string;
-  description: string;
-  category: string;
-  amount: string;
-  currency: InvoiceCurrency;
-  expenseDate: string;
-  notes: string;
-};
-
 function buildEmptyExpenseForm(currency: InvoiceCurrency): ExpenseFormState {
   return {
     vendor: "",
@@ -48,6 +55,10 @@ function buildEmptyExpenseForm(currency: InvoiceCurrency): ExpenseFormState {
     currency,
     expenseDate: getTodayDateInputValue(),
     notes: "",
+    isRecurring: false,
+    taxDeductible: true,
+    vatReclaimable: false,
+    vatAmount: "",
   };
 }
 
@@ -72,12 +83,14 @@ export default function ExpensesPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ExpenseRecord | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const createExpenseRef = useRef<HTMLDivElement | null>(null);
+  const { toast } = useToast();
 
   const currency = pageData?.overview.currency ?? "CHF";
   const [formState, setFormState] = useState<ExpenseFormState>(buildEmptyExpenseForm("CHF"));
@@ -165,6 +178,10 @@ export default function ExpensesPage() {
       currency: expense.currency,
       expenseDate: expense.expenseDate.slice(0, 10),
       notes: expense.notes ?? "",
+      isRecurring: expense.isRecurring,
+      taxDeductible: expense.taxDeductible,
+      vatReclaimable: expense.vatReclaimable,
+      vatAmount: expense.vatAmount === null ? "" : String(expense.vatAmount),
     });
   };
 
@@ -184,12 +201,20 @@ export default function ExpensesPage() {
           currency: formState.currency,
           expenseDate: formState.expenseDate,
           notes: formState.notes,
+          isRecurring: formState.isRecurring,
+          taxDeductible: formState.taxDeductible,
+          vatReclaimable: formState.vatReclaimable,
+          vatAmount: formState.vatAmount ? Number(formState.vatAmount) : null,
         }),
       });
 
       const result = (await response.json()) as ExpenseRecord & { error?: string };
       if (!response.ok) {
-        alert(result.error ?? "Failed to create expense");
+        toast({
+          title: "Unable to add expense",
+          description: result.error ?? "Failed to create expense",
+          variant: "error",
+        });
         return;
       }
 
@@ -199,7 +224,11 @@ export default function ExpensesPage() {
       setSuccessMessage("Expense added successfully.");
     } catch (error) {
       console.error("Error creating expense:", error);
-      alert("Failed to create expense");
+      toast({
+        title: "Unable to add expense",
+        description: "Failed to create expense",
+        variant: "error",
+      });
     } finally {
       setIsCreating(false);
     }
@@ -223,12 +252,20 @@ export default function ExpensesPage() {
           currency: formState.currency,
           expenseDate: formState.expenseDate,
           notes: formState.notes,
+          isRecurring: formState.isRecurring,
+          taxDeductible: formState.taxDeductible,
+          vatReclaimable: formState.vatReclaimable,
+          vatAmount: formState.vatAmount ? Number(formState.vatAmount) : null,
         }),
       });
 
       const result = (await response.json()) as ExpenseRecord & { error?: string };
       if (!response.ok) {
-        alert(result.error ?? "Failed to update expense");
+        toast({
+          title: "Unable to save expense",
+          description: result.error ?? "Failed to update expense",
+          variant: "error",
+        });
         return;
       }
 
@@ -238,7 +275,11 @@ export default function ExpensesPage() {
       setSuccessMessage("Expense updated successfully.");
     } catch (error) {
       console.error("Error updating expense:", error);
-      alert("Failed to update expense");
+      toast({
+        title: "Unable to save expense",
+        description: "Failed to update expense",
+        variant: "error",
+      });
     } finally {
       setIsSavingEdit(false);
     }
@@ -254,7 +295,11 @@ export default function ExpensesPage() {
       });
       const result = (await response.json()) as { error?: string };
       if (!response.ok) {
-        alert(result.error ?? "Failed to delete expense");
+        toast({
+          title: "Unable to delete expense",
+          description: result.error ?? "Failed to delete expense",
+          variant: "error",
+        });
         return;
       }
 
@@ -263,9 +308,60 @@ export default function ExpensesPage() {
       setSuccessMessage("Expense deleted.");
     } catch (error) {
       console.error("Error deleting expense:", error);
-      alert("Failed to delete expense");
+      toast({
+        title: "Unable to delete expense",
+        description: "Failed to delete expense",
+        variant: "error",
+      });
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleUploadReceipt = async (expenseId: string, file: File | null) => {
+    if (!file) return;
+
+    setUploadingReceiptId(expenseId);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await authenticatedFetch(`/api/expenses/${expenseId}/receipt`, {
+        method: "POST",
+        body: formData,
+      });
+      const result = (await response.json()) as { receiptUrl?: string; error?: string };
+
+      if (!response.ok || !result.receiptUrl) {
+        toast({
+          title: "Receipt upload failed",
+          description: result.error ?? "Unable to upload receipt",
+          variant: "error",
+        });
+        return;
+      }
+
+      await fetchExpenses();
+      setEditingExpense((current) =>
+        current && current.id === expenseId
+          ? { ...current, receiptUrl: result.receiptUrl ?? current.receiptUrl }
+          : current
+      );
+      toast({
+        title: "Receipt uploaded",
+        description: "The receipt is now attached to this expense.",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error uploading receipt:", error);
+      toast({
+        title: "Receipt upload failed",
+        description: "Unable to upload receipt",
+        variant: "error",
+      });
+    } finally {
+      setUploadingReceiptId(null);
     }
   };
 
@@ -283,7 +379,7 @@ export default function ExpensesPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Expenses</h1>
-        <p className="text-sm text-slate-500">Track business costs and understand net profitability.</p>
+        <p className="text-sm text-slate-500">Track business costs, keep receipts, and understand net profitability.</p>
       </div>
 
       {successMessage ? (
@@ -295,30 +391,35 @@ export default function ExpensesPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <ExpenseStatCard
           label="This month"
-          value={`${currency} ${formatMoney(overview?.thisMonthTotal ?? 0)}`}
+          value={`${currency} ${formatMoney(overview.thisMonthTotal)}`}
           helper="Costs booked in the current month"
         />
         <ExpenseStatCard
-          label="Last 30 days"
-          value={`${currency} ${formatMoney(overview?.last30DaysTotal ?? 0)}`}
-          helper="Useful for recent spend velocity"
+          label="Recurring monthly"
+          value={`${currency} ${formatMoney(overview.recurringMonthlyTotal)}`}
+          helper="Recurring spend currently on the books"
         />
         <ExpenseStatCard
-          label="Year to date"
-          value={`${currency} ${formatMoney(overview?.yearToDateTotal ?? 0)}`}
-          helper="Business spend since January 1"
+          label="Tax deductible"
+          value={`${currency} ${formatMoney(overview.deductibleTotal)}`}
+          helper="Booked costs marked as deductible"
         />
         <ExpenseStatCard
-          label="Filtered total"
-          value={`${currency} ${formatMoney(filteredTotal)}`}
-          helper={categoryFilter === "all" ? "Current filtered list" : `Filtered by ${categoryFilter}`}
+          label="Reclaimable VAT"
+          value={`${currency} ${formatMoney(overview.reclaimableVatTotal)}`}
+          helper="VAT currently reclaimable from booked expenses"
         />
       </div>
 
       <Card ref={createExpenseRef}>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Add Expense</CardTitle>
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsCreateFormOpen((current) => !current)}>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsCreateFormOpen((current) => !current)}
+          >
             {isCreateFormOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             {isCreateFormOpen ? "Close" : "Add New"}
           </Button>
@@ -326,43 +427,7 @@ export default function ExpensesPage() {
         {isCreateFormOpen ? (
           <CardContent>
             <form onSubmit={handleCreateExpense} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="vendor">Vendor</Label>
-                <Input id="vendor" value={formState.vendor} onChange={(event) => setFormState((current) => ({ ...current, vendor: event.target.value }))} placeholder="Optional" />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Input id="description" value={formState.description} onChange={(event) => setFormState((current) => ({ ...current, description: event.target.value }))} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select id="category" value={formState.category} onChange={(event) => setFormState((current) => ({ ...current, category: event.target.value }))}>
-                  {expenseCategoryOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="amount">Amount</Label>
-                <Input id="amount" type="number" min="0.01" step="0.01" value={formState.amount} onChange={(event) => setFormState((current) => ({ ...current, amount: event.target.value }))} required />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Select id="currency" value={formState.currency} onChange={(event) => setFormState((current) => ({ ...current, currency: event.target.value as InvoiceCurrency }))}>
-                  <option value="CHF">CHF</option>
-                  <option value="EUR">EUR</option>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="expenseDate">Expense Date</Label>
-                <Input id="expenseDate" type="date" value={formState.expenseDate} onChange={(event) => setFormState((current) => ({ ...current, expenseDate: event.target.value }))} required />
-              </div>
-              <div className="space-y-2 md:col-span-2 xl:col-span-3">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea id="notes" rows={3} value={formState.notes} onChange={(event) => setFormState((current) => ({ ...current, notes: event.target.value }))} placeholder="Optional details for bookkeeping" />
-              </div>
+              <ExpenseFormFields idPrefix="create" formState={formState} onChange={setFormState} />
               <div className="md:col-span-2 xl:col-span-3">
                 <Button type="submit" disabled={isCreating}>
                   <Plus className="h-4 w-4" />
@@ -422,6 +487,14 @@ export default function ExpensesPage() {
             </div>
           ) : (
             <>
+              <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                Showing {filteredExpenses.length} expense{filteredExpenses.length === 1 ? "" : "s"} totaling{" "}
+                <span className="font-semibold text-slate-900">
+                  {currency} {formatMoney(filteredTotal)}
+                </span>
+                .
+              </div>
+
               <div className="hidden md:block">
                 <Table>
                   <TableHeader>
@@ -431,6 +504,7 @@ export default function ExpensesPage() {
                       <TableHead>Category</TableHead>
                       <TableHead>Vendor</TableHead>
                       <TableHead>Amount</TableHead>
+                      <TableHead>Flags</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -444,8 +518,27 @@ export default function ExpensesPage() {
                         <TableCell>
                           {expense.currency} {formatMoney(expense.amount)}
                         </TableCell>
+                        <TableCell className="text-xs text-slate-600">
+                          <div className="flex flex-wrap gap-2">
+                            {expense.isRecurring ? <span className="rounded-full bg-slate-100 px-2 py-1">Recurring</span> : null}
+                            {expense.taxDeductible ? <span className="rounded-full bg-slate-100 px-2 py-1">Deductible</span> : null}
+                            {expense.vatReclaimable ? (
+                              <span className="rounded-full bg-slate-100 px-2 py-1">
+                                VAT {expense.currency} {formatMoney(expense.vatAmount ?? 0)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
+                            {expense.receiptUrl ? (
+                              <Button asChild size="sm" variant="outline">
+                                <a href={expense.receiptUrl} target="_blank" rel="noreferrer">
+                                  <LinkIcon className="h-4 w-4" />
+                                  Receipt
+                                </a>
+                              </Button>
+                            ) : null}
                             <Button size="sm" variant="outline" onClick={() => openEditExpense(expense)}>
                               <PencilLine className="h-4 w-4" />
                               Edit
@@ -476,10 +569,30 @@ export default function ExpensesPage() {
                         <p className="text-sm text-slate-600">{new Date(expense.expenseDate).toLocaleDateString()}</p>
                         <p className="text-sm text-slate-600">{getExpenseCategoryLabel(expense.category)}</p>
                         {expense.vendor ? <p className="text-sm text-slate-600">{expense.vendor}</p> : null}
+                        {expense.receiptUrl ? (
+                          <a
+                            href={expense.receiptUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-2 inline-flex items-center gap-1 text-sm text-slate-700 underline-offset-2 hover:underline"
+                          >
+                            <LinkIcon className="h-3.5 w-3.5" />
+                            Receipt
+                          </a>
+                        ) : null}
                       </div>
                       <p className="font-semibold text-slate-900">
                         {expense.currency} {formatMoney(expense.amount)}
                       </p>
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
+                      {expense.isRecurring ? <span className="rounded-full bg-slate-100 px-2 py-1">Recurring</span> : null}
+                      {expense.taxDeductible ? <span className="rounded-full bg-slate-100 px-2 py-1">Deductible</span> : null}
+                      {expense.vatReclaimable ? (
+                        <span className="rounded-full bg-slate-100 px-2 py-1">
+                          VAT {expense.currency} {formatMoney(expense.vatAmount ?? 0)}
+                        </span>
+                      ) : null}
                     </div>
                     <div className="mt-4 flex gap-2">
                       <Button size="sm" variant="outline" onClick={() => openEditExpense(expense)}>
@@ -505,50 +618,54 @@ export default function ExpensesPage() {
       </Card>
 
       <Dialog open={Boolean(editingExpense)} onOpenChange={(open) => !open && setEditingExpense(null)}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit Expense</DialogTitle>
             <DialogDescription>Update the details so your reporting stays accurate.</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSaveExpenseEdit} className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="editVendor">Vendor</Label>
-              <Input id="editVendor" value={formState.vendor} onChange={(event) => setFormState((current) => ({ ...current, vendor: event.target.value }))} />
+          <form onSubmit={handleSaveExpenseEdit} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <ExpenseFormFields idPrefix="edit" formState={formState} onChange={setFormState} />
+            <div className="md:col-span-2 xl:col-span-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <p className="text-sm font-medium text-slate-900">Receipt</p>
+                <p className="mt-1 text-sm text-slate-500">
+                  Attach an image or PDF so the expense has audit support.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    asChild
+                    variant="outline"
+                    disabled={uploadingReceiptId === editingExpense?.id}
+                  >
+                    <label>
+                      <Upload className="h-4 w-4" />
+                      {uploadingReceiptId === editingExpense?.id ? "Uploading..." : "Upload Receipt"}
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          event.target.value = "";
+                          if (editingExpense) {
+                            void handleUploadReceipt(editingExpense.id, file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </Button>
+                  {editingExpense?.receiptUrl ? (
+                    <Button asChild variant="outline">
+                      <a href={editingExpense.receiptUrl} target="_blank" rel="noreferrer">
+                        <LinkIcon className="h-4 w-4" />
+                        View Receipt
+                      </a>
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="editDescription">Description</Label>
-              <Input id="editDescription" value={formState.description} onChange={(event) => setFormState((current) => ({ ...current, description: event.target.value }))} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editCategory">Category</Label>
-              <Select id="editCategory" value={formState.category} onChange={(event) => setFormState((current) => ({ ...current, category: event.target.value }))}>
-                {expenseCategoryOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editAmount">Amount</Label>
-              <Input id="editAmount" type="number" min="0.01" step="0.01" value={formState.amount} onChange={(event) => setFormState((current) => ({ ...current, amount: event.target.value }))} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editCurrency">Currency</Label>
-              <Select id="editCurrency" value={formState.currency} onChange={(event) => setFormState((current) => ({ ...current, currency: event.target.value as InvoiceCurrency }))}>
-                <option value="CHF">CHF</option>
-                <option value="EUR">EUR</option>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="editExpenseDate">Expense Date</Label>
-              <Input id="editExpenseDate" type="date" value={formState.expenseDate} onChange={(event) => setFormState((current) => ({ ...current, expenseDate: event.target.value }))} required />
-            </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label htmlFor="editNotes">Notes</Label>
-              <Textarea id="editNotes" rows={4} value={formState.notes} onChange={(event) => setFormState((current) => ({ ...current, notes: event.target.value }))} />
-            </div>
-            <DialogFooter className="md:col-span-2">
+            <DialogFooter className="md:col-span-2 xl:col-span-3">
               <Button type="button" variant="outline" onClick={() => setEditingExpense(null)} disabled={isSavingEdit}>
                 Cancel
               </Button>

@@ -217,6 +217,7 @@ export async function GET(request: Request) {
       paidInvoices: paidInvoicesCount,
       unpaidInvoices: unpaidInvoicesCount,
       averageDaysToPay,
+      averagePaidInvoiceValue: paidInvoicesCount > 0 ? totalRevenue / paidInvoicesCount : 0,
       monthlySeries,
       topClients,
       expenseBreakdown,

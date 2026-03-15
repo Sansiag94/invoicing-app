@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
-import { isExpenseCategory, normalizeExpenseCurrency } from "@/lib/expenses";
-import { ExpenseCategory, ExpenseRecord, ExpensesPageData, InvoiceCurrency } from "@/lib/types";
+import { isExpenseCategory, normalizeExpenseCurrency, toExpenseRecord } from "@/lib/expenses";
+import { ExpensesPageData, InvoiceCurrency } from "@/lib/types";
 
 type CreateExpenseBody = {
   vendor?: unknown;
@@ -13,6 +13,10 @@ type CreateExpenseBody = {
   currency?: unknown;
   expenseDate: unknown;
   notes?: unknown;
+  isRecurring?: unknown;
+  taxDeductible?: unknown;
+  vatReclaimable?: unknown;
+  vatAmount?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -36,25 +40,17 @@ function asDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function toExpenseRecord(expense: {
-  id: string;
-  vendor: string | null;
-  description: string;
-  category: ExpenseCategory;
-  amount: number;
-  currency: string;
-  expenseDate: Date;
-  notes: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): ExpenseRecord {
-  return {
-    ...expense,
-    currency: normalizeExpenseCurrency(expense.currency, "CHF"),
-    expenseDate: expense.expenseDate.toISOString(),
-    createdAt: expense.createdAt.toISOString(),
-    updatedAt: expense.updatedAt.toISOString(),
-  };
+function asBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+  }
+
+  return fallback;
 }
 
 function getDateRanges(now: Date) {
@@ -124,6 +120,13 @@ export async function GET(request: Request) {
         yearToDateTotal: yearToDateAggregate._sum.amount ?? 0,
         totalExpenses: totalAggregate._sum.amount ?? 0,
         recentExpenses: expenses.slice(0, 5),
+        deductibleTotal: expensesRaw
+          .filter((expense) => expense.taxDeductible)
+          .reduce((sum, expense) => sum + expense.amount, 0),
+        reclaimableVatTotal: expensesRaw.reduce((sum, expense) => sum + (expense.vatAmount ?? 0), 0),
+        recurringMonthlyTotal: expensesRaw
+          .filter((expense) => expense.isRecurring)
+          .reduce((sum, expense) => sum + expense.amount, 0),
       },
       expenses,
     };
@@ -149,9 +152,17 @@ export async function POST(request: Request) {
     const amount = asNumber(body.amount);
     const expenseDate = asDate(body.expenseDate);
     const rawCurrency = asString(body.currency);
+    const vatAmount = body.vatAmount === undefined ? null : asNumber(body.vatAmount);
+    const isRecurring = asBoolean(body.isRecurring);
+    const taxDeductible = asBoolean(body.taxDeductible, true);
+    const vatReclaimable = asBoolean(body.vatReclaimable);
 
     if (!description || amount === null || amount <= 0 || !expenseDate || !isExpenseCategory(body.category)) {
       return apiError("Missing or invalid expense fields", 400);
+    }
+
+    if (vatAmount !== null && vatAmount < 0) {
+      return apiError("VAT amount must be 0 or higher", 400);
     }
 
     const business = await prisma.business.findFirst({
@@ -175,6 +186,10 @@ export async function POST(request: Request) {
         currency,
         expenseDate,
         notes,
+        isRecurring,
+        taxDeductible,
+        vatReclaimable,
+        vatAmount: vatReclaimable ? vatAmount ?? 0 : null,
       },
     });
 

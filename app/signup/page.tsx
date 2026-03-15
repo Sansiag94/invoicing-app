@@ -7,12 +7,14 @@ import AuthSplitShell from "@/components/AuthSplitShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/components/ui/toast";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const { toast } = useToast();
 
   const handleSignup = async () => {
     setIsLoading(true);
@@ -23,7 +25,11 @@ export default function SignupPage() {
       });
 
       if (error) {
-        alert(error.message);
+        toast({
+          title: "Unable to create account",
+          description: error.message,
+          variant: "error",
+        });
         return;
       }
 
@@ -38,12 +44,20 @@ export default function SignupPage() {
 
         if (!syncResponse.ok) {
           const result = (await syncResponse.json()) as { error?: string };
-          alert(result?.error ?? "Signup succeeded, but account initialization failed.");
+          toast({
+            title: "Account setup incomplete",
+            description: result?.error ?? "Signup succeeded, but account initialization failed.",
+            variant: "error",
+          });
           return;
         }
       }
 
-      alert("Signup successful! You can now log in.");
+      toast({
+        title: "Account created",
+        description: "Signup successful. You can now log in.",
+        variant: "success",
+      });
       router.push("/login");
     } finally {
       setIsLoading(false);

@@ -21,6 +21,14 @@ function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
 }
 
+function formatDeltaPercent(current: number, previous: number): string {
+  if (previous === 0) {
+    return current === 0 ? "0.0%" : "New";
+  }
+
+  return `${(((current - previous) / previous) * 100).toFixed(1)}%`;
+}
+
 function MetricCard(props: {
   label: string;
   value: string;
@@ -169,6 +177,34 @@ export default function AnalyticsPage() {
       },
     };
   }, [visibleSeries]);
+
+  const comparisonData = useMemo(() => {
+    const series = analytics?.monthlySeries ?? [];
+    const previousSeries = series.slice(-timeRange * 2, -timeRange);
+
+    const total = (values: Array<{ revenue: number; expenses: number; profit: number }>) =>
+      values.reduce(
+        (accumulator, entry) => ({
+          revenue: accumulator.revenue + entry.revenue,
+          expenses: accumulator.expenses + entry.expenses,
+          profit: accumulator.profit + entry.profit,
+        }),
+        { revenue: 0, expenses: 0, profit: 0 }
+      );
+
+    const currentTotals = total(visibleSeries);
+    const previousTotals = total(previousSeries);
+    const bestMonth = visibleSeries.reduce<(typeof visibleSeries)[number] | null>(
+      (best, entry) => (best === null || entry.profit > best.profit ? entry : best),
+      null
+    );
+
+    return {
+      previousTotals,
+      currentTotals,
+      bestMonth,
+    };
+  }, [analytics?.monthlySeries, timeRange, visibleSeries]);
 
   const maxBreakdownValue = useMemo(() => {
     const breakdown = analytics?.expenseBreakdown ?? [];
@@ -416,17 +452,26 @@ export default function AnalyticsPage() {
                 <p className="mt-2 text-xl font-semibold text-slate-900">
                   {analytics.currency} {formatMoney(chartData.totals.revenue)}
                 </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  vs previous: {formatDeltaPercent(chartData.totals.revenue, comparisonData.previousTotals.revenue)}
+                </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected costs</p>
                 <p className="mt-2 text-xl font-semibold text-slate-900">
                   {analytics.currency} {formatMoney(chartData.totals.expenses)}
                 </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  vs previous: {formatDeltaPercent(chartData.totals.expenses, comparisonData.previousTotals.expenses)}
+                </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected profit</p>
                 <p className="mt-2 text-xl font-semibold text-slate-900">
                   {analytics.currency} {formatMoney(chartData.totals.profit)}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">
+                  vs previous: {formatDeltaPercent(chartData.totals.profit, comparisonData.previousTotals.profit)}
                 </p>
               </div>
             </div>
@@ -448,11 +493,11 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm font-medium text-slate-900">Client concentration</p>
+              <p className="text-sm font-medium text-slate-900">Best month in this range</p>
               <p className="mt-2 text-sm text-slate-600">
-                {derived.topClientName && derived.topClientShare !== null
-                  ? `${derived.topClientName} represents ${formatPercent(derived.topClientShare)} of paid revenue.`
-                  : "No paid client revenue yet."}
+                {comparisonData.bestMonth
+                  ? `${comparisonData.bestMonth.label} delivered ${analytics.currency} ${formatMoney(comparisonData.bestMonth.profit)} profit.`
+                  : "Not enough data yet."}
               </p>
             </div>
 
@@ -462,6 +507,18 @@ export default function AnalyticsPage() {
                 <p>Prospect revenue: {analytics.currency} {formatMoney(analytics.prospectRevenue)}</p>
                 <p>Overdue amount: {analytics.currency} {formatMoney(analytics.overdueAmount)}</p>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-sm font-medium text-slate-900">Average paid invoice</p>
+              <p className="mt-2 text-sm text-slate-600">
+                {analytics.currency} {formatMoney(analytics.averagePaidInvoiceValue)} average value per paid invoice.
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                {derived.topClientName && derived.topClientShare !== null
+                  ? `${derived.topClientName} represents ${formatPercent(derived.topClientShare)} of paid revenue.`
+                  : "No paid client revenue yet."}
+              </p>
             </div>
 
             <div className="flex flex-col gap-2">

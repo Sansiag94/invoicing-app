@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
-import { isExpenseCategory, normalizeExpenseCurrency } from "@/lib/expenses";
-import { ExpenseCategory, ExpenseRecord, InvoiceCurrency } from "@/lib/types";
+import { isExpenseCategory, normalizeExpenseCurrency, toExpenseRecord } from "@/lib/expenses";
+import { InvoiceCurrency } from "@/lib/types";
 
 type UpdateExpenseBody = {
   vendor?: unknown;
@@ -13,6 +13,11 @@ type UpdateExpenseBody = {
   currency?: unknown;
   expenseDate?: unknown;
   notes?: unknown;
+  receiptUrl?: unknown;
+  isRecurring?: unknown;
+  taxDeductible?: unknown;
+  vatReclaimable?: unknown;
+  vatAmount?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -36,25 +41,17 @@ function asDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function toExpenseRecord(expense: {
-  id: string;
-  vendor: string | null;
-  description: string;
-  category: ExpenseCategory;
-  amount: number;
-  currency: string;
-  expenseDate: Date;
-  notes: string | null;
-  createdAt: Date;
-  updatedAt: Date;
-}): ExpenseRecord {
-  return {
-    ...expense,
-    currency: normalizeExpenseCurrency(expense.currency, "CHF"),
-    expenseDate: expense.expenseDate.toISOString(),
-    createdAt: expense.createdAt.toISOString(),
-    updatedAt: expense.updatedAt.toISOString(),
-  };
+function asBoolean(value: unknown, fallback = false): boolean {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+  }
+
+  return fallback;
 }
 
 export async function PATCH(
@@ -90,9 +87,29 @@ export async function PATCH(
     const expenseDate = body.expenseDate === undefined ? existingExpense.expenseDate : asDate(body.expenseDate);
     const category = body.category === undefined ? existingExpense.category : body.category;
     const rawCurrency = body.currency === undefined ? existingExpense.currency : asString(body.currency);
+    const receiptUrl =
+      body.receiptUrl === undefined ? existingExpense.receiptUrl : asString(body.receiptUrl);
+    const isRecurring =
+      body.isRecurring === undefined ? existingExpense.isRecurring : asBoolean(body.isRecurring);
+    const taxDeductible =
+      body.taxDeductible === undefined
+        ? existingExpense.taxDeductible
+        : asBoolean(body.taxDeductible, true);
+    const vatReclaimable =
+      body.vatReclaimable === undefined
+        ? existingExpense.vatReclaimable
+        : asBoolean(body.vatReclaimable);
+    const vatAmount =
+      body.vatAmount === undefined
+        ? existingExpense.vatAmount
+        : asNumber(body.vatAmount);
 
     if (!description || amount === null || amount <= 0 || !expenseDate || !isExpenseCategory(category)) {
       return apiError("Missing or invalid expense fields", 400);
+    }
+
+    if (vatAmount !== null && vatAmount < 0) {
+      return apiError("VAT amount must be 0 or higher", 400);
     }
 
     const currency: InvoiceCurrency = normalizeExpenseCurrency(rawCurrency, normalizeExpenseCurrency(business.currency, "CHF"));
@@ -107,6 +124,11 @@ export async function PATCH(
         currency,
         expenseDate,
         notes,
+        receiptUrl,
+        isRecurring,
+        taxDeductible,
+        vatReclaimable,
+        vatAmount: vatReclaimable ? vatAmount ?? 0 : null,
       },
     });
 
