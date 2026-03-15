@@ -309,18 +309,24 @@ export default function InvoicePreviewPage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white/90 p-1.5 shadow-sm">
-          <Button variant="default" onClick={handleSendInvoice} disabled={isSending || isLoading || isDuplicating} className="min-w-[7.5rem]">
-            <Send className="h-4 w-4" />
-            {isSending ? "Sending..." : "Send"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleSendReminder}
-            disabled={isSendingReminder || isLoading || invoice?.status === "paid" || invoice?.status === "draft"}
-          >
-            <BellRing className="h-4 w-4" />
-            {isSendingReminder ? "Sending..." : "Send Reminder"}
-          </Button>
+          {invoice?.status !== "paid" ? (
+            invoice?.status === "draft" ? (
+              <Button variant="default" onClick={handleSendInvoice} disabled={isSending || isLoading || isDuplicating} className="min-w-[7.5rem]">
+                <Send className="h-4 w-4" />
+                {isSending ? "Sending..." : "Send"}
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                onClick={handleSendReminder}
+                disabled={isSendingReminder || isLoading || isDuplicating}
+                className="min-w-[9.5rem]"
+              >
+                <BellRing className="h-4 w-4" />
+                {isSendingReminder ? "Sending..." : "Send Reminder"}
+              </Button>
+            )
+          ) : null}
           <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading}>
             <Download className="h-4 w-4" />
             Download PDF

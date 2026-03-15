@@ -438,7 +438,7 @@ export default function ClientDetailPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Invoices</CardTitle>
           <Button asChild size="sm" variant="outline">
-            <Link href="/invoices">Create Invoice</Link>
+            <Link href={`/invoices?clientId=${client.id}`}>Create Invoice</Link>
           </Button>
         </CardHeader>
         <CardContent>
@@ -452,36 +452,69 @@ export default function ClientDetailPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice Number</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Total</TableHead>
-                  <TableHead>Issue Date</TableHead>
-                  <TableHead>Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Invoice Number</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Total</TableHead>
+                      <TableHead>Issue Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {client.invoices.map((invoice) => (
+                      <TableRow
+                        key={invoice.id}
+                        className="cursor-pointer hover:bg-slate-50"
+                        onClick={() => router.push(`/invoices/${invoice.id}`)}
+                      >
+                        <TableCell className="font-medium">
+                          <Link
+                            href={`/invoices/${invoice.id}`}
+                            className="rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {invoice.invoiceNumber}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {invoice.currency} {invoice.totalAmount.toFixed(2)}
+                        </TableCell>
+                        <TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div className="space-y-3 md:hidden">
                 {client.invoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                    <TableCell>
+                  <Link
+                    key={invoice.id}
+                    href={`/invoices/${invoice.id}`}
+                    className="block rounded-lg border border-slate-200 bg-white p-4 transition hover:border-slate-300 hover:bg-slate-50"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-slate-900">{invoice.invoiceNumber}</p>
+                        <p className="text-sm text-slate-500">
+                          {new Date(invoice.issueDate).toLocaleDateString()}
+                        </p>
+                      </div>
                       <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
-                    </TableCell>
-                    <TableCell>
+                    </div>
+                    <p className="mt-3 text-base font-semibold text-slate-900">
                       {invoice.currency} {invoice.totalAmount.toFixed(2)}
-                    </TableCell>
-                    <TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={`/invoices/${invoice.id}`}>View Invoice</Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                    </p>
+                  </Link>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

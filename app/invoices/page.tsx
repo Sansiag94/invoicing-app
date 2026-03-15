@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { FocusEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BellRing, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Copy, Eye, FilePenLine, FileText, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { BellRing, Building2, CalendarDays, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, FileText, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 type InvoiceRow = InvoiceSummary & {
   client?: {
@@ -66,10 +67,34 @@ Kind regards,
 ${senderName}`;
 }
 
+function getTodayDateInputValue(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultDueDate(issueDateValue: string): string {
+  if (!issueDateValue) return "";
+
+  const [year, month, day] = issueDateValue.split("-").map(Number);
+  if (!year || !month || !day) return "";
+
+  const targetMonthIndex = month;
+  const targetYear = year + Math.floor(targetMonthIndex / 12);
+  const normalizedMonthIndex = targetMonthIndex % 12;
+  const lastDayOfTargetMonth = new Date(targetYear, normalizedMonthIndex + 1, 0).getDate();
+  const clampedDay = Math.min(day, lastDayOfTargetMonth);
+
+  return `${targetYear}-${String(normalizedMonthIndex + 1).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+}
+
 function InvoicePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const requestedClientId = (searchParams.get("clientId") ?? "").trim();
+  const defaultIssueDate = getTodayDateInputValue();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [invoiceSenderName, setInvoiceSenderName] = useState("User_name");
@@ -77,8 +102,8 @@ function InvoicePageContent() {
   const [lineItems, setLineItems] = useState<LineItemData[]>([
     { description: "", quantity: 1, unitPrice: 0, taxRate: 0 },
   ]);
-  const [issueDate, setIssueDate] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [issueDate, setIssueDate] = useState(defaultIssueDate);
+  const [dueDate, setDueDate] = useState(getDefaultDueDate(defaultIssueDate));
   const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate("client_first_name", "User_name"));
@@ -93,6 +118,7 @@ function InvoicePageContent() {
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
   const [bulkActionLabel, setBulkActionLabel] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [openActionsInvoiceId, setOpenActionsInvoiceId] = useState<string | null>(null);
   const createInvoiceRef = useRef<HTMLDivElement | null>(null);
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
   const statusFilter = (searchParams.get("status") ?? "").trim().toLowerCase();
@@ -219,6 +245,11 @@ function InvoicePageContent() {
     return { subtotal, taxAmount, totalAmount: subtotal + taxAmount };
   }, [lineItems]);
 
+  const handleIssueDateChange = (nextIssueDate: string) => {
+    setIssueDate(nextIssueDate);
+    setDueDate(getDefaultDueDate(nextIssueDate));
+  };
+
   const updateLineItem = (index: number, key: keyof LineItemData, value: string | number) => {
     setLineItems((current) =>
       current.map((item, itemIndex) => {
@@ -298,8 +329,9 @@ function InvoicePageContent() {
       }
 
       setLineItems([{ description: "", quantity: 1, unitPrice: 0, taxRate: 0 }]);
-      setIssueDate("");
-      setDueDate("");
+      const nextIssueDate = getTodayDateInputValue();
+      setIssueDate(nextIssueDate);
+      setDueDate(getDefaultDueDate(nextIssueDate));
       setClientId("");
       setSubject("");
       setNotesManuallyEdited(false);
@@ -388,6 +420,10 @@ function InvoicePageContent() {
     ) {
       router.push(`/invoices/${invoice.id}?mode=edit`);
     }
+  };
+
+  const handleOpenInvoice = (invoiceId: string) => {
+    router.push(`/invoices/${invoiceId}`);
   };
 
   const handleSendReminder = async (invoiceId: string) => {
@@ -575,6 +611,103 @@ function InvoicePageContent() {
     return () => window.clearTimeout(timeoutId);
   }, [successMessage]);
 
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest("[data-invoice-actions]")) {
+        setOpenActionsInvoiceId(null);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, []);
+
+  const renderActionMenu = (invoice: InvoiceRow, className?: string) => (
+    <div
+      className={cn("relative", className)}
+      data-invoice-actions
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-[7rem] justify-center"
+        onClick={() =>
+          setOpenActionsInvoiceId((current) => (current === invoice.id ? null : invoice.id))
+        }
+      >
+        <MoreHorizontal className="h-4 w-4" />
+        More
+      </Button>
+      {openActionsInvoiceId === invoice.id ? (
+        <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+          {invoice.status === "paid" ? (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+              disabled={isUpdatingStatusId === invoice.id}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                void handleManualStatusChange(invoice.id, "unpaid");
+              }}
+            >
+              <RotateCcw className="h-4 w-4" />
+              {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Unpaid"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800")}
+              disabled={isUpdatingStatusId === invoice.id}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                void handleManualStatusChange(invoice.id, "paid");
+              }}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
+            </button>
+          )}
+          <button
+            type="button"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+            onClick={() => {
+              setOpenActionsInvoiceId(null);
+              handleOpenEdit(invoice);
+            }}
+          >
+            <FilePenLine className="h-4 w-4" />
+            {invoice.status === "draft" ? "Edit" : "Reopen"}
+          </button>
+          <button
+            type="button"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+            onClick={() => {
+              setOpenActionsInvoiceId(null);
+              void handleDuplicateInvoice(invoice.id);
+            }}
+          >
+            <Copy className="h-4 w-4" />
+            Duplicate
+          </button>
+          <button
+            type="button"
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-red-700 hover:bg-red-50 hover:text-red-800")}
+            onClick={() => {
+              setOpenActionsInvoiceId(null);
+              setDeleteTarget(invoice);
+            }}
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="space-y-6">
       <div>
@@ -619,7 +752,7 @@ function InvoicePageContent() {
                       id="issueDate"
                       type="date"
                       value={issueDate}
-                      onChange={(event) => setIssueDate(event.target.value)}
+                      onChange={(event) => handleIssueDateChange(event.target.value)}
                     />
                   </div>
 
@@ -929,11 +1062,16 @@ function InvoicePageContent() {
               </TableHeader>
               <TableBody>
                 {filteredInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                  <TableRow
+                    key={invoice.id}
+                    className="cursor-pointer"
+                    onClick={() => handleOpenInvoice(invoice.id)}
+                  >
                     <TableCell>
                       <input
                         type="checkbox"
                         checked={selectedInvoiceIds.includes(invoice.id)}
+                        onClick={(event) => event.stopPropagation()}
                         onChange={() => toggleInvoiceSelection(invoice.id)}
                         aria-label={`Select ${invoice.invoiceNumber}`}
                       />
@@ -947,75 +1085,39 @@ function InvoicePageContent() {
                       <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-wrap gap-2">
-                        <Button asChild variant="outline" size="sm">
-                          <Link href={`/invoices/${invoice.id}`}>
-                            <Eye className="h-4 w-4" />
-                            View
-                          </Link>
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          disabled={invoice.status === "paid" || isSendingId === invoice.id}
-                          onClick={() => handleSendInvoice(invoice.id)}
-                        >
-                          <Send className="h-4 w-4" />
-                          {isSendingId === invoice.id ? "Sending..." : "Send"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={
-                            invoice.status === "paid" ||
-                            invoice.status === "draft" ||
-                            isSendingReminderId === invoice.id
-                          }
-                          onClick={() => handleSendReminder(invoice.id)}
-                        >
-                          <BellRing className="h-4 w-4" />
-                          {isSendingReminderId === invoice.id ? "Sending..." : "Reminder"}
-                        </Button>
-                        {invoice.status === "paid" ? (
+                      <div className="grid grid-cols-[8.5rem_7rem] gap-2">
+                        {invoice.status === "draft" ? (
                           <Button
-                            variant="outline"
+                            variant="secondary"
                             size="sm"
-                            disabled={isUpdatingStatusId === invoice.id}
-                            onClick={() => handleManualStatusChange(invoice.id, "unpaid")}
-                            className="min-w-[8.75rem]"
+                            className="w-[8.5rem] justify-start"
+                            disabled={isSendingId === invoice.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSendInvoice(invoice.id);
+                            }}
                           >
-                            <RotateCcw className="h-4 w-4" />
-                            {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Unpaid"}
+                            <Send className="h-4 w-4" />
+                            {isSendingId === invoice.id ? "Sending..." : "Send"}
+                          </Button>
+                        ) : invoice.status === "sent" || invoice.status === "overdue" ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-[8.5rem] justify-start"
+                            disabled={isSendingReminderId === invoice.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSendReminder(invoice.id);
+                            }}
+                          >
+                            <BellRing className="h-4 w-4" />
+                            {isSendingReminderId === invoice.id ? "Sending..." : "Reminder"}
                           </Button>
                         ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={isUpdatingStatusId === invoice.id}
-                            onClick={() => handleManualStatusChange(invoice.id, "paid")}
-                            className="min-w-[8.75rem] border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                          >
-                            <CheckCircle2 className="h-4 w-4" />
-                            {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
-                          </Button>
+                          <div className="h-9 w-[8.5rem]" />
                         )}
-                        <Button variant="outline" size="sm" onClick={() => handleOpenEdit(invoice)}>
-                          <FilePenLine className="h-4 w-4" />
-                          {invoice.status === "draft" ? "Edit" : "Reopen"}
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleDuplicateInvoice(invoice.id)}>
-                          <Copy className="h-4 w-4" />
-                          Duplicate
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setDeleteTarget(invoice)}
-                          className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
+                        {renderActionMenu(invoice)}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1026,13 +1128,18 @@ function InvoicePageContent() {
 
             <div className="space-y-3 md:hidden">
               {filteredInvoices.map((invoice) => (
-                <div key={invoice.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div
+                  key={invoice.id}
+                  className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+                  onClick={() => handleOpenInvoice(invoice.id)}
+                >
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
                           checked={selectedInvoiceIds.includes(invoice.id)}
+                          onClick={(event) => event.stopPropagation()}
                           onChange={() => toggleInvoiceSelection(invoice.id)}
                           aria-label={`Select ${invoice.invoiceNumber}`}
                         />
@@ -1047,77 +1154,38 @@ function InvoicePageContent() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/invoices/${invoice.id}`}>
-                        <Eye className="h-4 w-4" />
-                        View
-                      </Link>
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      disabled={invoice.status === "paid" || isSendingId === invoice.id}
-                      onClick={() => handleSendInvoice(invoice.id)}
-                    >
-                      <Send className="h-4 w-4" />
-                      {isSendingId === invoice.id ? "Sending..." : "Send"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={
-                        invoice.status === "paid" ||
-                        invoice.status === "draft" ||
-                        isSendingReminderId === invoice.id
-                      }
-                      onClick={() => handleSendReminder(invoice.id)}
-                    >
-                      <BellRing className="h-4 w-4" />
-                      {isSendingReminderId === invoice.id ? "Sending..." : "Reminder"}
-                    </Button>
-                    {invoice.status === "paid" ? (
+                    {invoice.status === "draft" ? (
                       <Button
-                        variant="outline"
+                        variant="secondary"
                         size="sm"
-                        disabled={isUpdatingStatusId === invoice.id}
-                        onClick={() => handleManualStatusChange(invoice.id, "unpaid")}
+                        disabled={isSendingId === invoice.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleSendInvoice(invoice.id);
+                        }}
+                        className="col-span-2"
                       >
-                        <RotateCcw className="h-4 w-4" />
-                        {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Unpaid"}
+                        <Send className="h-4 w-4" />
+                        {isSendingId === invoice.id ? "Sending..." : "Send"}
+                      </Button>
+                    ) : invoice.status === "sent" || invoice.status === "overdue" ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={isSendingReminderId === invoice.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleSendReminder(invoice.id);
+                        }}
+                        className="col-span-2"
+                      >
+                        <BellRing className="h-4 w-4" />
+                        {isSendingReminderId === invoice.id ? "Sending..." : "Reminder"}
                       </Button>
                     ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={isUpdatingStatusId === invoice.id}
-                        onClick={() => handleManualStatusChange(invoice.id, "paid")}
-                        className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
-                      </Button>
+                      <div className="col-span-2">{renderActionMenu(invoice)}</div>
                     )}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenEdit(invoice)}
-                    >
-                      <FilePenLine className="h-4 w-4" />
-                      {invoice.status === "draft" ? "Edit" : "Reopen"}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDuplicateInvoice(invoice.id)}>
-                      <Copy className="h-4 w-4" />
-                      Duplicate
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setDeleteTarget(invoice)}
-                      className="col-span-2 border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      Delete
-                    </Button>
+                    {invoice.status !== "paid" ? <div className="col-span-2">{renderActionMenu(invoice)}</div> : null}
                   </div>
                 </div>
               ))}

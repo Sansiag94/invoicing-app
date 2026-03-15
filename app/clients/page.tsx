@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, Eye, Trash2, UserPlus } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { isSupportedCountry } from "@/lib/countries";
 import { ClientSummary } from "@/lib/types";
@@ -14,13 +14,13 @@ import { CountryCombobox } from "@/components/ui/country-combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 function getClientDisplayName(client: ClientSummary): string {
   return client.companyName || client.contactName || client.email;
 }
 
 function ClientsPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [clients, setClients] = useState<ClientSummary[]>([]);
   const [companyName, setCompanyName] = useState("");
@@ -34,8 +34,6 @@ function ClientsPageContent() {
   const [vatNumber, setVatNumber] = useState("");
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<ClientSummary | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const createClientRef = useRef<HTMLDivElement | null>(null);
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
@@ -132,31 +130,6 @@ function ClientsPageContent() {
     }
   }
 
-  async function handleDeleteClient() {
-    if (!deleteTarget) return;
-    setIsDeleting(true);
-
-    try {
-      const response = await authenticatedFetch(`/api/clients/${deleteTarget.id}`, {
-        method: "DELETE",
-      });
-
-      const result = (await response.json()) as { error?: string };
-      if (!response.ok) {
-        alert(result?.error ?? "Failed to delete client");
-        return;
-      }
-
-      setDeleteTarget(null);
-      await fetchClients();
-    } catch (error) {
-      console.error("Error deleting client:", error);
-      alert("Failed to delete client");
-    } finally {
-      setIsDeleting(false);
-    }
-  }
-
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -188,6 +161,10 @@ function ClientsPageContent() {
 
     return () => window.clearTimeout(timeoutId);
   }, [successMessage]);
+
+  const handleOpenClient = (clientId: string) => {
+    router.push(`/clients/${clientId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -323,6 +300,8 @@ function ClientsPageContent() {
               </p>
             </div>
           ) : (
+            <>
+            <div className="hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -335,56 +314,65 @@ function ClientsPageContent() {
               </TableHeader>
               <TableBody>
                 {filteredClients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell>{getClientDisplayName(client) || "-"}</TableCell>
+                  <TableRow
+                    key={client.id}
+                    className="cursor-pointer"
+                    onClick={() => handleOpenClient(client.id)}
+                  >
+                    <TableCell>
+                      <Link
+                        href={`/clients/${client.id}`}
+                        className="font-medium text-slate-900 hover:underline"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        {getClientDisplayName(client) || "-"}
+                      </Link>
+                    </TableCell>
                     <TableCell>{client.email}</TableCell>
                     <TableCell>{client.phone || "-"}</TableCell>
                     <TableCell>{client.country}</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/clients/${client.id}`}>
-                            <Eye className="h-4 w-4" />
-                            View
-                          </Link>
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={() => setDeleteTarget(client)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Delete
-                        </Button>
-                      </div>
+                      <Button asChild size="sm" variant="outline">
+                        <Link href={`/invoices?clientId=${client.id}`} onClick={(event) => event.stopPropagation()}>
+                          Create Invoice
+                        </Link>
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+            </div>
+
+            <div className="space-y-3 md:hidden">
+              {filteredClients.map((client) => (
+                <div
+                  key={client.id}
+                  className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+                  onClick={() => handleOpenClient(client.id)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <p className="font-semibold text-slate-900">{getClientDisplayName(client) || "-"}</p>
+                      <p className="text-sm text-slate-600">{client.email}</p>
+                      <p className="text-sm text-slate-600">{client.phone || "-"}</p>
+                      <p className="text-sm text-slate-600">{client.country}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <Button asChild size="sm" variant="outline">
+                      <Link href={`/invoices?clientId=${client.id}`} onClick={(event) => event.stopPropagation()}>
+                        Create Invoice
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            </>
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Client</DialogTitle>
-            <DialogDescription>
-              Delete <strong>{deleteTarget?.companyName || deleteTarget?.contactName || deleteTarget?.email}</strong>?
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={isDeleting}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteClient} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

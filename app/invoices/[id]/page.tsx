@@ -28,6 +28,21 @@ function toDateInputValue(value: string): string {
   return `${year}-${month}-${day}`;
 }
 
+function getDefaultDueDate(issueDateValue: string): string {
+  if (!issueDateValue) return "";
+
+  const [year, month, day] = issueDateValue.split("-").map(Number);
+  if (!year || !month || !day) return "";
+
+  const targetMonthIndex = month;
+  const targetYear = year + Math.floor(targetMonthIndex / 12);
+  const normalizedMonthIndex = targetMonthIndex % 12;
+  const lastDayOfTargetMonth = new Date(targetYear, normalizedMonthIndex + 1, 0).getDate();
+  const clampedDay = Math.min(day, lastDayOfTargetMonth);
+
+  return `${targetYear}-${String(normalizedMonthIndex + 1).padStart(2, "0")}-${String(clampedDay).padStart(2, "0")}`;
+}
+
 function parseNumberInput(value: string): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -120,6 +135,11 @@ export default function InvoiceDetailPage() {
   const [lineItems, setLineItems] = useState<LineItemData[]>([]);
 
   const editedTotals = useMemo(() => calculateTotals(lineItems), [lineItems]);
+
+  const handleIssueDateChange = (nextIssueDate: string) => {
+    setIssueDate(nextIssueDate);
+    setDueDate(getDefaultDueDate(nextIssueDate));
+  };
 
   function loadInvoiceIntoForm(dataInvoice: InvoiceDetails) {
     setIssueDate(toDateInputValue(dataInvoice.issueDate));
@@ -594,16 +614,6 @@ export default function InvoiceDetailPage() {
             Download PDF
           </Button>
           {!isEditing ? (
-            <Button
-              variant="outline"
-              onClick={handleSendReminder}
-              disabled={isSendingReminder || invoice.status === "paid" || invoice.status === "draft"}
-            >
-              <BellRing className="h-4 w-4" />
-              {isSendingReminder ? "Sending..." : "Send Reminder"}
-            </Button>
-          ) : null}
-          {!isEditing ? (
             invoice.status === "paid" ? (
               <Button
                 variant="outline"
@@ -631,15 +641,27 @@ export default function InvoiceDetailPage() {
               {isDuplicating ? "Duplicating..." : "Duplicate"}
             </Button>
           ) : null}
-          <Button
-            variant="default"
-            onClick={handleSendInvoice}
-            disabled={isSending || invoice.status === "paid" || isEditing || isDuplicating}
-            title={invoice.status === "paid" ? "Paid invoices cannot be sent" : undefined}
-          >
-            <Send className="h-4 w-4" />
-            {isSending ? "Sending..." : "Send"}
-          </Button>
+          {!isEditing && invoice.status !== "paid" ? (
+            invoice.status === "draft" ? (
+              <Button
+                variant="default"
+                onClick={handleSendInvoice}
+                disabled={isSending || isDuplicating}
+              >
+                <Send className="h-4 w-4" />
+                {isSending ? "Sending..." : "Send"}
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                onClick={handleSendReminder}
+                disabled={isSendingReminder || isDuplicating}
+              >
+                <BellRing className="h-4 w-4" />
+                {isSendingReminder ? "Sending..." : "Send Reminder"}
+              </Button>
+            )
+          ) : null}
           <Button
             variant="outline"
             onClick={() => setShowDeleteDialog(true)}
@@ -785,7 +807,7 @@ export default function InvoiceDetailPage() {
                   id="issueDate"
                   type="date"
                   value={issueDate}
-                  onChange={(event) => setIssueDate(event.target.value)}
+                  onChange={(event) => handleIssueDateChange(event.target.value)}
                 />
               </div>
               <div className="space-y-2">
