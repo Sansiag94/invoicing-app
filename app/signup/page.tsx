@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/utils/supabase";
+import { setRememberSession, supabase } from "@/utils/supabase";
 import AuthSplitShell from "@/components/AuthSplitShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,13 +12,24 @@ import { useToast } from "@/components/ui/toast";
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
 
   const handleSignup = async () => {
+    if (password !== repeatPassword) {
+      toast({
+        title: "Passwords do not match",
+        description: "Please repeat the same password to continue.",
+        variant: "error",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
+      setRememberSession(true);
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -33,7 +44,19 @@ export default function SignupPage() {
         return;
       }
 
-      const accessToken = data.session?.access_token;
+      let accessToken = data.session?.access_token ?? null;
+
+      if (!accessToken) {
+        const signInResult = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (!signInResult.error) {
+          accessToken = signInResult.data.session?.access_token ?? null;
+        }
+      }
+
       if (accessToken) {
         const syncResponse = await fetch("/api/create-user", {
           method: "POST",
@@ -51,11 +74,19 @@ export default function SignupPage() {
           });
           return;
         }
+
+        toast({
+          title: "Account created",
+          description: "Welcome to Sierra Invoices.",
+          variant: "success",
+        });
+        router.push("/dashboard");
+        return;
       }
 
       toast({
         title: "Account created",
-        description: "Signup successful. You can now log in.",
+        description: "Account created. Check your inbox if email confirmation is required before logging in.",
         variant: "success",
       });
       router.push("/login");
@@ -102,10 +133,20 @@ export default function SignupPage() {
                 autoComplete="new-password"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="repeatPassword">Repeat Password</Label>
+              <Input
+                id="repeatPassword"
+                type="password"
+                value={repeatPassword}
+                onChange={(event) => setRepeatPassword(event.target.value)}
+                autoComplete="new-password"
+              />
+            </div>
             <Button
               className="w-full"
               type="submit"
-              disabled={isLoading || !email.trim() || !password.trim()}
+              disabled={isLoading || !email.trim() || !password.trim() || !repeatPassword.trim()}
             >
               {isLoading ? "Creating account..." : "Create account"}
             </Button>

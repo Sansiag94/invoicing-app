@@ -3,6 +3,8 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { ensureBusiness } from "@/lib/ensureBusiness";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
+import { getPublicInvoiceBaseUrl } from "@/lib/publicInvoiceLink";
+import { sendWelcomeEmail } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -13,20 +15,39 @@ export async function POST(request: Request) {
       return apiError("Authenticated email is required", 400);
     }
 
-    const user = await prisma.user.upsert({
+    const existingUser = await prisma.user.findUnique({
       where: { id: authUser.id },
-      update: {
-        email,
-        name: email,
-      },
-      create: {
-        id: authUser.id,
-        email,
-        name: email,
-      },
+      select: { id: true },
     });
 
+    const user = existingUser
+      ? await prisma.user.update({
+          where: { id: authUser.id },
+          data: {
+            email,
+            name: email,
+          },
+        })
+      : await prisma.user.create({
+          data: {
+            id: authUser.id,
+            email,
+            name: email,
+          },
+        });
+
     await ensureBusiness(user.id);
+
+    if (!existingUser) {
+      try {
+        await sendWelcomeEmail({
+          to: email,
+          dashboardLink: `${getPublicInvoiceBaseUrl()}/dashboard`,
+        });
+      } catch (error) {
+        console.error("Error sending welcome email:", error);
+      }
+    }
 
     return NextResponse.json(user);
   } catch (error) {

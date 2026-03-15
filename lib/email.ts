@@ -1,6 +1,9 @@
 import { Resend } from "resend";
 import { getResendApiKey } from "@/lib/env";
-import { buildPublicInvoiceLink as buildPublicInvoiceLinkValue } from "@/lib/publicInvoiceLink";
+import {
+  buildPublicInvoiceLink as buildPublicInvoiceLinkValue,
+  getPublicInvoiceBaseUrl,
+} from "@/lib/publicInvoiceLink";
 
 type SendInvoiceEmailInput = {
   to: string;
@@ -41,6 +44,12 @@ type SendManualInvoiceReminderEmailInput = {
   currency: string;
   invoiceLink: string;
   dueDate: Date;
+};
+
+type SendWelcomeEmailInput = {
+  to: string;
+  appName?: string;
+  dashboardLink?: string;
 };
 
 let resendClient: Resend | null = null;
@@ -388,6 +397,71 @@ ${invoiceLink}`,
   if (result.error) {
     throw new EmailDeliveryError("Failed to send invoice reminder email");
   }
+
+  return result;
+}
+
+export async function sendWelcomeEmail({
+  to,
+  appName = "Sierra Invoices",
+  dashboardLink,
+}: SendWelcomeEmailInput) {
+  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
+  const appLink = dashboardLink?.trim() || getPublicInvoiceBaseUrl();
+  const safeAppName = escapeHtml(appName);
+  const safeAppLink = escapeHtml(appLink);
+
+  const result = await getResendClient().emails.send({
+    from,
+    replyTo,
+    to,
+    subject: `Welcome to ${appName}`,
+    text: `Welcome to ${appName}.
+
+Your account has been created successfully.
+
+Open your workspace:
+${appLink}
+`,
+    html: `
+      <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
+        <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 16px; padding: 28px;">
+          <p style="margin: 0 0 14px; color: #334155;">Welcome,</p>
+          <h2 style="margin: 0 0 10px; color: #0f172a; font-size: 22px;">Your ${safeAppName} account is ready</h2>
+          <p style="margin: 0 0 22px; color: #475569; line-height: 1.6;">
+            Your account has been created successfully. You can now open your workspace and start managing clients, invoices, and payments.
+          </p>
+          <div style="margin: 0 0 18px;">
+            <a href="${safeAppLink}" style="display: inline-block; padding: 13px 18px; background: #0f172a; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600;">
+              Open ${safeAppName}
+            </a>
+          </div>
+          <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+            If the button does not work, copy and paste this link into your browser:<br />
+            <span>${safeAppLink}</span>
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  if (result.error) {
+    console.error("[email] Resend welcome email failed", {
+      to,
+      appName,
+      dashboardLink: appLink,
+      error: result.error,
+    });
+    throw new EmailDeliveryError("Failed to send welcome email");
+  }
+
+  console.log("[email] Resend welcome email sent", {
+    to,
+    appName,
+    dashboardLink: appLink,
+    emailId: result.data?.id,
+  });
 
   return result;
 }

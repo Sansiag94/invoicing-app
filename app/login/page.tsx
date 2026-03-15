@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/utils/supabase";
+import { getRememberSessionPreference, setRememberSession, supabase } from "@/utils/supabase";
 import AuthSplitShell from "@/components/AuthSplitShell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { useToast } from "@/components/ui/toast";
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(() => getRememberSessionPreference());
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -19,6 +20,7 @@ export default function LoginPage() {
   const handleLogin = async () => {
     setIsLoading(true);
     try {
+      setRememberSession(rememberMe);
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -104,6 +106,20 @@ export default function LoginPage() {
                 autoComplete="current-password"
               />
             </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900"
+                checked={rememberMe}
+                onChange={(event) => setRememberMe(event.target.checked)}
+              />
+              <span>
+                <span className="block font-medium text-slate-900">Keep me logged in</span>
+                <span className="block text-xs text-slate-500">
+                  Stay signed in on this device after you close the browser.
+                </span>
+              </span>
+            </label>
             <Button className="w-full" type="submit" disabled={isLoading || !email.trim() || !password.trim()}>
               {isLoading ? "Logging in..." : "Log in"}
             </Button>
