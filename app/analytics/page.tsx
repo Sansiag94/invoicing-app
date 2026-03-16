@@ -38,31 +38,31 @@ function MetricCard(props: {
 }) {
   const toneClasses =
     props.tone === "success"
-      ? "border-emerald-200 bg-emerald-50/70"
+      ? "border-emerald-200 bg-white dark:border-emerald-900/80 dark:bg-slate-900"
       : props.tone === "warning"
-        ? "border-amber-200 bg-amber-50/70"
+        ? "border-amber-200 bg-white dark:border-amber-900/80 dark:bg-slate-900"
         : props.tone === "danger"
-          ? "border-red-200 bg-red-50/70"
-          : "border-slate-200 bg-white";
+          ? "border-red-200 bg-white dark:border-red-900/80 dark:bg-slate-900"
+          : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900";
 
   const iconClasses =
     props.tone === "success"
-      ? "bg-emerald-100 text-emerald-700"
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
       : props.tone === "warning"
-        ? "bg-amber-100 text-amber-700"
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
         : props.tone === "danger"
-          ? "bg-red-100 text-red-700"
-          : "bg-slate-100 text-slate-700";
+          ? "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-200"
+          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
 
   return (
     <Card className={toneClasses}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-slate-500">{props.label}</CardTitle>
+        <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-300">{props.label}</CardTitle>
         <div className={`rounded-lg p-2 ${iconClasses}`}>{props.icon}</div>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold text-slate-900">{props.value}</p>
-        <p className="mt-2 text-sm text-slate-600">{props.helper}</p>
+        <p className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{props.value}</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{props.helper}</p>
       </CardContent>
     </Card>
   );
@@ -364,8 +364,8 @@ export default function AnalyticsPage() {
                   className={cn(
                     "rounded-md border px-3 py-2 text-sm font-medium transition-colors",
                     timeRange === range
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                      ? "border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-600 dark:bg-slate-100 dark:text-slate-950"
+                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
                   )}
                 >
                   {range}M
@@ -384,7 +384,7 @@ export default function AnalyticsPage() {
                 Costs
               </div>
               <div className="flex items-center gap-2 text-slate-700">
-                <span className="h-2.5 w-2.5 rounded-full bg-slate-900" />
+                <span className="h-2.5 w-2.5 rounded-full bg-slate-700 dark:bg-slate-200" />
                 Profit
               </div>
             </div>
@@ -408,7 +408,7 @@ export default function AnalyticsPage() {
 
                 <path d={revenuePath} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
                 <path d={expensePath} fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
-                <path d={profitPath} fill="none" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" />
+                <path d={profitPath} fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
 
                 {revenuePoints.map((point, index) => (
                   <circle key={`revenue-${index}`} cx={point.x} cy={point.y} r="4" fill="#10b981">
@@ -421,7 +421,7 @@ export default function AnalyticsPage() {
                   </circle>
                 ))}
                 {profitPoints.map((point, index) => (
-                  <circle key={`profit-${index}`} cx={point.x} cy={point.y} r="4" fill="#0f172a">
+                  <circle key={`profit-${index}`} cx={point.x} cy={point.y} r="4" fill="#475569">
                     <title>{`${visibleSeries[index]?.label}: Profit ${analytics.currency} ${formatMoney(visibleSeries[index]?.profit ?? 0)}`}</title>
                   </circle>
                 ))}
@@ -584,7 +584,7 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="h-2 rounded-full bg-slate-100">
                     <div
-                      className="h-2 rounded-full bg-slate-900"
+                      className="h-2 rounded-full bg-slate-600 dark:bg-slate-300"
                       style={{ width: `${Math.max(6, (entry.amount / maxBreakdownValue) * 100)}%` }}
                     />
                   </div>

@@ -64,7 +64,7 @@ export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "bg-slate-900 text-white"
+                      ? "border border-slate-300 bg-slate-100 text-slate-900"
                       : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
                   )}
                 >

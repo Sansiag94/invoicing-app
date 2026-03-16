@@ -598,8 +598,8 @@ export default function InvoiceDetailPage() {
 
   if (!invoice) {
     return (
-      <Card className={loadError ? "border-red-200 bg-red-50" : undefined}>
-        <CardContent className={`pt-6 ${loadError ? "text-red-700" : "text-slate-600"}`}>
+      <Card className={loadError ? "border-red-200 bg-red-50/80 dark:border-red-900/70 dark:bg-red-950/35" : undefined}>
+        <CardContent className={`pt-6 ${loadError ? "text-red-800 dark:text-red-100" : "text-slate-600"}`}>
           {loadError ?? "Invoice not found."}
         </CardContent>
       </Card>
@@ -652,69 +652,14 @@ export default function InvoiceDetailPage() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {!isEditing ? (
-            <Button asChild variant="outline">
-              <Link href={`/invoices/${invoice.id}/preview`}>
-                <Eye className="h-4 w-4" />
-                Preview Invoice
-              </Link>
-            </Button>
-          ) : null}
-          {!isEditing ? (
-            <Button variant="outline" onClick={handleOpenEdit}>
-              <PencilLine className="h-4 w-4" />
-              {invoice.status === "draft" ? "Edit Invoice" : "Reopen & Edit"}
-            </Button>
-          ) : (
-            <>
-              <Button onClick={handleSaveInvoice} disabled={isSaving}>
-                {isSaving ? "Saving..." : "Save Invoice"}
-              </Button>
-              <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving}>
-                Cancel
-              </Button>
-            </>
-          )}
-
-          <Button variant="outline" onClick={handleDownloadPdf} disabled={isSaving || isDeleting}>
-            <Download className="h-4 w-4" />
-            Download PDF
-          </Button>
-          {!isEditing ? (
-            invoice.status === "paid" ? (
-              <Button
-                variant="outline"
-                onClick={() => void handleManualStatusChange("unpaid")}
-                disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
-              >
-                <RotateCcw className="h-4 w-4" />
-                {isUpdatingStatus ? "Updating..." : "Mark Unpaid"}
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                onClick={() => void handleManualStatusChange("paid")}
-                disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
-                className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {isUpdatingStatus ? "Updating..." : "Mark Paid"}
-              </Button>
-            )
-          ) : null}
-          {!isEditing ? (
-            <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isDeleting}>
-              <Copy className="h-4 w-4" />
-              {isDuplicating ? "Duplicating..." : "Duplicate"}
-            </Button>
-          ) : null}
+        <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap">
           {!isEditing && invoice.status !== "paid" ? (
             invoice.status === "draft" ? (
               <Button
                 variant="default"
                 onClick={handleSendInvoice}
                 disabled={isSending || isDuplicating}
+                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <Send className="h-4 w-4" />
                 {isSending ? "Sending..." : "Send"}
@@ -724,17 +669,75 @@ export default function InvoiceDetailPage() {
                 variant="default"
                 onClick={handleSendReminder}
                 disabled={isSendingReminder || isDuplicating}
+                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <BellRing className="h-4 w-4" />
                 {isSendingReminder ? "Sending..." : "Send Reminder"}
               </Button>
             )
           ) : null}
+          {!isEditing ? (
+            invoice.status === "paid" ? (
+              <Button
+                variant="outline"
+                onClick={() => void handleManualStatusChange("unpaid")}
+                disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
+                className="w-full sm:w-auto"
+              >
+                <RotateCcw className="h-4 w-4" />
+                {isUpdatingStatus ? "Updating..." : "Mark Unpaid"}
+              </Button>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={() => void handleManualStatusChange("paid")}
+                disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
+                className="w-full sm:w-auto"
+              >
+                <CheckCircle2 className="h-4 w-4" />
+                {isUpdatingStatus ? "Updating..." : "Mark Paid"}
+              </Button>
+            )
+          ) : null}
+          {!isEditing ? (
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href={`/invoices/${invoice.id}/preview`}>
+                <Eye className="h-4 w-4" />
+                Preview Invoice
+              </Link>
+            </Button>
+          ) : null}
+          {!isEditing ? (
+            <Button variant="outline" onClick={handleOpenEdit} className="w-full sm:w-auto">
+              <PencilLine className="h-4 w-4" />
+              {invoice.status === "draft" ? "Edit Invoice" : "Reopen & Edit"}
+            </Button>
+          ) : (
+            <>
+              <Button onClick={handleSaveInvoice} disabled={isSaving} className="w-full sm:w-auto">
+                {isSaving ? "Saving..." : "Save Invoice"}
+              </Button>
+              <Button variant="outline" onClick={handleCancelEdit} disabled={isSaving} className="w-full sm:w-auto">
+                Cancel
+              </Button>
+            </>
+          )}
+
+          <Button variant="outline" onClick={handleDownloadPdf} disabled={isSaving || isDeleting} className="w-full sm:w-auto">
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+          {!isEditing ? (
+            <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isDeleting} className="w-full sm:w-auto">
+              <Copy className="h-4 w-4" />
+              {isDuplicating ? "Duplicating..." : "Duplicate"}
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             onClick={() => setShowDeleteDialog(true)}
             disabled={isDeleting || isDuplicating}
-            className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+            className="col-span-2 w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:col-span-1 sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete
@@ -743,7 +746,7 @@ export default function InvoiceDetailPage() {
       </div>
 
       {successMessage ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
         </div>
       ) : null}
@@ -759,20 +762,20 @@ export default function InvoiceDetailPage() {
                 key={step.label}
                 className={`rounded-lg border px-4 py-3 ${
                   step.danger
-                    ? "border-red-200 bg-red-50"
+                    ? "border-red-200 bg-red-50/70 dark:border-red-900/70 dark:bg-red-950/35"
                     : step.active
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-200 bg-slate-50"
+                      ? "border-slate-300 bg-slate-100 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-50"
+                      : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-900"
                 }`}
               >
                 <p
                   className={`text-xs font-semibold uppercase tracking-wide ${
-                    step.danger ? "text-red-700" : step.active ? "text-white/70" : "text-slate-500"
+                    step.danger ? "text-red-700 dark:text-red-200" : step.active ? "text-slate-500 dark:text-slate-300" : "text-slate-500 dark:text-slate-400"
                   }`}
                 >
                   {step.label}
                 </p>
-                <p className={`mt-1 font-medium ${step.active && !step.danger ? "text-white" : "text-slate-900"}`}>
+                <p className={`mt-1 font-medium ${step.active && !step.danger ? "text-slate-900 dark:text-slate-50" : "text-slate-900 dark:text-slate-100"}`}>
                   {step.description}
                 </p>
               </div>

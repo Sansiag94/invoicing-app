@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
   --background: #f8fafc;
@@ -42,7 +43,7 @@ html.dark body {
 }
 
 html.dark .bg-slate-50 {
-  background-color: #020617 !important;
+  background-color: #111827 !important;
 }
 
 html.dark .bg-white,
@@ -74,15 +75,7 @@ html.dark .hover\:bg-slate-100:hover {
 }
 
 html.dark .bg-slate-100 {
-  background-color: #1e293b !important;
-}
-
-html.dark .bg-slate-900 {
-  background-color: #e2e8f0 !important;
-}
-
-html.dark .text-white {
-  color: #0f172a !important;
+  background-color: #1f2937 !important;
 }
 
 html.dark input,

@@ -37,18 +37,20 @@ function getToastStyles(variant: ToastVariant) {
   switch (variant) {
     case "success":
       return {
-        wrapper: "border-emerald-200 bg-emerald-50 text-emerald-900",
-        icon: "text-emerald-600",
+        wrapper:
+          "border-emerald-200 bg-emerald-50/80 text-emerald-900 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100",
+        icon: "text-emerald-600 dark:text-emerald-300",
       };
     case "error":
       return {
-        wrapper: "border-red-200 bg-red-50 text-red-900",
-        icon: "text-red-600",
+        wrapper:
+          "border-red-200 bg-red-50/80 text-red-900 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-100",
+        icon: "text-red-600 dark:text-red-300",
       };
     default:
       return {
-        wrapper: "border-slate-200 bg-white text-slate-900",
-        icon: "text-slate-600",
+        wrapper: "border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100",
+        icon: "text-slate-600 dark:text-slate-300",
       };
   }
 }
@@ -129,13 +131,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold">{item.title}</p>
                   {item.description ? (
-                    <p className="mt-1 text-sm text-slate-600">{item.description}</p>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.description}</p>
                   ) : null}
                 </div>
                 <button
                   type="button"
                   onClick={() => dismissToast(item.id)}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-black/5 hover:text-slate-900"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-black/5 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-slate-100"
                   aria-label="Dismiss notification"
                 >
                   <X className="h-4 w-4" />

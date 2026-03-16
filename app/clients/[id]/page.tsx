@@ -236,8 +236,8 @@ export default function ClientDetailPage() {
 
   if (!client) {
     return (
-      <Card className={loadError ? "border-red-200 bg-red-50" : undefined}>
-        <CardContent className={`pt-6 ${loadError ? "text-red-700" : "text-slate-600"}`}>
+      <Card className={loadError ? "border-red-200 bg-red-50/80 dark:border-red-900/70 dark:bg-red-950/35" : undefined}>
+        <CardContent className={`pt-6 ${loadError ? "text-red-800 dark:text-red-100" : "text-slate-600"}`}>
           {loadError ?? "Client not found."}
         </CardContent>
       </Card>
@@ -290,7 +290,7 @@ export default function ClientDetailPage() {
       </div>
 
       {successMessage ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
         </div>
       ) : null}

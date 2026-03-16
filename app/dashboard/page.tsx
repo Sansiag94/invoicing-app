@@ -34,31 +34,54 @@ function StatCard(props: {
 }) {
   const toneClasses =
     props.tone === "success"
-      ? "border-emerald-200 bg-emerald-50/70"
+      ? "border-emerald-200 bg-white dark:border-emerald-900/80 dark:bg-slate-900"
       : props.tone === "warning"
-        ? "border-amber-200 bg-amber-50/70"
+        ? "border-amber-200 bg-white dark:border-amber-900/80 dark:bg-slate-900"
         : props.tone === "danger"
-          ? "border-red-200 bg-red-50/70"
-          : "border-slate-200 bg-white";
+          ? "border-red-200 bg-white dark:border-red-900/80 dark:bg-slate-900"
+          : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900";
 
   const iconClasses =
     props.tone === "success"
-      ? "bg-emerald-100 text-emerald-700"
+      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
       : props.tone === "warning"
-        ? "bg-amber-100 text-amber-700"
+        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
         : props.tone === "danger"
-          ? "bg-red-100 text-red-700"
-          : "bg-slate-100 text-slate-700";
+        ? "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-200"
+          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
+
+  const labelClasses =
+    props.tone === "success"
+      ? "text-slate-500 dark:text-slate-300"
+      : props.tone === "warning"
+        ? "text-slate-500 dark:text-slate-300"
+        : props.tone === "danger"
+          ? "text-slate-500 dark:text-slate-300"
+          : "text-slate-500 dark:text-slate-300";
+
+  const valueClasses =
+    props.tone === "success" || props.tone === "warning" || props.tone === "danger"
+      ? "text-slate-900 dark:text-white"
+      : "text-slate-900 dark:text-slate-50";
+
+  const helperClasses =
+    props.tone === "success"
+      ? "text-slate-600 dark:text-slate-300"
+      : props.tone === "warning"
+        ? "text-slate-600 dark:text-slate-300"
+        : props.tone === "danger"
+          ? "text-slate-600 dark:text-slate-300"
+          : "text-slate-600 dark:text-slate-300";
 
   const content = (
     <Card className={toneClasses}>
       <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-slate-500">{props.label}</CardTitle>
+        <CardTitle className={`text-sm font-medium ${labelClasses}`}>{props.label}</CardTitle>
         <div className={`rounded-lg p-2 ${iconClasses}`}>{props.icon}</div>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold text-slate-900">{props.value}</p>
-        <p className="mt-2 text-sm text-slate-600">{props.helper}</p>
+        <p className={`text-3xl font-semibold ${valueClasses}`}>{props.value}</p>
+        <p className={`mt-2 text-sm ${helperClasses}`}>{props.helper}</p>
       </CardContent>
     </Card>
   );
@@ -123,7 +146,11 @@ export default function DashboardPage() {
   }
 
   if (!dashboard) {
-    return <div className="rounded-md border border-red-200 bg-red-50 p-4">Unable to load dashboard.</div>;
+    return (
+      <div className="rounded-md border border-red-200 bg-red-50/80 p-4 text-red-800 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-100">
+        Unable to load dashboard.
+      </div>
+    );
   }
 
   const showOnboarding = dashboard.clientCount === 0 && dashboard.invoiceCount === 0;
@@ -136,13 +163,13 @@ export default function DashboardPage() {
       </div>
 
       {showOnboarding ? (
-        <Card className="border-blue-200 bg-blue-50/60">
+        <Card className="border-sky-200 bg-sky-50/70 dark:border-sky-900/60 dark:bg-sky-950/25">
           <CardHeader>
             <CardTitle>Welcome to your invoicing workspace</CardTitle>
-            <p className="text-sm text-slate-600">Complete the setup below to send your first invoice.</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Complete the setup below to send your first invoice.</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <ol className="space-y-3 text-sm text-slate-700">
+            <ol className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
               <li className="flex items-start gap-2">
                 <Circle className="mt-0.5 h-4 w-4 text-slate-400" />
                 <span>1. Add business info</span>

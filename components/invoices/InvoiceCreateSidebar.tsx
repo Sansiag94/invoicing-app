@@ -25,12 +25,12 @@ export default function InvoiceCreateSidebar({
 }: InvoiceCreateSidebarProps) {
   return (
     <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
-      <Card className="border-slate-200 bg-slate-50/80 shadow-none">
+      <Card className="border-slate-200 shadow-none">
         <CardHeader>
           <CardTitle className="text-base">Quick Summary</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 text-sm">
-          <div className="space-y-2">
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-900">
             <div className="flex items-center gap-2 text-slate-500">
               <Building2 className="h-4 w-4" />
               <span className="text-xs font-semibold uppercase tracking-wide">Client</span>
@@ -50,7 +50,7 @@ export default function InvoiceCreateSidebar({
             )}
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-900">
             <div className="flex items-center gap-2 text-slate-500">
               <CalendarDays className="h-4 w-4" />
               <span className="text-xs font-semibold uppercase tracking-wide">Schedule</span>
@@ -61,12 +61,12 @@ export default function InvoiceCreateSidebar({
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-4 dark:bg-slate-900">
             <div className="flex items-center gap-2 text-slate-500">
               <FileText className="h-4 w-4" />
               <span className="text-xs font-semibold uppercase tracking-wide">Totals</span>
             </div>
-            <div className="rounded-lg border border-slate-200 bg-white p-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:bg-slate-950/60">
               <div className="mb-2 flex items-center justify-between text-slate-600">
                 <span>Subtotal</span>
                 <span>

@@ -35,6 +35,7 @@ export default function InvoicePreviewPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const id = params?.id;
+  const [isMobile, setIsMobile] = useState(false);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFilename, setPdfFilename] = useState<string | null>(null);
   const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
@@ -51,7 +52,24 @@ export default function InvoicePreviewPage() {
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const activePdfUrlRef = useRef<string | null>(null);
+  const hasOpenedMobilePreviewRef = useRef(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateIsMobile = () => setIsMobile(mediaQuery.matches);
+
+    updateIsMobile();
+    mediaQuery.addEventListener("change", updateIsMobile);
+
+    return () => {
+      mediaQuery.removeEventListener("change", updateIsMobile);
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -135,6 +153,15 @@ export default function InvoicePreviewPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isMobile || !pdfUrl || hasOpenedMobilePreviewRef.current) {
+      return;
+    }
+
+    hasOpenedMobilePreviewRef.current = true;
+    window.location.assign(pdfUrl);
+  }, [isMobile, pdfUrl]);
+
   const handleDownloadPdf = () => {
     if (!pdfUrl) {
       return;
@@ -146,6 +173,14 @@ export default function InvoicePreviewPage() {
     document.body.appendChild(link);
     link.click();
     link.remove();
+  };
+
+  const handleOpenPdfPreview = () => {
+    if (!pdfUrl) {
+      return;
+    }
+
+    window.location.assign(pdfUrl);
   };
 
   const sendInvoiceNow = async () => {
@@ -366,10 +401,15 @@ export default function InvoicePreviewPage() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-2 rounded-xl border border-slate-200 bg-white/90 p-1.5 shadow-sm">
+        <div className="grid w-full grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
           {invoice?.status !== "paid" ? (
             invoice?.status === "draft" ? (
-              <Button variant="default" onClick={handleSendInvoice} disabled={isSending || isLoading || isDuplicating} className="min-w-[7.5rem]">
+              <Button
+                variant="default"
+                onClick={handleSendInvoice}
+                disabled={isSending || isLoading || isDuplicating}
+                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
+              >
                 <Send className="h-4 w-4" />
                 {isSending ? "Sending..." : "Send"}
               </Button>
@@ -378,22 +418,19 @@ export default function InvoicePreviewPage() {
                 variant="default"
                 onClick={handleSendReminder}
                 disabled={isSendingReminder || isLoading || isDuplicating}
-                className="min-w-[9.5rem]"
+                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <BellRing className="h-4 w-4" />
                 {isSendingReminder ? "Sending..." : "Send Reminder"}
               </Button>
             )
           ) : null}
-          <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading}>
-            <Download className="h-4 w-4" />
-            Download PDF
-          </Button>
           {invoice?.status === "paid" ? (
             <Button
               variant="outline"
               onClick={() => void handleManualStatusChange("unpaid")}
               disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
+              className="w-full sm:w-auto"
             >
               <RotateCcw className="h-4 w-4" />
               {isUpdatingStatus ? "Updating..." : "Mark Unpaid"}
@@ -403,13 +440,17 @@ export default function InvoicePreviewPage() {
               variant="outline"
               onClick={() => void handleManualStatusChange("paid")}
               disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
-              className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+              className="w-full sm:w-auto"
             >
               <CheckCircle2 className="h-4 w-4" />
               {isUpdatingStatus ? "Updating..." : "Mark Paid"}
             </Button>
           )}
-          <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isLoading || isDeleting}>
+          <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading} className="w-full sm:w-auto">
+            <Download className="h-4 w-4" />
+            Download PDF
+          </Button>
+          <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isLoading || isDeleting} className="w-full sm:w-auto">
             <Copy className="h-4 w-4" />
             {isDuplicating ? "Duplicating..." : "Duplicate"}
           </Button>
@@ -422,6 +463,7 @@ export default function InvoicePreviewPage() {
               }
               router.push(`/invoices/${id}?mode=edit`);
             }}
+            className="w-full sm:w-auto"
           >
             <PencilLine className="h-4 w-4" />
             {invoice?.status === "draft" ? "Edit Invoice" : "Reopen & Edit"}
@@ -430,7 +472,7 @@ export default function InvoicePreviewPage() {
             variant="outline"
             onClick={() => setShowDeleteDialog(true)}
             disabled={isDeleting || isLoading || isDuplicating}
-            className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+            className="col-span-2 w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:col-span-1 sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete
@@ -439,7 +481,7 @@ export default function InvoicePreviewPage() {
       </div>
 
       {successMessage ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
         </div>
       ) : null}
@@ -447,9 +489,24 @@ export default function InvoicePreviewPage() {
       <Card className="overflow-hidden">
         <CardContent className="p-0">
           {loadError ? (
-            <div className="px-6 py-8 text-sm text-red-700">{loadError}</div>
+            <div className="px-6 py-8 text-sm text-red-800 dark:text-red-100">{loadError}</div>
           ) : isLoading || !pdfUrl ? (
             <div className="px-6 py-8 text-sm text-slate-600">Loading invoice preview...</div>
+          ) : isMobile ? (
+            <div className="space-y-4 px-6 py-8">
+              <p className="text-sm text-slate-600">
+                Mobile browsers open invoices more reliably in the native PDF viewer.
+              </p>
+              <div className="flex flex-col gap-3">
+                <Button onClick={handleOpenPdfPreview}>
+                  Open PDF Preview
+                </Button>
+                <Button variant="outline" onClick={handleDownloadPdf}>
+                  <Download className="h-4 w-4" />
+                  Download PDF
+                </Button>
+              </div>
+            </div>
           ) : (
             <iframe
               title="Invoice PDF preview"

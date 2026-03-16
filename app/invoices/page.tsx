@@ -833,7 +833,7 @@ function InvoicePageContent() {
       </div>
 
       {successMessage ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
         </div>
       ) : null}
@@ -908,92 +908,193 @@ function InvoicePageContent() {
                   />
                 </div>
 
-                <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Qty</TableHead>
-                      <TableHead>Unit Price</TableHead>
-                      <TableHead>Tax %</TableHead>
-                      <TableHead>Line Total</TableHead>
-                      <TableHead>Action</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <div className="space-y-3">
+                  <Label>Line Items</Label>
+
+                  <div className="space-y-3 md:hidden">
                     {lineItems.map((item, index) => (
-                      <TableRow key={`${item.id ?? "new"}-${index}`}>
-                        <TableCell>
-                          <Input
-                            value={item.description}
-                            placeholder="Description"
-                            onChange={(event) => updateLineItem(index, "description", event.target.value)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min={0.01}
-                            step="0.01"
-                            value={item.quantity}
-                            onFocus={handleNumberInputFocus}
-                            onBlur={(event) => {
-                              if (parseNumber(event.target.value) <= 0) {
-                                updateLineItem(index, "quantity", MIN_QUANTITY);
-                              }
-                            }}
-                            onChange={(event) =>
-                              updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            value={item.unitPrice}
-                            onFocus={handleNumberInputFocus}
-                            onChange={(event) =>
-                              updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.1"
-                            value={item.taxRate}
-                            onFocus={handleNumberInputFocus}
-                            onChange={(event) =>
-                              updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                        <TableCell>
-                          <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
+                      <div
+                        key={`${item.id ?? "new"}-${index}`}
+                        className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                      >
+                        <div className="space-y-3">
+                          <div className="space-y-2">
+                            <Label htmlFor={`description-${index}`}>Description</Label>
+                            <Input
+                              id={`description-${index}`}
+                              value={item.description}
+                              placeholder="Description"
+                              onChange={(event) => updateLineItem(index, "description", event.target.value)}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`quantity-${index}`}>Qty</Label>
+                              <Input
+                                id={`quantity-${index}`}
+                                type="number"
+                                min={0.01}
+                                step="0.01"
+                                value={item.quantity}
+                                onFocus={handleNumberInputFocus}
+                                onBlur={(event) => {
+                                  if (parseNumber(event.target.value) <= 0) {
+                                    updateLineItem(index, "quantity", MIN_QUANTITY);
+                                  }
+                                }}
+                                onChange={(event) =>
+                                  updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
+                                }
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label htmlFor={`unit-price-${index}`}>Unit Price</Label>
+                              <Input
+                                id={`unit-price-${index}`}
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={item.unitPrice}
+                                onFocus={handleNumberInputFocus}
+                                onChange={(event) =>
+                                  updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
+                                }
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`tax-rate-${index}`}>Tax %</Label>
+                              <Input
+                                id={`tax-rate-${index}`}
+                                type="number"
+                                min={0}
+                                step="0.1"
+                                value={item.taxRate}
+                                onFocus={handleNumberInputFocus}
+                                onChange={(event) =>
+                                  updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
+                                }
+                              />
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Line Total</Label>
+                              <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium">
+                                {(item.quantity * item.unitPrice).toFixed(2)}
+                              </div>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => removeLineItem(index)}
+                            className="w-full"
+                          >
                             <Trash2 className="h-4 w-4" />
+                            Remove Line Item
                           </Button>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+                      </div>
                     ))}
-                    <TableRow>
-                      <TableCell>
-                        <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
-                          <Plus className="h-4 w-4" />
-                          Add Line Item
-                        </Button>
-                      </TableCell>
-                      <TableCell colSpan={5} />
-                    </TableRow>
-                  </TableBody>
-                </Table>
+
+                    <Button type="button" variant="secondary" onClick={addLineItem} className="w-full justify-center">
+                      <Plus className="h-4 w-4" />
+                      Add Line Item
+                    </Button>
+                  </div>
+
+                  <div className="hidden overflow-x-auto md:block">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Qty</TableHead>
+                          <TableHead>Unit Price</TableHead>
+                          <TableHead>Tax %</TableHead>
+                          <TableHead>Line Total</TableHead>
+                          <TableHead>Action</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lineItems.map((item, index) => (
+                          <TableRow key={`${item.id ?? "new"}-${index}`}>
+                            <TableCell>
+                              <Input
+                                value={item.description}
+                                placeholder="Description"
+                                onChange={(event) => updateLineItem(index, "description", event.target.value)}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min={0.01}
+                                step="0.01"
+                                value={item.quantity}
+                                onFocus={handleNumberInputFocus}
+                                onBlur={(event) => {
+                                  if (parseNumber(event.target.value) <= 0) {
+                                    updateLineItem(index, "quantity", MIN_QUANTITY);
+                                  }
+                                }}
+                                onChange={(event) =>
+                                  updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.01"
+                                value={item.unitPrice}
+                                onFocus={handleNumberInputFocus}
+                                onChange={(event) =>
+                                  updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                min={0}
+                                step="0.1"
+                                value={item.taxRate}
+                                onFocus={handleNumberInputFocus}
+                                onChange={(event) =>
+                                  updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
+                                }
+                              />
+                            </TableCell>
+                            <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                            <TableCell>
+                              <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        <TableRow>
+                          <TableCell>
+                            <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
+                              <Plus className="h-4 w-4" />
+                              Add Line Item
+                            </Button>
+                          </TableCell>
+                          <TableCell colSpan={5} />
+                        </TableRow>
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
 
                 <div className="flex justify-end">
-                  <Button onClick={handleCreateInvoice} disabled={isCreating} className="min-w-[10rem]">
+                  <Button onClick={handleCreateInvoice} disabled={isCreating} className="min-w-[10rem] max-md:w-full">
                     {isCreating ? "Creating..." : "Create Invoice"}
                   </Button>
                 </div>

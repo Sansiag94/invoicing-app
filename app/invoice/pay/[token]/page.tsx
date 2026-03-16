@@ -482,22 +482,22 @@ export default function PublicInvoicePage() {
       </div>
 
       {paymentSuccess ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 print:hidden">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100 print:hidden">
           {isConfirmingPayment ? "Payment received. Updating invoice status..." : "Payment completed. Thank you."}
         </div>
       ) : null}
       {paymentCancelled ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 print:hidden">
+        <div className="rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-100 print:hidden">
           Payment was cancelled.
         </div>
       ) : null}
       {checkoutError ? (
-        <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 print:hidden">
+        <div className="rounded-md border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-100 print:hidden">
           {checkoutError}
         </div>
       ) : null}
       {!cardPaymentAvailable ? (
-        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 print:hidden">
+        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 print:hidden">
           Online card payment is not enabled for this business. Please use the payment details shown on the invoice.
         </div>
       ) : null}
