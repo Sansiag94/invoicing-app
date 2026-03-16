@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/components/ui/toast";
 
 function parseNumberInput(value: string): number {
   const parsed = Number(value);
@@ -104,6 +105,7 @@ export default function InvoiceDetailPage() {
   const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -194,7 +196,11 @@ export default function InvoiceDetailPage() {
       const response = await authenticatedFetch(`/api/invoices/${invoice.id}/pdf`);
       if (!response.ok) {
         const result = (await response.json()) as { error?: string };
-        alert(result?.error ?? "Failed to download PDF");
+        toast({
+          title: "Failed to download PDF",
+          description: result?.error ?? "Failed to download PDF",
+          variant: "error",
+        });
         return;
       }
 
@@ -209,7 +215,11 @@ export default function InvoiceDetailPage() {
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
       console.error("Error downloading PDF:", error);
-      alert("Failed to download PDF");
+      toast({
+        title: "Failed to download PDF",
+        description: "Failed to download PDF",
+        variant: "error",
+      });
     }
   };
 
@@ -226,7 +236,11 @@ export default function InvoiceDetailPage() {
       const result = (await response.json()) as { message?: string; error?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to send invoice");
+        toast({
+          title: "Failed to send invoice",
+          description: result?.error ?? "Failed to send invoice",
+          variant: "error",
+        });
         return;
       }
 
@@ -234,7 +248,11 @@ export default function InvoiceDetailPage() {
       setSuccessMessage(result?.message ?? "Invoice sent");
     } catch (error) {
       console.error("Error sending invoice:", error);
-      alert("Failed to send invoice");
+      toast({
+        title: "Failed to send invoice",
+        description: "Failed to send invoice",
+        variant: "error",
+      });
     } finally {
       setIsSending(false);
     }
@@ -266,14 +284,22 @@ export default function InvoiceDetailPage() {
       const result = (await response.json()) as InvoiceDetails & { error?: string };
 
       if (!response.ok || !result?.id) {
-        alert(result?.error ?? "Failed to duplicate invoice");
+        toast({
+          title: "Failed to duplicate invoice",
+          description: result?.error ?? "Failed to duplicate invoice",
+          variant: "error",
+        });
         return;
       }
 
       router.push(`/invoices/${result.id}/preview`);
     } catch (error) {
       console.error("Error duplicating invoice:", error);
-      alert("Failed to duplicate invoice");
+      toast({
+        title: "Failed to duplicate invoice",
+        description: "Failed to duplicate invoice",
+        variant: "error",
+      });
     } finally {
       setIsDuplicating(false);
     }
@@ -292,7 +318,11 @@ export default function InvoiceDetailPage() {
       const result = (await response.json()) as InvoiceDetails & { error?: string; message?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to send reminder");
+        toast({
+          title: "Failed to send reminder",
+          description: result?.error ?? "Failed to send reminder",
+          variant: "error",
+        });
         return;
       }
 
@@ -300,7 +330,11 @@ export default function InvoiceDetailPage() {
       setSuccessMessage(result?.message ?? "Reminder sent.");
     } catch (error) {
       console.error("Error sending reminder:", error);
-      alert("Failed to send reminder");
+      toast({
+        title: "Failed to send reminder",
+        description: "Failed to send reminder",
+        variant: "error",
+      });
     } finally {
       setIsSendingReminder(false);
     }
@@ -332,7 +366,11 @@ export default function InvoiceDetailPage() {
       const result = (await response.json()) as (InvoiceDetails & { error?: string });
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to update invoice status");
+        toast({
+          title: "Failed to update invoice status",
+          description: result?.error ?? "Failed to update invoice status",
+          variant: "error",
+        });
         return;
       }
 
@@ -341,7 +379,11 @@ export default function InvoiceDetailPage() {
       setSuccessMessage(nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid.");
     } catch (error) {
       console.error("Error updating invoice status:", error);
-      alert("Failed to update invoice status");
+      toast({
+        title: "Failed to update invoice status",
+        description: "Failed to update invoice status",
+        variant: "error",
+      });
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -424,22 +466,38 @@ export default function InvoiceDetailPage() {
     );
 
     if (!issueDate || !dueDate) {
-      alert("Issue date and due date are required.");
+      toast({
+        title: "Missing dates",
+        description: "Issue date and due date are required.",
+        variant: "error",
+      });
       return;
     }
 
     if (new Date(dueDate) < new Date(issueDate)) {
-      alert("Due date must be on or after issue date.");
+      toast({
+        title: "Invalid due date",
+        description: "Due date must be on or after issue date.",
+        variant: "error",
+      });
       return;
     }
 
     if (lineItems.length === 0) {
-      alert("Invoice must contain at least one line item.");
+      toast({
+        title: "Missing line items",
+        description: "Invoice must contain at least one line item.",
+        variant: "error",
+      });
       return;
     }
 
     if (hasInvalidLineItems) {
-      alert("Please fix invalid line items before saving.");
+      toast({
+        title: "Invalid line items",
+        description: "Please fix invalid line items before saving.",
+        variant: "error",
+      });
       return;
     }
 
@@ -469,7 +527,11 @@ export default function InvoiceDetailPage() {
       const result = (await response.json()) as InvoiceDetails & { error?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to update invoice");
+        toast({
+          title: "Failed to update invoice",
+          description: result?.error ?? "Failed to update invoice",
+          variant: "error",
+        });
         return;
       }
 
@@ -480,7 +542,11 @@ export default function InvoiceDetailPage() {
       setSuccessMessage("Invoice updated successfully.");
     } catch (error) {
       console.error("Error updating invoice:", error);
-      alert("Failed to update invoice");
+      toast({
+        title: "Failed to update invoice",
+        description: "Failed to update invoice",
+        variant: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -500,7 +566,11 @@ export default function InvoiceDetailPage() {
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to delete invoice");
+        toast({
+          title: "Failed to delete invoice",
+          description: result?.error ?? "Failed to delete invoice",
+          variant: "error",
+        });
         return;
       }
 
@@ -508,7 +578,11 @@ export default function InvoiceDetailPage() {
       router.push("/invoices");
     } catch (error) {
       console.error("Error deleting invoice:", error);
-      alert("Failed to delete invoice");
+      toast({
+        title: "Failed to delete invoice",
+        description: "Failed to delete invoice",
+        variant: "error",
+      });
     } finally {
       setIsDeleting(false);
     }

@@ -7,6 +7,7 @@ import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 function parseLineItems(raw: string | null): LineItemData[] {
   if (!raw) return [];
@@ -32,6 +33,7 @@ function parseLineItems(raw: string | null): LineItemData[] {
 function InvoicePreviewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const clientId = searchParams.get("clientId");
   const issueDate = searchParams.get("issueDate");
   const dueDate = searchParams.get("dueDate");
@@ -52,7 +54,11 @@ function InvoicePreviewContent() {
 
   const handleCreateInvoice = async () => {
     if (!canCreate) {
-      alert("Missing required preview data. Please return to invoice creation.");
+      toast({
+        title: "Missing preview data",
+        description: "Please return to invoice creation and complete the required fields.",
+        variant: "error",
+      });
       return;
     }
 
@@ -73,11 +79,18 @@ function InvoicePreviewContent() {
 
     if (!response.ok) {
       const result = await response.json();
-      alert(result?.error ?? "Invoice creation failed");
+      toast({
+        title: "Invoice creation failed",
+        description: result?.error ?? "Invoice creation failed",
+        variant: "error",
+      });
       return;
     }
 
-    alert("Invoice created successfully!");
+    toast({
+      title: "Invoice created successfully",
+      variant: "success",
+    });
     router.push("/invoices");
   };
 

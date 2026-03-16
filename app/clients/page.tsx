@@ -14,6 +14,7 @@ import { CountryCombobox } from "@/components/ui/country-combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 function getClientDisplayName(client: ClientSummary): string {
   return client.companyName || client.contactName || client.email;
@@ -37,6 +38,7 @@ function ClientsPageContent() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const createClientRef = useRef<HTMLDivElement | null>(null);
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
+  const { toast } = useToast();
 
   const filteredClients = useMemo(() => {
     if (!searchQuery) return clients;
@@ -77,7 +79,11 @@ function ClientsPageContent() {
     e.preventDefault();
 
     if (!isSupportedCountry(country)) {
-      alert("Please select a valid country from the list.");
+      toast({
+        title: "Invalid country",
+        description: "Please select a valid country from the list.",
+        variant: "error",
+      });
       return;
     }
 
@@ -106,7 +112,11 @@ function ClientsPageContent() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result?.error ?? "Client creation failed");
+        toast({
+          title: "Client creation failed",
+          description: result?.error ?? "Client creation failed",
+          variant: "error",
+        });
         return;
       }
 
@@ -124,7 +134,11 @@ function ClientsPageContent() {
       await fetchClients();
     } catch (error) {
       console.error("Client creation failed:", error);
-      alert("Client creation failed");
+      toast({
+        title: "Client creation failed",
+        description: "Client creation failed",
+        variant: "error",
+      });
     } finally {
       setIsCreating(false);
     }

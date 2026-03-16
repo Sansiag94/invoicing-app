@@ -20,6 +20,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import InvoiceCreateSidebar from "@/components/invoices/InvoiceCreateSidebar";
+import { useToast } from "@/components/ui/toast";
 
 type InvoiceRow = InvoiceSummary & {
   client?: {
@@ -109,6 +110,7 @@ function InvoicePageContent() {
   const [openActionsInvoiceId, setOpenActionsInvoiceId] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const createInvoiceRef = useRef<HTMLDivElement | null>(null);
+  const { toast } = useToast();
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
   const statusFilter = (searchParams.get("status") ?? "").trim().toLowerCase();
 
@@ -274,7 +276,11 @@ function InvoicePageContent() {
 
   const handleCreateInvoice = async () => {
     if (!clientId || !issueDate || !dueDate || lineItems.length === 0) {
-      alert("Please complete all required fields.");
+      toast({
+        title: "Missing required fields",
+        description: "Please complete all required fields.",
+        variant: "error",
+      });
       return;
     }
 
@@ -300,7 +306,11 @@ function InvoicePageContent() {
     );
 
     if (hasInvalidLineItems) {
-      alert("Please complete valid line item values.");
+      toast({
+        title: "Invalid line items",
+        description: "Please complete valid line item values.",
+        variant: "error",
+      });
       return;
     }
 
@@ -326,7 +336,11 @@ function InvoicePageContent() {
       const result = await response.json();
 
       if (!response.ok) {
-        alert(result?.error ?? "Invoice creation failed");
+        toast({
+          title: "Invoice creation failed",
+          description: result?.error ?? "Invoice creation failed",
+          variant: "error",
+        });
         return;
       }
 
@@ -349,7 +363,11 @@ function InvoicePageContent() {
       await fetchInvoices();
     } catch (error) {
       console.error("Error creating invoice:", error);
-      alert("Invoice creation failed");
+      toast({
+        title: "Invoice creation failed",
+        description: "Invoice creation failed",
+        variant: "error",
+      });
     } finally {
       setIsCreating(false);
     }
@@ -366,7 +384,11 @@ function InvoicePageContent() {
 
       const result = (await response.json()) as { error?: string };
       if (!response.ok) {
-        alert(result.error ?? "Failed to delete invoice");
+        toast({
+          title: "Failed to delete invoice",
+          description: result.error ?? "Failed to delete invoice",
+          variant: "error",
+        });
         return;
       }
 
@@ -374,7 +396,11 @@ function InvoicePageContent() {
       await fetchInvoices();
     } catch (error) {
       console.error("Error deleting invoice:", error);
-      alert("Failed to delete invoice");
+      toast({
+        title: "Failed to delete invoice",
+        description: "Failed to delete invoice",
+        variant: "error",
+      });
     } finally {
       setIsDeleting(false);
     }
@@ -390,7 +416,11 @@ function InvoicePageContent() {
       const result = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        alert(result.error ?? "Failed to send invoice");
+        toast({
+          title: "Failed to send invoice",
+          description: result.error ?? "Failed to send invoice",
+          variant: "error",
+        });
         return;
       }
 
@@ -398,7 +428,11 @@ function InvoicePageContent() {
       await fetchInvoices();
     } catch (error) {
       console.error("Error sending invoice:", error);
-      alert("Failed to send invoice");
+      toast({
+        title: "Failed to send invoice",
+        description: "Failed to send invoice",
+        variant: "error",
+      });
     } finally {
       setIsSendingId(null);
     }
@@ -463,7 +497,11 @@ function InvoicePageContent() {
       const result = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        alert(result.error ?? "Failed to send reminder");
+        toast({
+          title: "Failed to send reminder",
+          description: result.error ?? "Failed to send reminder",
+          variant: "error",
+        });
         return;
       }
 
@@ -471,7 +509,11 @@ function InvoicePageContent() {
       await fetchInvoices();
     } catch (error) {
       console.error("Error sending reminder:", error);
-      alert("Failed to send reminder");
+      toast({
+        title: "Failed to send reminder",
+        description: "Failed to send reminder",
+        variant: "error",
+      });
     } finally {
       setIsSendingReminderId(null);
     }
@@ -512,7 +554,11 @@ function InvoicePageContent() {
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        alert(result.error ?? "Failed to update invoice status");
+        toast({
+          title: "Failed to update invoice status",
+          description: result.error ?? "Failed to update invoice status",
+          variant: "error",
+        });
         return;
       }
 
@@ -522,7 +568,11 @@ function InvoicePageContent() {
       await fetchInvoices();
     } catch (error) {
       console.error("Error updating invoice status:", error);
-      alert("Failed to update invoice status");
+      toast({
+        title: "Failed to update invoice status",
+        description: "Failed to update invoice status",
+        variant: "error",
+      });
     } finally {
       setIsUpdatingStatusId(null);
     }
@@ -536,14 +586,22 @@ function InvoicePageContent() {
       const result = (await response.json()) as { id?: string; error?: string };
 
       if (!response.ok || !result.id) {
-        alert(result.error ?? "Failed to duplicate invoice");
+        toast({
+          title: "Failed to duplicate invoice",
+          description: result.error ?? "Failed to duplicate invoice",
+          variant: "error",
+        });
         return;
       }
 
       router.push(`/invoices/${result.id}/preview`);
     } catch (error) {
       console.error("Error duplicating invoice:", error);
-      alert("Failed to duplicate invoice");
+      toast({
+        title: "Failed to duplicate invoice",
+        description: "Failed to duplicate invoice",
+        variant: "error",
+      });
     }
   };
 
@@ -650,7 +708,11 @@ function InvoicePageContent() {
       await fetchInvoices();
     } catch (error) {
       console.error(`Error running bulk ${action}:`, error);
-      alert(`Failed to complete bulk ${action}`);
+      toast({
+        title: `Failed to complete bulk ${action}`,
+        description: `Failed to complete bulk ${action}`,
+        variant: "error",
+      });
     } finally {
       setBulkActionLabel(null);
     }

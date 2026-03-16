@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useToast } from "@/components/ui/toast";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "danger" {
   if (status === "paid") return "success";
@@ -37,6 +38,7 @@ export default function ClientDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
@@ -108,7 +110,11 @@ export default function ClientDetailPage() {
     }
 
     if (!isSupportedCountry(country)) {
-      alert("Please select a valid country from the list.");
+      toast({
+        title: "Invalid country",
+        description: "Please select a valid country from the list.",
+        variant: "error",
+      });
       return;
     }
 
@@ -137,7 +143,11 @@ export default function ClientDetailPage() {
       const result = (await response.json()) as ClientDetails & { error?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to update client");
+        toast({
+          title: "Failed to update client",
+          description: result?.error ?? "Failed to update client",
+          variant: "error",
+        });
         return;
       }
 
@@ -146,7 +156,11 @@ export default function ClientDetailPage() {
       setSuccessMessage("Client updated successfully.");
     } catch (error) {
       console.error("Error updating client:", error);
-      alert("Failed to update client");
+      toast({
+        title: "Failed to update client",
+        description: "Failed to update client",
+        variant: "error",
+      });
     } finally {
       setIsSaving(false);
     }
@@ -184,7 +198,11 @@ export default function ClientDetailPage() {
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to delete client");
+        toast({
+          title: "Failed to delete client",
+          description: result?.error ?? "Failed to delete client",
+          variant: "error",
+        });
         return;
       }
 
@@ -192,7 +210,11 @@ export default function ClientDetailPage() {
       router.push("/clients");
     } catch (error) {
       console.error("Error deleting client:", error);
-      alert("Failed to delete client");
+      toast({
+        title: "Failed to delete client",
+        description: "Failed to delete client",
+        variant: "error",
+      });
     } finally {
       setIsDeleting(false);
     }

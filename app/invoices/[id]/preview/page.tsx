@@ -9,6 +9,7 @@ import { InvoiceDetails } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
+import { useToast } from "@/components/ui/toast";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ export default function InvoicePreviewPage() {
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const activePdfUrlRef = useRef<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!id) return;
@@ -159,7 +161,11 @@ export default function InvoicePreviewPage() {
       const result = (await response.json()) as { message?: string; error?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to send invoice");
+        toast({
+          title: "Failed to send invoice",
+          description: result?.error ?? "Failed to send invoice",
+          variant: "error",
+        });
         return;
       }
 
@@ -167,7 +173,11 @@ export default function InvoicePreviewPage() {
       router.push("/invoices");
     } catch (error) {
       console.error("Error sending invoice:", error);
-      alert("Failed to send invoice");
+      toast({
+        title: "Failed to send invoice",
+        description: "Failed to send invoice",
+        variant: "error",
+      });
     } finally {
       setIsSending(false);
     }
@@ -199,7 +209,11 @@ export default function InvoicePreviewPage() {
       const result = (await response.json()) as (InvoiceDetails & { error?: string });
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to update invoice status");
+        toast({
+          title: "Failed to update invoice status",
+          description: result?.error ?? "Failed to update invoice status",
+          variant: "error",
+        });
         return;
       }
 
@@ -207,7 +221,11 @@ export default function InvoicePreviewPage() {
       setSuccessMessage(nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid.");
     } catch (error) {
       console.error("Error updating invoice status:", error);
-      alert("Failed to update invoice status");
+      toast({
+        title: "Failed to update invoice status",
+        description: "Failed to update invoice status",
+        variant: "error",
+      });
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -226,14 +244,22 @@ export default function InvoicePreviewPage() {
       const result = (await response.json()) as { error?: string; message?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to send reminder");
+        toast({
+          title: "Failed to send reminder",
+          description: result?.error ?? "Failed to send reminder",
+          variant: "error",
+        });
         return;
       }
 
       setSuccessMessage(result?.message ?? "Reminder sent.");
     } catch (error) {
       console.error("Error sending reminder:", error);
-      alert("Failed to send reminder");
+      toast({
+        title: "Failed to send reminder",
+        description: "Failed to send reminder",
+        variant: "error",
+      });
     } finally {
       setIsSendingReminder(false);
     }
@@ -260,14 +286,22 @@ export default function InvoicePreviewPage() {
       const result = (await response.json()) as { id?: string; error?: string };
 
       if (!response.ok || !result?.id) {
-        alert(result?.error ?? "Failed to duplicate invoice");
+        toast({
+          title: "Failed to duplicate invoice",
+          description: result?.error ?? "Failed to duplicate invoice",
+          variant: "error",
+        });
         return;
       }
 
       router.push(`/invoices/${result.id}/preview`);
     } catch (error) {
       console.error("Error duplicating invoice:", error);
-      alert("Failed to duplicate invoice");
+      toast({
+        title: "Failed to duplicate invoice",
+        description: "Failed to duplicate invoice",
+        variant: "error",
+      });
     } finally {
       setIsDuplicating(false);
     }
@@ -286,7 +320,11 @@ export default function InvoicePreviewPage() {
       const result = (await response.json()) as { error?: string };
 
       if (!response.ok) {
-        alert(result?.error ?? "Failed to delete invoice");
+        toast({
+          title: "Failed to delete invoice",
+          description: result?.error ?? "Failed to delete invoice",
+          variant: "error",
+        });
         return;
       }
 
@@ -294,7 +332,11 @@ export default function InvoicePreviewPage() {
       router.push("/invoices");
     } catch (error) {
       console.error("Error deleting invoice:", error);
-      alert("Failed to delete invoice");
+      toast({
+        title: "Failed to delete invoice",
+        description: "Failed to delete invoice",
+        variant: "error",
+      });
     } finally {
       setIsDeleting(false);
     }

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Sierra Invoices">
+  <rect width="180" height="180" rx="40" fill="#0f172a"/>
+  <path d="M124 48H67c-10 0-17 7-17 16 0 8 5 14 12 16l36 13c6 2 9 6 9 11 0 5-4 9-10 9H56" fill="none" stroke="#f8fafc" stroke-linecap="round" stroke-linejoin="round" stroke-width="10"/>
+  <path d="M58 132h56c10 0 16-7 16-17 0-7-5-13-12-16L82 87c-6-2-9-6-9-11 0-5 4-9 10-9h41" fill="none" stroke="#f8fafc" stroke-linecap="round" stroke-linejoin="round" stroke-width="10"/>
+</svg>
