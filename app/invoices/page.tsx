@@ -740,7 +740,11 @@ function InvoicePageContent() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
 
-  const renderActionMenu = (invoice: InvoiceRow, className?: string) => (
+  const renderActionMenu = (
+    invoice: InvoiceRow,
+    className?: string,
+    buttonClassName?: string
+  ) => (
     <div
       className={cn("relative", className)}
       data-invoice-actions
@@ -750,7 +754,7 @@ function InvoicePageContent() {
         type="button"
         variant="outline"
         size="sm"
-        className="w-[7rem] justify-center"
+        className={cn("justify-center", buttonClassName ?? "w-[7rem]")}
         onClick={() =>
           setOpenActionsInvoiceId((current) => (current === invoice.id ? null : invoice.id))
         }
@@ -1290,7 +1294,7 @@ function InvoicePageContent() {
                         ) : (
                           <div className="h-9 w-[8.5rem]" />
                         )}
-                        {renderActionMenu(invoice)}
+                        {renderActionMenu(invoice, undefined, "w-[8.5rem]")}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -1364,9 +1368,11 @@ function InvoicePageContent() {
                         {isSendingReminderId === invoice.id ? "Sending..." : "Reminder"}
                       </Button>
                     ) : (
-                      <div className="col-span-2">{renderActionMenu(invoice)}</div>
+                      <div className="col-span-2">{renderActionMenu(invoice, "w-full", "w-full")}</div>
                     )}
-                    {invoice.status !== "paid" ? <div className="col-span-2">{renderActionMenu(invoice)}</div> : null}
+                    {invoice.status !== "paid" ? (
+                      <div className="col-span-2">{renderActionMenu(invoice, "w-full", "w-full")}</div>
+                    ) : null}
                   </div>
                 </div>
               ))}

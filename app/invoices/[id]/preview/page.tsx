@@ -450,10 +450,6 @@ export default function InvoicePreviewPage() {
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
-          <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isLoading || isDeleting} className="w-full sm:w-auto">
-            <Copy className="h-4 w-4" />
-            {isDuplicating ? "Duplicating..." : "Duplicate"}
-          </Button>
           <Button
             variant="outline"
             onClick={() => {
@@ -468,11 +464,15 @@ export default function InvoicePreviewPage() {
             <PencilLine className="h-4 w-4" />
             {invoice?.status === "draft" ? "Edit Invoice" : "Reopen & Edit"}
           </Button>
+          <Button variant="outline" onClick={handleDuplicateInvoice} disabled={isDuplicating || isLoading || isDeleting} className="w-full sm:w-auto">
+            <Copy className="h-4 w-4" />
+            {isDuplicating ? "Duplicating..." : "Duplicate"}
+          </Button>
           <Button
             variant="outline"
             onClick={() => setShowDeleteDialog(true)}
             disabled={isDeleting || isLoading || isDuplicating}
-            className="col-span-2 w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:col-span-1 sm:w-auto"
+            className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete
