@@ -55,6 +55,7 @@ type SendWelcomeEmailInput = {
 let resendClient: Resend | null = null;
 const DEFAULT_RESEND_FROM_EMAIL = "Sierra Services <invoices@sierraservices.ch>";
 const DEFAULT_RESEND_REPLY_TO_EMAIL = "santiago@sierraservices.ch";
+const DEFAULT_WELCOME_FROM_NAME = "Sierra Invoices";
 
 export class EmailConfigurationError extends Error {
   constructor(message: string) {
@@ -118,6 +119,17 @@ function formatDueDate(value: Date): string {
   }).format(value);
 }
 
+function getConfiguredFromEmailAddress(): string {
+  const configuredFrom = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const match = configuredFrom.match(/<([^>]+)>/);
+  return match?.[1]?.trim() || configuredFrom.trim();
+}
+
+function buildSenderIdentity(displayName: string): string {
+  const normalizedDisplayName = displayName.trim() || DEFAULT_WELCOME_FROM_NAME;
+  return `${normalizedDisplayName} <${getConfiguredFromEmailAddress()}>`;
+}
+
 export async function sendInvoiceEmail({
   to,
   businessName,
@@ -130,7 +142,7 @@ export async function sendInvoiceEmail({
   payLink,
   pdfAttachment,
 }: SendInvoiceEmailInput) {
-  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const from = buildSenderIdentity(businessName);
   const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const parsedDueDate =
@@ -249,7 +261,7 @@ export async function sendInvoiceReminderEmail({
   dueDate,
   reminderKind,
 }: SendInvoiceReminderEmailInput) {
-  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const from = buildSenderIdentity(businessName);
   const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const dueDateLabel = formatDueDate(dueDate);
@@ -341,7 +353,7 @@ export async function sendManualInvoiceReminderEmail({
   invoiceLink,
   dueDate,
 }: SendManualInvoiceReminderEmailInput) {
-  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const from = buildSenderIdentity(businessName);
   const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const dueDateLabel = formatDueDate(dueDate);
@@ -406,7 +418,7 @@ export async function sendWelcomeEmail({
   appName = "Sierra Invoices",
   dashboardLink,
 }: SendWelcomeEmailInput) {
-  const from = process.env.RESEND_FROM_EMAIL || DEFAULT_RESEND_FROM_EMAIL;
+  const from = buildSenderIdentity(DEFAULT_WELCOME_FROM_NAME);
   const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const appLink = dashboardLink?.trim() || getPublicInvoiceBaseUrl();
   const safeAppName = escapeHtml(appName);
