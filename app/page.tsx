@@ -58,14 +58,19 @@ export default function LandingPage() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-3">
-                <Button asChild size="lg" className="min-w-[12rem]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <Button asChild size="lg" className="w-full sm:min-w-[12rem] sm:w-auto">
                   <Link href="/signup">
                     Create account
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" size="lg" className="min-w-[10rem]">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:min-w-[12rem] sm:w-auto"
+                >
                   <Link href="/login">Log in</Link>
                 </Button>
               </div>
