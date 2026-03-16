@@ -4,6 +4,7 @@ import React from "react";
 import { validateRequiredEnv } from "@/lib/env";
 import AppFrame from "@/components/AppFrame";
 import { ToastProvider } from "@/components/ui/toast";
+import { ThemeProvider } from "@/components/ui/theme";
 
 validateRequiredEnv();
 
@@ -25,9 +26,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <ToastProvider>
-          <AppFrame>{children}</AppFrame>
-        </ToastProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <AppFrame>{children}</AppFrame>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { getRememberSessionPreference, setRememberSession, supabase } from "@/utils/supabase";
@@ -105,6 +106,14 @@ export default function LoginPage() {
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="current-password"
               />
+            </div>
+            <div className="flex justify-end">
+              <Link
+                href="/forgot-password"
+                className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+              >
+                Forgot password?
+              </Link>
             </div>
             <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
               <input

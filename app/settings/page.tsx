@@ -2,20 +2,25 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
-import { CreditCard, ExternalLink, RefreshCw, Save, Trash2, Upload } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
 import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { supabase } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
+import { useTheme } from "@/components/ui/theme";
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [businessId, setBusinessId] = useState("");
   const [name, setName] = useState("");
   const [ownerName, setOwnerName] = useState("");
@@ -41,6 +46,8 @@ export default function SettingsPage() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isRefreshingStripe, setIsRefreshingStripe] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const { toast } = useToast();
 
   const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
@@ -56,6 +63,26 @@ export default function SettingsPage() {
   });
   const isStripeFullyEnabled =
     stripeChargesEnabled && stripePayoutsEnabled && stripeDetailsSubmitted;
+  const stripeStatusTone = !stripeAccountId
+    ? "bg-slate-100 text-slate-700"
+    : isStripeFullyEnabled
+      ? "bg-emerald-100 text-emerald-700"
+      : "bg-amber-100 text-amber-700";
+  const stripeStatusLabel = !stripeAccountId
+    ? "Stripe not connected"
+    : isStripeFullyEnabled
+      ? "Stripe ready to accept payments"
+      : "Stripe connected, onboarding incomplete";
+  const stripeStatusDescription = !stripeAccountId
+    ? "Connect Stripe only if you want this business to accept card payments online."
+    : isStripeFullyEnabled
+      ? "Card payments are enabled for this business."
+      : "Stripe still needs some onboarding or verification before card payments can be accepted.";
+  const stripePendingSteps = [
+    !stripeDetailsSubmitted ? "finish Stripe account details" : null,
+    !stripeChargesEnabled ? "enable charges" : null,
+    !stripePayoutsEnabled ? "enable payouts" : null,
+  ].filter(Boolean) as string[];
 
   async function saveBusinessSettings(
     options?: {
@@ -138,6 +165,46 @@ export default function SettingsPage() {
 
   async function handleSave() {
     await saveBusinessSettings({ successMessage: "Business settings updated" });
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmation.trim() !== "DELETE") {
+      toast({
+        title: "Confirmation required",
+        description: 'Type "DELETE" exactly to confirm account removal.',
+        variant: "error",
+      });
+      return;
+    }
+
+    setIsDeletingAccount(true);
+
+    try {
+      const response = await authenticatedFetch("/api/account", {
+        method: "DELETE",
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Could not delete account");
+      }
+
+      await supabase.auth.signOut();
+      toast({
+        title: "Account deleted",
+        description: "Your workspace and account have been removed.",
+        variant: "success",
+      });
+      router.push("/signup");
+    } catch (error) {
+      toast({
+        title: "Unable to delete account",
+        description: error instanceof Error ? error.message : "Could not delete account",
+        variant: "error",
+      });
+    } finally {
+      setIsDeletingAccount(false);
+    }
   }
 
   async function refreshStripeStatus(options?: { showSuccessToast?: boolean }) {
@@ -343,8 +410,8 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Business Settings</h1>
-        <p className="text-sm text-slate-500">Branding and invoice defaults</p>
+        <h1 className="text-3xl font-bold">Settings</h1>
+        <p className="text-sm text-slate-500">Business profile, appearance, payments, and account controls</p>
       </div>
 
       <Card>
@@ -384,71 +451,6 @@ export default function SettingsPage() {
           <p className="text-xs text-slate-500">
             Bucket: <strong>{logosBucket}</strong>. Configure it as public for invoice rendering.
           </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Stripe Payments</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border border-slate-200 p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-slate-600" />
-                  <p className="font-semibold text-slate-900">
-                    {stripeAccountId ? "Stripe account connected" : "Connect Stripe to accept card payments"}
-                  </p>
-                </div>
-                <p className="max-w-2xl text-sm text-slate-600">
-                  Each business can connect its own Stripe account. Card payments for invoices will only be available after Stripe onboarding is completed.
-                </p>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className={`rounded-full px-2 py-1 ${stripeAccountId ? "bg-slate-100 text-slate-700" : "bg-slate-100 text-slate-500"}`}>
-                    Account {stripeAccountId ? "created" : "not connected"}
-                  </span>
-                  <span className={`rounded-full px-2 py-1 ${stripeDetailsSubmitted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    Details {stripeDetailsSubmitted ? "submitted" : "pending"}
-                  </span>
-                  <span className={`rounded-full px-2 py-1 ${stripeChargesEnabled ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    Charges {stripeChargesEnabled ? "enabled" : "pending"}
-                  </span>
-                  <span className={`rounded-full px-2 py-1 ${stripePayoutsEnabled ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
-                    Payouts {stripePayoutsEnabled ? "enabled" : "pending"}
-                  </span>
-                </div>
-                {stripeAccountId ? (
-                  <p className="text-xs text-slate-500">
-                    Connected account ID: <span className="font-mono">{stripeAccountId}</span>
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {!isStripeFullyEnabled ? (
-                  <Button onClick={() => void handleConnectStripe()} disabled={isConnectingStripe}>
-                    <ExternalLink className="h-4 w-4" />
-                    {isConnectingStripe
-                      ? "Opening Stripe..."
-                      : stripeAccountId
-                        ? "Continue Stripe setup"
-                        : "Connect Stripe"}
-                  </Button>
-                ) : null}
-                {stripeAccountId ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
-                    disabled={isRefreshingStripe}
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
-                    {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
@@ -603,6 +605,162 @@ export default function SettingsPage() {
             {iban ? <p className="mt-2 text-sm text-slate-700">{iban}</p> : null}
             {bankName ? <p className="text-sm text-slate-700">{bankName}</p> : null}
             {bic ? <p className="text-sm text-slate-700">BIC / SWIFT: {bic}</p> : null}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Stripe Payments</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-slate-200 p-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-slate-600" />
+                  <p className="font-semibold text-slate-900">
+                    {stripeAccountId ? "Stripe account connected" : "Optional card payments"}
+                  </p>
+                </div>
+                <p className="max-w-2xl text-sm text-slate-600">
+                  Stripe is only needed if this business wants to accept card payments online. Bank transfers and Swiss QR payments work without it.
+                </p>
+                <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${stripeStatusTone}`}>
+                  {stripeStatusLabel}
+                </div>
+                <p className="max-w-2xl text-sm text-slate-600">{stripeStatusDescription}</p>
+                {stripePendingSteps.length > 0 ? (
+                  <p className="text-xs text-slate-500">
+                    Still pending in Stripe: {stripePendingSteps.join(", ")}.
+                  </p>
+                ) : null}
+                {!stripeAccountId ? (
+                  <p className="text-xs text-slate-500">
+                    You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
+                  </p>
+                ) : null}
+                {stripeAccountId ? (
+                  <p className="text-xs text-slate-500">
+                    Connected account ID: <span className="font-mono">{stripeAccountId}</span>
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {!isStripeFullyEnabled ? (
+                  <Button onClick={() => void handleConnectStripe()} disabled={isConnectingStripe}>
+                    <ExternalLink className="h-4 w-4" />
+                    {isConnectingStripe
+                      ? "Opening Stripe..."
+                      : stripeAccountId
+                        ? "Continue Stripe setup"
+                        : "Connect Stripe"}
+                  </Button>
+                ) : null}
+                {stripeAccountId ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
+                    disabled={isRefreshingStripe}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
+                    {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Appearance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="space-y-1">
+                <Label htmlFor="themeToggle">Dark mode</Label>
+                <p className="text-sm text-slate-500">
+                  Switch the workspace between light and dark.
+                </p>
+              </div>
+              <button
+                id="themeToggle"
+                type="button"
+                aria-pressed={theme === "dark"}
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="inline-flex min-w-44 items-center justify-between rounded-full border px-3 py-2 text-sm font-medium transition-colors"
+                style={{
+                  borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
+                  backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
+                  color: theme === "dark" ? "#f8fafc" : "#0f172a",
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                  {theme === "dark" ? "Dark mode" : "Light mode"}
+                </span>
+                <span
+                  className="relative h-6 w-11 overflow-hidden rounded-full transition-colors"
+                  style={{
+                    backgroundColor: theme === "dark" ? "#334155" : "#cbd5e1",
+                  }}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full shadow-sm transition-all ${
+                      theme === "dark" ? "left-0.5" : "left-[22px]"
+                    }`}
+                    style={{ backgroundColor: "#ffffff" }}
+                  />
+                </span>
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Security</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={() => router.push("/settings/password")}>
+                Change Password
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="border-red-200">
+        <CardHeader>
+          <CardTitle>Danger Zone</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-slate-600">
+            Deleting your account permanently removes your business, clients, invoices, expenses, and login access.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="deleteConfirmation">Type DELETE to confirm</Label>
+            <Input
+              id="deleteConfirmation"
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              placeholder="DELETE"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="destructive"
+              onClick={handleDeleteAccount}
+              disabled={isDeletingAccount || deleteConfirmation.trim() !== "DELETE"}
+            >
+              {isDeletingAccount ? "Deleting..." : "Delete Account"}
+            </Button>
+            <p className="text-sm text-slate-500">This action cannot be undone.</p>
           </div>
         </CardContent>
       </Card>

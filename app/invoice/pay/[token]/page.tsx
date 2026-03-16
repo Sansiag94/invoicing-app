@@ -496,6 +496,11 @@ export default function PublicInvoicePage() {
           {checkoutError}
         </div>
       ) : null}
+      {!cardPaymentAvailable ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 print:hidden">
+          Online card payment is not enabled for this business. Please use the payment details shown on the invoice.
+        </div>
+      ) : null}
 
       <article
         className={`invoice-document bg-white text-[11px] text-slate-900 shadow-sm print:shadow-none${

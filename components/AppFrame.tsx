@@ -21,6 +21,9 @@ function shouldHideShell(pathname: string): boolean {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
+    pathname === "/settings/password" ||
     pathname.startsWith("/i/") ||
     pathname.startsWith("/invoice/pay/")
   );
