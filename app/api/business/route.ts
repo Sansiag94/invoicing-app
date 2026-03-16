@@ -6,6 +6,7 @@ import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { withStructuredAddress } from "@/lib/address";
 import { isSupportedInvoiceCurrency, normalizeInvoiceCurrency } from "@/lib/invoice";
 import { normalizeInvoiceSenderType } from "@/lib/business";
+import { loadBusinessStripeConnectStatus } from "@/lib/stripeConnect";
 
 type UpdateBusinessBody = {
   name: unknown;
@@ -67,10 +68,12 @@ export async function GET(request: Request) {
     const user = await getAuthenticatedUser(request);
     const business = await ensureBusiness(user.id);
     const senderPreferences = await loadSenderPreferences(business.id);
+    const stripeConnectStatus = await loadBusinessStripeConnectStatus(business.id);
 
     return NextResponse.json({
       ...business,
       ...senderPreferences,
+      ...stripeConnectStatus,
     });
   } catch (error) {
     if (isAuthenticationError(error)) {
@@ -147,10 +150,12 @@ export async function PATCH(request: Request) {
     }
 
     const senderPreferences = await loadSenderPreferences(business.id);
+    const stripeConnectStatus = await loadBusinessStripeConnectStatus(business.id);
 
     return NextResponse.json({
       ...updatedBusiness,
       ...senderPreferences,
+      ...stripeConnectStatus,
     });
   } catch (error) {
     if (isAuthenticationError(error)) {

@@ -36,6 +36,10 @@ model Business {
   vatNumber      String?
   iban           String?
   logoUrl        String?
+  stripeAccountId String?
+  stripeChargesEnabled Boolean @default(false)
+  stripePayoutsEnabled Boolean @default(false)
+  stripeDetailsSubmitted Boolean @default(false)
   invoicePrefix  String
   invoiceCounter Int       @default(0)
   createdAt      DateTime  @default(now())

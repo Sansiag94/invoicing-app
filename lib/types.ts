@@ -69,6 +69,10 @@ export interface BusinessSettingsData {
   bankName?: string | null;
   bic?: string | null;
   logoUrl: string | null;
+  stripeAccountId?: string | null;
+  stripeChargesEnabled?: boolean;
+  stripePayoutsEnabled?: boolean;
+  stripeDetailsSubmitted?: boolean;
 }
 
 export interface InvoiceSummary {
@@ -312,5 +316,6 @@ export interface PublicInvoiceDetails {
   lineItems: LineItemData[];
   client: PublicInvoiceClientData;
   business: PublicInvoiceBusinessData;
+  cardPaymentAvailable: boolean;
   qrBill: SwissQRBillPayloadData | null;
 }

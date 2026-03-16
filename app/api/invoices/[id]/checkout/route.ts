@@ -3,6 +3,7 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
 import { calculateInvoiceTotals } from "@/lib/invoice";
+import { loadBusinessStripeConnectStatus } from "@/lib/stripeConnect";
 
 export const runtime = "nodejs";
 
@@ -34,6 +35,7 @@ export async function POST(
       },
       select: {
         id: true,
+        businessId: true,
         invoiceNumber: true,
         status: true,
         totalAmount: true,
@@ -61,6 +63,11 @@ export async function POST(
       return apiError("Invoice is already paid", 400);
     }
 
+    const stripeConnectStatus = await loadBusinessStripeConnectStatus(invoice.businessId);
+    if (!stripeConnectStatus.stripeAccountId || !stripeConnectStatus.stripeChargesEnabled) {
+      return apiError("Online card payments are not enabled for this business", 400);
+    }
+
     const computedTotals = calculateInvoiceTotals(invoice.lineItems);
     const totalAmountDue = computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount;
     const amountInMinorUnit = Math.round(totalAmountDue * 100);
@@ -80,6 +87,7 @@ export async function POST(
       metadata: {
         invoiceId: invoice.id,
         publicToken: invoice.publicToken,
+        businessId: invoice.businessId,
       },
       line_items: [
         {
@@ -94,6 +102,8 @@ export async function POST(
           },
         },
       ],
+    }, {
+      stripeAccount: stripeConnectStatus.stripeAccountId,
     });
 
     if (!session.url) {

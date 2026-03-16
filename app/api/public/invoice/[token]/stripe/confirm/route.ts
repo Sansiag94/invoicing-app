@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { apiError } from "@/lib/api-response";
 import { getStripeClient } from "@/lib/stripe";
 import { recordStripePaymentFromSession } from "@/lib/stripePayments";
+import { loadBusinessStripeConnectStatus } from "@/lib/stripeConnect";
 
 type ConfirmCheckoutBody = {
   sessionId?: unknown;
@@ -29,15 +30,22 @@ export async function POST(
 
     const invoice = await prisma.invoice.findFirst({
       where: { publicToken: token },
-      select: { id: true, publicToken: true, status: true },
+      select: { id: true, publicToken: true, status: true, businessId: true },
     });
 
     if (!invoice) {
       return apiError("Invoice not found", 404);
     }
 
+    const stripeConnectStatus = await loadBusinessStripeConnectStatus(invoice.businessId);
+    if (!stripeConnectStatus.stripeAccountId) {
+      return apiError("Card payments are not configured for this business", 400);
+    }
+
     const stripe = getStripeClient();
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      stripeAccount: stripeConnectStatus.stripeAccountId,
+    });
 
     if (session.metadata?.publicToken !== invoice.publicToken) {
       return apiError("Checkout session does not match invoice", 400);

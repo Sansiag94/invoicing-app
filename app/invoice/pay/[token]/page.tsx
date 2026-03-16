@@ -155,6 +155,7 @@ export default function PublicInvoicePage() {
   const taxAmount = totals.taxAmount;
   const totalAmountDue = totals.totalAmount;
   const shouldRenderQRSection = Boolean(invoice?.qrBill);
+  const cardPaymentAvailable = Boolean(invoice?.cardPaymentAvailable);
   const shouldShareQrOnFirstPage = shouldRenderQRSection && lineItems.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE;
   const shouldRenderStandaloneQrPage = shouldRenderQRSection && !shouldShareQrOnFirstPage;
 
@@ -467,14 +468,16 @@ export default function PublicInvoicePage() {
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
-          <Button onClick={handleCheckout} disabled={isCheckoutLoading || invoice.status === "paid"}>
-            <CreditCard className="h-4 w-4" />
-            {isCheckoutLoading
-              ? "Redirecting to Stripe..."
-              : invoice.status === "paid"
-                ? "Invoice already paid"
-                : "Pay with Card"}
-          </Button>
+          {cardPaymentAvailable ? (
+            <Button onClick={handleCheckout} disabled={isCheckoutLoading || invoice.status === "paid"}>
+              <CreditCard className="h-4 w-4" />
+              {isCheckoutLoading
+                ? "Redirecting to Stripe..."
+                : invoice.status === "paid"
+                  ? "Invoice already paid"
+                  : "Pay with Card"}
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -598,9 +601,13 @@ export default function PublicInvoicePage() {
             <div className="grid gap-4 md:grid-cols-2">
               {onlinePaymentLink ? (
                 <div className="border border-slate-200 p-3">
-                  <p className="mb-2 text-[12px] font-semibold text-slate-900">Pay online</p>
+                  <p className="mb-2 text-[12px] font-semibold text-slate-900">
+                    {cardPaymentAvailable ? "Pay online" : "View invoice online"}
+                  </p>
                   <p className="mb-2 text-[10px] leading-[1.4] text-slate-700">
-                    Use the secure payment page to review this invoice and pay online.
+                    {cardPaymentAvailable
+                      ? "Use the secure payment page to review this invoice and pay online."
+                      : "Use the secure invoice page to review this invoice online."}
                   </p>
                   <p className="break-all text-[10px] leading-[1.4] text-slate-900 underline">
                     {onlinePaymentLink}

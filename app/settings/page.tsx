@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useState } from "react";
-import { Upload, Trash2, Save } from "lucide-react";
+import { CreditCard, ExternalLink, RefreshCw, Save, Trash2, Upload } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -33,8 +33,14 @@ export default function SettingsPage() {
   const [vatNumber, setVatNumber] = useState("");
   const [iban, setIban] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [stripeChargesEnabled, setStripeChargesEnabled] = useState(false);
+  const [stripePayoutsEnabled, setStripePayoutsEnabled] = useState(false);
+  const [stripeDetailsSubmitted, setStripeDetailsSubmitted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isConnectingStripe, setIsConnectingStripe] = useState(false);
+  const [isRefreshingStripe, setIsRefreshingStripe] = useState(false);
   const { toast } = useToast();
 
   const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
@@ -48,6 +54,8 @@ export default function SettingsPage() {
     ownerName,
     invoiceSenderType,
   });
+  const isStripeFullyEnabled =
+    stripeChargesEnabled && stripePayoutsEnabled && stripeDetailsSubmitted;
 
   async function saveBusinessSettings(
     options?: {
@@ -112,6 +120,10 @@ export default function SettingsPage() {
     setVatNumber(updatedBusiness.vatNumber || "");
     setIban(updatedBusiness.iban || "");
     setLogoUrl(updatedBusiness.logoUrl || "");
+    setStripeAccountId(updatedBusiness.stripeAccountId || null);
+    setStripeChargesEnabled(Boolean(updatedBusiness.stripeChargesEnabled));
+    setStripePayoutsEnabled(Boolean(updatedBusiness.stripePayoutsEnabled));
+    setStripeDetailsSubmitted(Boolean(updatedBusiness.stripeDetailsSubmitted));
     setIsSaving(false);
 
     if (options?.successMessage) {
@@ -126,6 +138,74 @@ export default function SettingsPage() {
 
   async function handleSave() {
     await saveBusinessSettings({ successMessage: "Business settings updated" });
+  }
+
+  async function refreshStripeStatus(options?: { showSuccessToast?: boolean }) {
+    setIsRefreshingStripe(true);
+
+    try {
+      const response = await authenticatedFetch("/api/business/stripe/status");
+      const result = (await response.json()) as {
+        stripeAccountId?: string | null;
+        stripeChargesEnabled?: boolean;
+        stripePayoutsEnabled?: boolean;
+        stripeDetailsSubmitted?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Could not refresh Stripe status");
+      }
+
+      setStripeAccountId(result.stripeAccountId || null);
+      setStripeChargesEnabled(Boolean(result.stripeChargesEnabled));
+      setStripePayoutsEnabled(Boolean(result.stripePayoutsEnabled));
+      setStripeDetailsSubmitted(Boolean(result.stripeDetailsSubmitted));
+
+      if (options?.showSuccessToast) {
+        toast({
+          title: result.stripeChargesEnabled
+            ? "Stripe account connected"
+            : "Stripe status refreshed",
+          variant: "success",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Unable to refresh Stripe status",
+        description: error instanceof Error ? error.message : "Could not refresh Stripe status",
+        variant: "error",
+      });
+    } finally {
+      setIsRefreshingStripe(false);
+    }
+  }
+
+  async function handleConnectStripe() {
+    setIsConnectingStripe(true);
+
+    try {
+      const response = await authenticatedFetch("/api/business/stripe/connect", {
+        method: "POST",
+      });
+      const result = (await response.json()) as {
+        redirectUrl?: string;
+        error?: string;
+      };
+
+      if (!response.ok || !result.redirectUrl) {
+        throw new Error(result.error ?? "Could not connect Stripe");
+      }
+
+      window.location.assign(result.redirectUrl);
+    } catch (error) {
+      toast({
+        title: "Unable to start Stripe onboarding",
+        description: error instanceof Error ? error.message : "Could not connect Stripe",
+        variant: "error",
+      });
+      setIsConnectingStripe(false);
+    }
   }
 
   async function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
@@ -228,12 +308,36 @@ export default function SettingsPage() {
         setVatNumber(data?.vatNumber || "");
         setIban(data?.iban || "");
         setLogoUrl(data?.logoUrl || "");
+        setStripeAccountId(data?.stripeAccountId || null);
+        setStripeChargesEnabled(Boolean(data?.stripeChargesEnabled));
+        setStripePayoutsEnabled(Boolean(data?.stripePayoutsEnabled));
+        setStripeDetailsSubmitted(Boolean(data?.stripeDetailsSubmitted));
       }
     })();
 
     return () => {
       mounted = false;
     };
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const stripeQueryStatus = new URLSearchParams(window.location.search).get("stripe");
+    if (stripeQueryStatus === "refresh") {
+      void handleConnectStripe();
+      window.history.replaceState({}, "", "/settings");
+      return;
+    }
+
+    if (stripeQueryStatus !== "connected") {
+      return;
+    }
+
+    void refreshStripeStatus({ showSuccessToast: true });
+    window.history.replaceState({}, "", "/settings");
   }, []);
 
   return (
@@ -280,6 +384,71 @@ export default function SettingsPage() {
           <p className="text-xs text-slate-500">
             Bucket: <strong>{logosBucket}</strong>. Configure it as public for invoice rendering.
           </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Stripe Payments</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-lg border border-slate-200 p-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <CreditCard className="h-4 w-4 text-slate-600" />
+                  <p className="font-semibold text-slate-900">
+                    {stripeAccountId ? "Stripe account connected" : "Connect Stripe to accept card payments"}
+                  </p>
+                </div>
+                <p className="max-w-2xl text-sm text-slate-600">
+                  Each business can connect its own Stripe account. Card payments for invoices will only be available after Stripe onboarding is completed.
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className={`rounded-full px-2 py-1 ${stripeAccountId ? "bg-slate-100 text-slate-700" : "bg-slate-100 text-slate-500"}`}>
+                    Account {stripeAccountId ? "created" : "not connected"}
+                  </span>
+                  <span className={`rounded-full px-2 py-1 ${stripeDetailsSubmitted ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    Details {stripeDetailsSubmitted ? "submitted" : "pending"}
+                  </span>
+                  <span className={`rounded-full px-2 py-1 ${stripeChargesEnabled ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    Charges {stripeChargesEnabled ? "enabled" : "pending"}
+                  </span>
+                  <span className={`rounded-full px-2 py-1 ${stripePayoutsEnabled ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    Payouts {stripePayoutsEnabled ? "enabled" : "pending"}
+                  </span>
+                </div>
+                {stripeAccountId ? (
+                  <p className="text-xs text-slate-500">
+                    Connected account ID: <span className="font-mono">{stripeAccountId}</span>
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {!isStripeFullyEnabled ? (
+                  <Button onClick={() => void handleConnectStripe()} disabled={isConnectingStripe}>
+                    <ExternalLink className="h-4 w-4" />
+                    {isConnectingStripe
+                      ? "Opening Stripe..."
+                      : stripeAccountId
+                        ? "Continue Stripe setup"
+                        : "Connect Stripe"}
+                  </Button>
+                ) : null}
+                {stripeAccountId ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
+                    disabled={isRefreshingStripe}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
+                    {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
