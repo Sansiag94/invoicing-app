@@ -68,6 +68,10 @@ export function getResendApiKey(): string {
   return value;
 }
 
+export function getCronSecret(): string | null {
+  return readEnv("CRON_SECRET") ?? null;
+}
+
 export function getSupabaseServiceRoleKey(): string | null {
   return readEnv("SUPABASE_SERVICE_ROLE_KEY") ?? null;
 }

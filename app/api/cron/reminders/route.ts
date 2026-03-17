@@ -10,6 +10,10 @@ import {
   sendInvoiceReminderEmail,
 } from "@/lib/email";
 import { getInvoiceSenderName } from "@/lib/business";
+import {
+  assertAuthorizedCronRequest,
+  isCronAuthorizationError,
+} from "@/lib/cronAuth";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
 
 export const runtime = "nodejs";
@@ -220,6 +224,8 @@ async function processReminderBatch(
 
 async function runReminderJob(request: Request) {
   try {
+    assertAuthorizedCronRequest(request);
+
     const now = new Date();
     const todayStart = startOfUtcDay(now);
 
@@ -249,6 +255,10 @@ async function runReminderJob(request: Request) {
       sent: dueSoon.sent + overdue.sent,
     });
   } catch (error) {
+    if (isCronAuthorizationError(error)) {
+      return apiError(error.message, error.status);
+    }
+
     if (isEmailConfigurationError(error)) {
       console.error("Error sending reminders: email configuration missing", error);
       return apiError("Email provider not configured. Set RESEND_API_KEY.", 500);
@@ -259,8 +269,8 @@ async function runReminderJob(request: Request) {
   }
 }
 
-export async function GET(request: Request) {
-  return runReminderJob(request);
+export async function GET() {
+  return apiError("Method not allowed", 405);
 }
 
 export async function POST(request: Request) {
