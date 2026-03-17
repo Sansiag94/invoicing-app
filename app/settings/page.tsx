@@ -8,6 +8,7 @@ import { usePwa } from "@/components/PwaProvider";
 import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
+import { clearPwaAppCache } from "@/lib/pwaCache";
 import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -274,6 +275,7 @@ export default function SettingsPage() {
       }
 
       await supabase.auth.signOut();
+      await clearPwaAppCache();
       toast({
         title: "Account deleted",
         description: "Your workspace and account have been removed.",

@@ -9,6 +9,7 @@ import { usePwa } from "@/components/PwaProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
+import { clearPwaAppCache } from "@/lib/pwaCache";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { supabase } from "@/utils/supabase";
 import { cn } from "@/lib/utils";
@@ -385,6 +386,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
         return;
       }
 
+      await clearPwaAppCache();
       setUserEmail(null);
       handleNavigate("/login");
     } finally {

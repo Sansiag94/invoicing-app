@@ -8,24 +8,30 @@ const APP_SHELL = [
   "/pwa-512.svg",
   "/apple-touch-icon.svg",
 ];
+const PUBLIC_NAVIGATION_ROUTES = new Set([
+  "/",
+  "/login",
+  "/signup",
+  "/forgot-password",
+  "/reset-password",
+  OFFLINE_URL,
+]);
+const PUBLIC_NAVIGATION_PREFIXES = ["/invoice/pay/", "/i/"];
 
 function isCacheableResponse(response) {
   return Boolean(response && (response.ok || response.type === "opaque"));
 }
 
-async function cacheFirst(request) {
-  const cached = await caches.match(request);
-  if (cached) {
-    return cached;
-  }
+function isPublicNavigation(pathname) {
+  return (
+    PUBLIC_NAVIGATION_ROUTES.has(pathname) ||
+    PUBLIC_NAVIGATION_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+  );
+}
 
-  const response = await fetch(request);
-  if (isCacheableResponse(response)) {
-    const cache = await caches.open(CACHE_NAME);
-    cache.put(request, response.clone());
-  }
-
-  return response;
+async function warmAppShellCache() {
+  const cache = await caches.open(CACHE_NAME);
+  await cache.addAll(APP_SHELL);
 }
 
 async function staleWhileRevalidate(request) {
@@ -59,7 +65,7 @@ async function networkFirst(request) {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    warmAppShellCache().then(() => self.skipWaiting())
   );
 });
 
@@ -68,6 +74,19 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((keys) =>
       Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
     ).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type !== "RESET_APP_CACHE") {
+    return;
+  }
+
+  event.waitUntil(
+    caches
+      .delete(CACHE_NAME)
+      .then(() => warmAppShellCache())
+      .then(() => self.clients.claim())
   );
 });
 
@@ -85,7 +104,9 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request));
+    if (isPublicNavigation(url.pathname)) {
+      event.respondWith(networkFirst(request));
+    }
     return;
   }
 
@@ -98,6 +119,4 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(staleWhileRevalidate(request));
     return;
   }
-
-  event.respondWith(cacheFirst(request));
 });
