@@ -29,18 +29,18 @@ function applyTheme(theme: ThemeMode) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>("light");
-
-  useEffect(() => {
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") {
-      return;
+      return "light";
     }
 
     const storedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
-    const nextTheme: ThemeMode = storedTheme === "dark" ? "dark" : "light";
-    setThemeState(nextTheme);
-    applyTheme(nextTheme);
-  }, []);
+    return storedTheme === "dark" ? "dark" : "light";
+  });
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({

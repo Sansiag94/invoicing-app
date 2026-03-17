@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText } from "lucide-react";
@@ -35,10 +36,13 @@ export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
       <div className="border-b border-slate-200 px-5 py-6">
         <div className="mb-3">
           {businessBrand?.logoUrl ? (
-            <img
+            <Image
               src={businessBrand.logoUrl}
               alt={`${brandName} logo`}
+              width={48}
+              height={48}
               className="h-12 w-12 rounded-xl border border-slate-200 object-cover"
+              unoptimized
             />
           ) : (
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white">

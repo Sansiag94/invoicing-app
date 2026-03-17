@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
@@ -474,10 +475,13 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
             className="flex items-center gap-3 text-sm font-semibold tracking-tight text-slate-900 dark:text-slate-100 sm:text-base"
           >
             {businessBrand?.logoUrl ? (
-              <img
+              <Image
                 src={businessBrand.logoUrl}
                 alt={`${brandName} logo`}
+                width={36}
+                height={36}
                 className="h-9 w-9 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
+                unoptimized
               />
             ) : (
               <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-xs font-semibold text-white dark:bg-slate-100 dark:text-slate-950">
@@ -667,10 +671,13 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
               onClick={() => setIsAccountOpen((current) => !current)}
             >
               {businessBrand?.logoUrl ? (
-                <img
+                <Image
                   src={businessBrand.logoUrl}
                   alt={`${brandName} avatar`}
+                  width={40}
+                  height={40}
                   className="h-full w-full object-cover"
+                  unoptimized
                 />
               ) : (
                 <span className="text-xs font-semibold text-slate-900 dark:text-slate-100">{brandInitials}</span>

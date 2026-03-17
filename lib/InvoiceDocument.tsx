@@ -629,13 +629,11 @@ const InvoiceDocument = ({
 
   const businessEmail = normalizeLine(invoice.business.email);
   const businessPhone = normalizeLine(invoice.business.phone);
-  const businessWebsite = normalizeLine(invoice.business.website);
   const headerPrimaryName = senderBusinessName;
   const headerSecondaryName = sellerSecondaryName;
 
   const businessHeaderLines = collectLines(...toCompactAddressLines(businessAddress));
   const sellerContactLines = collectLines(businessEmail, businessPhone);
-  const clientLines = collectLines(clientPrimaryName, clientSecondaryName, ...toCompactAddressLines(clientAddress));
   const creditorLines =
     senderType === "owner"
       ? collectLines(paymentRecipientName, ...toPaymentAddressLines(businessAddress))

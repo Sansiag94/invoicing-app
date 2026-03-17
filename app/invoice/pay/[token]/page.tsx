@@ -51,8 +51,6 @@ function toPaymentAddressLines(address: ReturnType<typeof parsePostalAddress>): 
     .filter((line) => line && line.trim().length > 0);
 }
 
-const FIRST_PAGE_ROWS_NO_QR = 16;
-const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
 
 export default function PublicInvoicePage() {
