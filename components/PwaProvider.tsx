@@ -18,6 +18,7 @@ type PwaContextValue = {
   isInstalled: boolean;
   canInstall: boolean;
   showInstallInstructions: boolean;
+  installHelpText: string;
   install: () => Promise<"accepted" | "dismissed" | "unavailable">;
 };
 
@@ -106,6 +107,9 @@ export default function PwaProvider({ children }: { children: ReactNode }) {
       isInstalled,
       canInstall: !isInstalled && deferredPrompt !== null,
       showInstallInstructions: !isInstalled && isIosInstallHintTarget(),
+      installHelpText: isIosInstallHintTarget()
+        ? "Open the Share menu in Safari, then choose Add to Home Screen."
+        : "Use your browser menu and choose Install App or Add to Home Screen.",
       install: async () => {
         if (!deferredPrompt) {
           return "unavailable";

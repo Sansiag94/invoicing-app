@@ -4,6 +4,7 @@
 import { useEffect, useEffectEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
+import { usePwa } from "@/components/PwaProvider";
 import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -23,6 +24,7 @@ import { useTheme } from "@/components/ui/theme";
 export default function SettingsPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { canInstall, install, installHelpText, isInstalled, showInstallInstructions } = usePwa();
   const [businessId, setBusinessId] = useState("");
   const [name, setName] = useState("");
   const [ownerName, setOwnerName] = useState("");
@@ -219,6 +221,34 @@ export default function SettingsPage() {
 
   async function handleSave() {
     await saveBusinessSettings({ successMessage: "Business settings updated" });
+  }
+
+  async function handleInstallApp() {
+    const outcome = await install();
+
+    if (outcome === "accepted") {
+      toast({
+        title: "App installed",
+        description: "Sierra Invoices is now available from your device home screen.",
+        variant: "success",
+      });
+      return;
+    }
+
+    if (outcome === "dismissed") {
+      toast({
+        title: "Install dismissed",
+        description: "You can install the app later from the browser menu or prompt.",
+        variant: "info",
+      });
+      return;
+    }
+
+    toast({
+      title: "Install instructions",
+      description: installHelpText,
+      variant: "info",
+    });
   }
 
   async function handleDeleteAccount() {
@@ -830,6 +860,38 @@ export default function SettingsPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>App Install</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-slate-900">
+                  {isInstalled
+                    ? "Installed on this device"
+                    : canInstall
+                      ? "Ready to install"
+                      : showInstallInstructions
+                        ? "Install from your browser menu"
+                        : "Open in a supported browser to install"}
+                </p>
+                <p className="text-sm text-slate-500">
+                  Installing gives Sierra Invoices its own home-screen icon and a cleaner app-like window. Core pages and the offline screen are cached for weak connections.
+                </p>
+                {!isInstalled ? (
+                  <p className="text-xs text-slate-500">{installHelpText}</p>
+                ) : null}
+              </div>
+              {!isInstalled ? (
+                <Button onClick={() => void handleInstallApp()} className="w-full sm:w-auto">
+                  {canInstall ? "Install App" : "Show Install Steps"}
+                </Button>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Appearance</CardTitle>
