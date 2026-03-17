@@ -4,7 +4,7 @@ import Stripe from "stripe";
 import { getStripeClient } from "@/lib/stripe";
 import { recordStripePaymentFromSession } from "@/lib/stripePayments";
 import {
-  EMPTY_STRIPE_CONNECT_STATUS,
+  clearBusinessStripeConnectStatus,
   findBusinessIdByStripeAccountId,
   getStripeConnectStatusFromAccount,
   saveBusinessStripeConnectStatus,
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
         const businessId = await findBusinessIdByStripeAccountId(connectedAccountId);
 
         if (businessId) {
-          await saveBusinessStripeConnectStatus(businessId, EMPTY_STRIPE_CONNECT_STATUS);
+          await clearBusinessStripeConnectStatus(businessId);
         }
       }
     }

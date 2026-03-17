@@ -105,12 +105,37 @@ export async function saveBusinessStripeConnectStatus(
   }
 }
 
+export async function clearBusinessStripeConnectStatus(businessId: string): Promise<void> {
+  try {
+    await prisma.$executeRaw`
+      UPDATE "Business"
+      SET
+        "stripeAccountId" = NULL,
+        "stripeChargesEnabled" = false,
+        "stripePayoutsEnabled" = false,
+        "stripeDetailsSubmitted" = false
+      WHERE "uuid" = ${businessId}
+    `;
+  } catch (error) {
+    console.warn("Unable to clear Stripe Connect status (columns may not exist yet):", error);
+  }
+}
+
 export async function refreshBusinessStripeConnectStatus(
   businessId: string
 ): Promise<BusinessStripeConnectStatus> {
   const currentStatus = await loadBusinessStripeConnectStatus(businessId);
 
   if (currentStatus.usesPlatformStripe) {
+    if (
+      currentStatus.stripeAccountId ||
+      currentStatus.stripeChargesEnabled ||
+      currentStatus.stripePayoutsEnabled ||
+      currentStatus.stripeDetailsSubmitted
+    ) {
+      await clearBusinessStripeConnectStatus(businessId);
+    }
+
     return getPlatformStripeStatus();
   }
 

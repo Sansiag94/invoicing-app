@@ -286,10 +286,29 @@ export default function SettingsPage() {
       setStripeDetailsSubmitted(Boolean(result.stripeDetailsSubmitted));
 
       if (options?.showSuccessToast) {
+        const isPlatform = Boolean(result.usesPlatformStripe);
+        const isReady =
+          Boolean(result.stripeChargesEnabled) &&
+          Boolean(result.stripePayoutsEnabled) &&
+          Boolean(result.stripeDetailsSubmitted);
+
         toast({
-          title: result.stripeChargesEnabled
-            ? "Stripe account connected"
-            : "Stripe status refreshed",
+          title: isPlatform
+            ? isReady
+              ? "Platform Stripe account active"
+              : "Platform Stripe account needs attention"
+            : result.stripeAccountId
+              ? isReady
+                ? "Stripe account connected"
+                : "Stripe setup still incomplete"
+              : "Stripe not connected",
+          description: isPlatform
+            ? "This business uses your app-wide Stripe account for card payments."
+            : result.stripeAccountId
+              ? isReady
+                ? "Card payments are ready for this business."
+                : "Finish the remaining Stripe onboarding steps to accept card payments."
+              : "This business can still use bank transfer and QR-bill payments.",
           variant: "success",
         });
       }

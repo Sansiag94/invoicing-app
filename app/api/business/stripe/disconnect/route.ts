@@ -4,8 +4,8 @@ import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { ensureBusiness } from "@/lib/ensureBusiness";
 import {
   EMPTY_STRIPE_CONNECT_STATUS,
+  clearBusinessStripeConnectStatus,
   loadBusinessStripeConnectStatus,
-  saveBusinessStripeConnectStatus,
 } from "@/lib/stripeConnect";
 
 export const runtime = "nodejs";
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       );
     }
 
-    await saveBusinessStripeConnectStatus(business.id, EMPTY_STRIPE_CONNECT_STATUS);
+    await clearBusinessStripeConnectStatus(business.id);
 
     return NextResponse.json(EMPTY_STRIPE_CONNECT_STATUS);
   } catch (error) {
