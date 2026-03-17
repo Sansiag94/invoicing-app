@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, LogOut, Menu, Search, Settings } from "lucide-react";
+import { Bell, Download, LogOut, Menu, Search, Settings } from "lucide-react";
+import { usePwa } from "@/components/PwaProvider";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -106,6 +108,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const accountRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
+  const { canInstall, install, isInstalled, showInstallInstructions } = usePwa();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -390,6 +393,43 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     }
   }
 
+  async function handleInstallApp() {
+    const outcome = await install();
+
+    if (outcome === "accepted") {
+      toast({
+        title: "App installed",
+        description: "Sierra Invoices is now available from your device home screen.",
+        variant: "success",
+      });
+      return;
+    }
+
+    if (outcome === "dismissed") {
+      toast({
+        title: "Install dismissed",
+        description: "You can install the app later from the browser prompt.",
+        variant: "info",
+      });
+      return;
+    }
+
+    if (showInstallInstructions) {
+      toast({
+        title: "Install on iPhone or iPad",
+        description: "Open the Share menu in Safari, then choose Add to Home Screen.",
+        variant: "info",
+      });
+      return;
+    }
+
+    toast({
+      title: "Install not available yet",
+      description: "Use a supported browser and visit the app again after a short moment.",
+      variant: "info",
+    });
+  }
+
   useEffect(() => {
     if (!isSearchOpen) {
       return;
@@ -514,6 +554,19 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
         </nav>
 
         <div className="ml-auto flex min-w-0 items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+          {!isInstalled && (canInstall || showInstallInstructions) ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void handleInstallApp()}
+              className="hidden lg:inline-flex"
+            >
+              <Download className="h-4 w-4" />
+              Install App
+            </Button>
+          ) : null}
+
           <div ref={searchContainerRef} className="relative hidden w-full max-w-sm lg:block">
             <form onSubmit={handleSearchSubmit}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -688,6 +741,16 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
               <div className="absolute right-0 z-30 mt-2 w-56 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
                 <p className="px-2 py-1 text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Account</p>
                 <p className="truncate px-2 py-1 text-sm font-medium text-slate-900 dark:text-slate-100">{userEmail || "Unknown user"}</p>
+                {!isInstalled && (canInstall || showInstallInstructions) ? (
+                  <button
+                    type="button"
+                    className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                    onClick={() => void handleInstallApp()}
+                  >
+                    <Download className="h-4 w-4" />
+                    Install App
+                  </button>
+                ) : null}
                 <button
                   type="button"
                   className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
