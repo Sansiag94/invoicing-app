@@ -673,7 +673,7 @@ export default function SettingsPage() {
             <p className="text-xs text-slate-500">Use the 8 or 11 character bank code, for example `RAIFCH22XXX`.</p>
           </div>
           <div className="md:col-span-2">
-            <Button onClick={handleSave} disabled={isSaving || isUploadingLogo}>
+            <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
               <Save className="h-4 w-4" />
               {isSaving ? "Saving..." : "Save Settings"}
             </Button>
@@ -768,9 +768,13 @@ export default function SettingsPage() {
                 ) : null}
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
                 {!usesPlatformStripe && !isStripeFullyEnabled ? (
-                  <Button onClick={() => void handleConnectStripe()} disabled={isConnectingStripe}>
+                  <Button
+                    onClick={() => void handleConnectStripe()}
+                    disabled={isConnectingStripe}
+                    className="w-full sm:w-auto"
+                  >
                     <ExternalLink className="h-4 w-4" />
                     {isConnectingStripe
                       ? "Opening Stripe..."
@@ -784,6 +788,7 @@ export default function SettingsPage() {
                     variant="secondary"
                     onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
                     disabled={isRefreshingStripe || isDisconnectingStripe}
+                    className="w-full sm:w-auto"
                   >
                     <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
                     {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
@@ -794,6 +799,7 @@ export default function SettingsPage() {
                     variant="destructive"
                     onClick={() => setShowDisconnectStripeDialog(true)}
                     disabled={isDisconnectingStripe || isConnectingStripe || isRefreshingStripe}
+                    className="w-full sm:w-auto"
                   >
                     {isDisconnectingStripe ? "Disconnecting..." : "Disconnect Stripe"}
                   </Button>
@@ -822,7 +828,7 @@ export default function SettingsPage() {
                 type="button"
                 aria-pressed={theme === "dark"}
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="inline-flex min-w-44 items-center justify-between rounded-full border px-3 py-2 text-sm font-medium transition-colors"
+                className="inline-flex w-full items-center justify-between rounded-full border px-3 py-2 text-sm font-medium transition-colors sm:min-w-44 sm:w-auto"
                 style={{
                   borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
                   backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
@@ -857,7 +863,7 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={() => router.push("/settings/password")}>
+              <Button onClick={() => router.push("/settings/password")} className="w-full sm:w-auto">
                 Change Password
               </Button>
             </div>
@@ -887,6 +893,7 @@ export default function SettingsPage() {
               variant="destructive"
               onClick={handleDeleteAccount}
               disabled={isDeletingAccount || deleteConfirmation.trim() !== "DELETE"}
+              className="w-full sm:w-auto"
             >
               {isDeletingAccount ? "Deleting..." : "Delete Account"}
             </Button>

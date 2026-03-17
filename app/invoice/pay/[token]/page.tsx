@@ -456,18 +456,26 @@ export default function PublicInvoicePage() {
           page-break-inside: avoid;
         }
       `}</style>
-      <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <h1 className="text-xl font-semibold text-slate-900">Invoice {invoice.invoiceNumber}</h1>
           <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button onClick={() => window.open(`/api/public/invoice/${token}/pdf`, "_blank")} variant="outline">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+          <Button
+            onClick={() => window.open(`/api/public/invoice/${token}/pdf`, "_blank")}
+            variant="outline"
+            className="w-full sm:w-auto"
+          >
             <Download className="h-4 w-4" />
             Download PDF
           </Button>
           {cardPaymentAvailable ? (
-            <Button onClick={handleCheckout} disabled={isCheckoutLoading || invoice.status === "paid"}>
+            <Button
+              onClick={handleCheckout}
+              disabled={isCheckoutLoading || invoice.status === "paid"}
+              className="w-full sm:w-auto"
+            >
               <CreditCard className="h-4 w-4" />
               {isCheckoutLoading
                 ? "Redirecting to Stripe..."
@@ -505,8 +513,8 @@ export default function PublicInvoicePage() {
           shouldShareQrOnFirstPage ? " invoice-document--qr" : ""
         }`}
       >
-        <header className="flex items-start justify-between gap-8">
-          <div className="max-w-[58%] space-y-1">
+        <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+          <div className="w-full space-y-1 sm:max-w-[58%]">
             {invoice.business.logoUrl ? (
               <img
                 src={invoice.business.logoUrl}
@@ -523,7 +531,7 @@ export default function PublicInvoicePage() {
             {invoice.business.phone ? <p>{invoice.business.phone}</p> : null}
           </div>
 
-          <div className="mt-1 max-w-[36%] text-[11px]">
+          <div className="w-full text-[11px] sm:mt-1 sm:max-w-[36%]">
             <p className="text-[18px] font-semibold leading-none">{clientName}</p>
             {clientAddress.displayLines.map((line, index) => (
               <p key={`client-address-${index}`}>{line}</p>
@@ -538,8 +546,8 @@ export default function PublicInvoicePage() {
           {invoice.subject ? <p className="text-slate-700">Subject: {invoice.subject}</p> : null}
         </section>
 
-        <section>
-          <table className="invoice-table">
+        <section className="overflow-x-auto">
+          <table className="invoice-table min-w-[34rem]">
             <thead>
               <tr>
                 <th style={{ width: "8%" }}>Pos</th>

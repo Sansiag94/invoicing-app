@@ -478,7 +478,7 @@ export default function ClientDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Invoices</CardTitle>
-          <Button asChild size="sm" variant="outline">
+          <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
             <Link href={`/invoices?clientId=${client.id}`}>Create Invoice</Link>
           </Button>
         </CardHeader>

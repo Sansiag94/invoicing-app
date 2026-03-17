@@ -299,7 +299,7 @@ function ClientsPageContent() {
               </div>
 
               <div className="md:col-span-2">
-                <Button type="submit" disabled={isCreating}>
+                <Button type="submit" disabled={isCreating} className="w-full sm:w-auto">
                   <UserPlus className="h-4 w-4" />
                   {isCreating ? "Saving..." : "Add Client"}
                 </Button>
@@ -411,7 +411,7 @@ function ClientsPageContent() {
                     </div>
                   </div>
                   <div className="mt-4">
-                    <Button asChild size="sm" variant="outline">
+                    <Button asChild size="sm" variant="outline" className="w-full sm:w-auto">
                       <Link href={`/invoices?clientId=${client.id}`} onClick={(event) => event.stopPropagation()}>
                         Create Invoice
                       </Link>
