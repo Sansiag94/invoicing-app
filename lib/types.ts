@@ -69,6 +69,7 @@ export interface BusinessSettingsData {
   bankName?: string | null;
   bic?: string | null;
   logoUrl: string | null;
+  usesPlatformStripe?: boolean;
   stripeAccountId?: string | null;
   stripeChargesEnabled?: boolean;
   stripePayoutsEnabled?: boolean;

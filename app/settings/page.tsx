@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
@@ -12,6 +12,7 @@ import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { supabase } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
@@ -38,6 +39,7 @@ export default function SettingsPage() {
   const [vatNumber, setVatNumber] = useState("");
   const [iban, setIban] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [usesPlatformStripe, setUsesPlatformStripe] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [stripeChargesEnabled, setStripeChargesEnabled] = useState(false);
   const [stripePayoutsEnabled, setStripePayoutsEnabled] = useState(false);
@@ -46,6 +48,8 @@ export default function SettingsPage() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isRefreshingStripe, setIsRefreshingStripe] = useState(false);
+  const [isDisconnectingStripe, setIsDisconnectingStripe] = useState(false);
+  const [showDisconnectStripeDialog, setShowDisconnectStripeDialog] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const { toast } = useToast();
@@ -63,17 +67,23 @@ export default function SettingsPage() {
   });
   const isStripeFullyEnabled =
     stripeChargesEnabled && stripePayoutsEnabled && stripeDetailsSubmitted;
-  const stripeStatusTone = !stripeAccountId
+  const stripeStatusTone = !usesPlatformStripe && !stripeAccountId
     ? "border border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
     : isStripeFullyEnabled
       ? "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-200"
       : "border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-200";
-  const stripeStatusLabel = !stripeAccountId
+  const stripeStatusLabel = usesPlatformStripe
+    ? isStripeFullyEnabled
+      ? "Platform Stripe account active"
+      : "Platform Stripe account needs attention"
+    : !stripeAccountId
     ? "Stripe not connected"
     : isStripeFullyEnabled
       ? "Stripe ready to accept payments"
       : "Stripe connected, onboarding incomplete";
-  const stripeStatusDescription = !stripeAccountId
+  const stripeStatusDescription = usesPlatformStripe
+    ? "This business charges directly on your platform Stripe account. Stripe Connect onboarding is skipped for it."
+    : !stripeAccountId
     ? "Connect Stripe only if you want this business to accept card payments online."
     : isStripeFullyEnabled
       ? "Card payments are enabled for this business."
@@ -83,6 +93,12 @@ export default function SettingsPage() {
     !stripeChargesEnabled ? "enable charges" : null,
     !stripePayoutsEnabled ? "enable payouts" : null,
   ].filter(Boolean) as string[];
+  const handleConnectStripeEvent = useEffectEvent(() => {
+    void handleConnectStripe();
+  });
+  const refreshStripeStatusEvent = useEffectEvent(() => {
+    void refreshStripeStatus({ showSuccessToast: true });
+  });
 
   async function saveBusinessSettings(
     options?: {
@@ -147,6 +163,7 @@ export default function SettingsPage() {
     setVatNumber(updatedBusiness.vatNumber || "");
     setIban(updatedBusiness.iban || "");
     setLogoUrl(updatedBusiness.logoUrl || "");
+    setUsesPlatformStripe(Boolean(updatedBusiness.usesPlatformStripe));
     setStripeAccountId(updatedBusiness.stripeAccountId || null);
     setStripeChargesEnabled(Boolean(updatedBusiness.stripeChargesEnabled));
     setStripePayoutsEnabled(Boolean(updatedBusiness.stripePayoutsEnabled));
@@ -213,6 +230,7 @@ export default function SettingsPage() {
     try {
       const response = await authenticatedFetch("/api/business/stripe/status");
       const result = (await response.json()) as {
+        usesPlatformStripe?: boolean;
         stripeAccountId?: string | null;
         stripeChargesEnabled?: boolean;
         stripePayoutsEnabled?: boolean;
@@ -224,6 +242,7 @@ export default function SettingsPage() {
         throw new Error(result.error ?? "Could not refresh Stripe status");
       }
 
+      setUsesPlatformStripe(Boolean(result.usesPlatformStripe));
       setStripeAccountId(result.stripeAccountId || null);
       setStripeChargesEnabled(Boolean(result.stripeChargesEnabled));
       setStripePayoutsEnabled(Boolean(result.stripePayoutsEnabled));
@@ -272,6 +291,53 @@ export default function SettingsPage() {
         variant: "error",
       });
       setIsConnectingStripe(false);
+    }
+  }
+
+  async function disconnectStripeNow() {
+    if (!stripeAccountId || usesPlatformStripe) {
+      return;
+    }
+
+    setIsDisconnectingStripe(true);
+
+    try {
+      const response = await authenticatedFetch("/api/business/stripe/disconnect", {
+        method: "POST",
+      });
+      const result = (await response.json()) as {
+        usesPlatformStripe?: boolean;
+        stripeAccountId?: string | null;
+        stripeChargesEnabled?: boolean;
+        stripePayoutsEnabled?: boolean;
+        stripeDetailsSubmitted?: boolean;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Could not disconnect Stripe");
+      }
+
+      setUsesPlatformStripe(Boolean(result.usesPlatformStripe));
+      setStripeAccountId(result.stripeAccountId || null);
+      setStripeChargesEnabled(Boolean(result.stripeChargesEnabled));
+      setStripePayoutsEnabled(Boolean(result.stripePayoutsEnabled));
+      setStripeDetailsSubmitted(Boolean(result.stripeDetailsSubmitted));
+      setShowDisconnectStripeDialog(false);
+
+      toast({
+        title: "Stripe disconnected",
+        description: "This business can now connect a different Stripe account.",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Unable to disconnect Stripe",
+        description: error instanceof Error ? error.message : "Could not disconnect Stripe",
+        variant: "error",
+      });
+    } finally {
+      setIsDisconnectingStripe(false);
     }
   }
 
@@ -375,6 +441,7 @@ export default function SettingsPage() {
         setVatNumber(data?.vatNumber || "");
         setIban(data?.iban || "");
         setLogoUrl(data?.logoUrl || "");
+        setUsesPlatformStripe(Boolean(data?.usesPlatformStripe));
         setStripeAccountId(data?.stripeAccountId || null);
         setStripeChargesEnabled(Boolean(data?.stripeChargesEnabled));
         setStripePayoutsEnabled(Boolean(data?.stripePayoutsEnabled));
@@ -394,7 +461,7 @@ export default function SettingsPage() {
 
     const stripeQueryStatus = new URLSearchParams(window.location.search).get("stripe");
     if (stripeQueryStatus === "refresh") {
-      void handleConnectStripe();
+      handleConnectStripeEvent();
       window.history.replaceState({}, "", "/settings");
       return;
     }
@@ -403,7 +470,7 @@ export default function SettingsPage() {
       return;
     }
 
-    void refreshStripeStatus({ showSuccessToast: true });
+    refreshStripeStatusEvent();
     window.history.replaceState({}, "", "/settings");
   }, []);
 
@@ -620,7 +687,11 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-2">
                   <CreditCard className="h-4 w-4 text-slate-600" />
                   <p className="font-semibold text-slate-900">
-                    {stripeAccountId ? "Stripe account connected" : "Optional card payments"}
+                    {usesPlatformStripe
+                      ? "Platform Stripe account"
+                      : stripeAccountId
+                        ? "Stripe account connected"
+                        : "Optional card payments"}
                   </p>
                 </div>
                 <p className="max-w-2xl text-sm text-slate-600">
@@ -635,20 +706,31 @@ export default function SettingsPage() {
                     Still pending in Stripe: {stripePendingSteps.join(", ")}.
                   </p>
                 ) : null}
-                {!stripeAccountId ? (
+                {!usesPlatformStripe && !stripeAccountId ? (
                   <p className="text-xs text-slate-500">
                     You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
                   </p>
                 ) : null}
+                {!usesPlatformStripe && stripeAccountId ? (
+                  <p className="text-xs text-slate-500">
+                    Disconnecting removes this Stripe link from the app. Reconnecting starts Stripe onboarding again.
+                  </p>
+                ) : null}
+                {usesPlatformStripe ? (
+                  <p className="text-xs text-slate-500">
+                    This business uses the app-wide Stripe platform account, so it cannot be disconnected here.
+                  </p>
+                ) : null}
                 {stripeAccountId ? (
                   <p className="text-xs text-slate-500">
-                    Connected account ID: <span className="font-mono">{stripeAccountId}</span>
+                    {usesPlatformStripe ? "Platform" : "Connected"} account ID:{" "}
+                    <span className="font-mono">{stripeAccountId}</span>
                   </p>
                 ) : null}
               </div>
 
               <div className="flex flex-wrap gap-2">
-                {!isStripeFullyEnabled ? (
+                {!usesPlatformStripe && !isStripeFullyEnabled ? (
                   <Button onClick={() => void handleConnectStripe()} disabled={isConnectingStripe}>
                     <ExternalLink className="h-4 w-4" />
                     {isConnectingStripe
@@ -658,14 +740,23 @@ export default function SettingsPage() {
                         : "Connect Stripe"}
                   </Button>
                 ) : null}
-                {stripeAccountId ? (
+                {(usesPlatformStripe || stripeAccountId) ? (
                   <Button
                     variant="secondary"
                     onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
-                    disabled={isRefreshingStripe}
+                    disabled={isRefreshingStripe || isDisconnectingStripe}
                   >
                     <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
                     {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
+                  </Button>
+                ) : null}
+                {!usesPlatformStripe && stripeAccountId ? (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDisconnectStripeDialog(true)}
+                    disabled={isDisconnectingStripe || isConnectingStripe || isRefreshingStripe}
+                  >
+                    {isDisconnectingStripe ? "Disconnecting..." : "Disconnect Stripe"}
                   </Button>
                 ) : null}
               </div>
@@ -764,6 +855,19 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={showDisconnectStripeDialog}
+        onOpenChange={setShowDisconnectStripeDialog}
+        title="Disconnect Stripe"
+        description="Disconnect this Stripe account from the business? Card payments will stop until a new Stripe account is connected."
+        confirmLabel="Disconnect Stripe"
+        confirmVariant="destructive"
+        isConfirming={isDisconnectingStripe}
+        onConfirm={() => {
+          void disconnectStripeNow();
+        }}
+      />
     </div>
   );
 }

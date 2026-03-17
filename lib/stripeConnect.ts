@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
 
 export type BusinessStripeConnectStatus = {
+  usesPlatformStripe: boolean;
   stripeAccountId: string | null;
   stripeChargesEnabled: boolean;
   stripePayoutsEnabled: boolean;
@@ -10,6 +11,7 @@ export type BusinessStripeConnectStatus = {
 };
 
 type BusinessStripeRow = {
+  usesPlatformStripe: boolean | null;
   stripeAccountId: string | null;
   stripeChargesEnabled: boolean | null;
   stripePayoutsEnabled: boolean | null;
@@ -21,6 +23,7 @@ function normalizeBoolean(value: boolean | null | undefined): boolean {
 }
 
 export const EMPTY_STRIPE_CONNECT_STATUS: BusinessStripeConnectStatus = {
+  usesPlatformStripe: false,
   stripeAccountId: null,
   stripeChargesEnabled: false,
   stripePayoutsEnabled: false,
@@ -29,6 +32,7 @@ export const EMPTY_STRIPE_CONNECT_STATUS: BusinessStripeConnectStatus = {
 
 function mapBusinessStripeRow(row: BusinessStripeRow | undefined): BusinessStripeConnectStatus {
   return {
+    usesPlatformStripe: normalizeBoolean(row?.usesPlatformStripe),
     stripeAccountId: row?.stripeAccountId ?? null,
     stripeChargesEnabled: normalizeBoolean(row?.stripeChargesEnabled),
     stripePayoutsEnabled: normalizeBoolean(row?.stripePayoutsEnabled),
@@ -40,10 +44,21 @@ export function getStripeConnectStatusFromAccount(
   account: Pick<Stripe.Account, "id" | "charges_enabled" | "payouts_enabled" | "details_submitted">
 ): BusinessStripeConnectStatus {
   return {
+    usesPlatformStripe: false,
     stripeAccountId: account.id,
     stripeChargesEnabled: account.charges_enabled ?? false,
     stripePayoutsEnabled: account.payouts_enabled ?? false,
     stripeDetailsSubmitted: account.details_submitted ?? false,
+  };
+}
+
+export async function getPlatformStripeStatus(): Promise<BusinessStripeConnectStatus> {
+  const stripe = getStripeClient();
+  const account = await stripe.accounts.retrieve();
+
+  return {
+    ...getStripeConnectStatusFromAccount(account),
+    usesPlatformStripe: true,
   };
 }
 
@@ -53,6 +68,7 @@ export async function loadBusinessStripeConnectStatus(
   try {
     const rows = await prisma.$queryRaw<BusinessStripeRow[]>`
       SELECT
+        "usesPlatformStripe",
         "stripeAccountId",
         "stripeChargesEnabled",
         "stripePayoutsEnabled",
@@ -82,6 +98,7 @@ export async function saveBusinessStripeConnectStatus(
         "stripePayoutsEnabled" = ${status.stripePayoutsEnabled},
         "stripeDetailsSubmitted" = ${status.stripeDetailsSubmitted}
       WHERE "uuid" = ${businessId}
+        AND COALESCE("usesPlatformStripe", false) = false
     `;
   } catch (error) {
     console.warn("Unable to save Stripe Connect status (columns may not exist yet):", error);
@@ -92,6 +109,10 @@ export async function refreshBusinessStripeConnectStatus(
   businessId: string
 ): Promise<BusinessStripeConnectStatus> {
   const currentStatus = await loadBusinessStripeConnectStatus(businessId);
+
+  if (currentStatus.usesPlatformStripe) {
+    return getPlatformStripeStatus();
+  }
 
   if (!currentStatus.stripeAccountId) {
     return currentStatus;
@@ -104,6 +125,18 @@ export async function refreshBusinessStripeConnectStatus(
   await saveBusinessStripeConnectStatus(businessId, updatedStatus);
 
   return updatedStatus;
+}
+
+export async function loadResolvedBusinessStripeStatus(
+  businessId: string
+): Promise<BusinessStripeConnectStatus> {
+  const currentStatus = await loadBusinessStripeConnectStatus(businessId);
+
+  if (!currentStatus.usesPlatformStripe) {
+    return currentStatus;
+  }
+
+  return getPlatformStripeStatus();
 }
 
 export async function createConnectedStripeAccount(input: {
@@ -134,12 +167,35 @@ export async function createConnectedStripeAccount(input: {
   return status;
 }
 
+export function getStripeRequestOptions(
+  status: Pick<BusinessStripeConnectStatus, "usesPlatformStripe" | "stripeAccountId">
+): Stripe.RequestOptions | undefined {
+  if (status.usesPlatformStripe || !status.stripeAccountId) {
+    return undefined;
+  }
+
+  return {
+    stripeAccount: status.stripeAccountId,
+  };
+}
+
+export function isStripeCardPaymentAvailable(
+  status: Pick<BusinessStripeConnectStatus, "usesPlatformStripe" | "stripeAccountId" | "stripeChargesEnabled">
+): boolean {
+  if (status.usesPlatformStripe) {
+    return status.stripeChargesEnabled;
+  }
+
+  return status.stripeAccountId !== null && status.stripeChargesEnabled;
+}
+
 export async function findBusinessIdByStripeAccountId(accountId: string): Promise<string | null> {
   try {
     const rows = await prisma.$queryRaw<Array<{ id: string }>>`
       SELECT "uuid" AS "id"
       FROM "Business"
       WHERE "stripeAccountId" = ${accountId}
+        AND COALESCE("usesPlatformStripe", false) = false
       LIMIT 1
     `;
 

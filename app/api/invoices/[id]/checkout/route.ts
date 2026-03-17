@@ -3,7 +3,11 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
 import { calculateInvoiceTotals } from "@/lib/invoice";
-import { loadBusinessStripeConnectStatus } from "@/lib/stripeConnect";
+import {
+  getStripeRequestOptions,
+  isStripeCardPaymentAvailable,
+  loadResolvedBusinessStripeStatus,
+} from "@/lib/stripeConnect";
 
 export const runtime = "nodejs";
 
@@ -63,8 +67,8 @@ export async function POST(
       return apiError("Invoice is already paid", 400);
     }
 
-    const stripeConnectStatus = await loadBusinessStripeConnectStatus(invoice.businessId);
-    if (!stripeConnectStatus.stripeAccountId || !stripeConnectStatus.stripeChargesEnabled) {
+    const stripeStatus = await loadResolvedBusinessStripeStatus(invoice.businessId);
+    if (!isStripeCardPaymentAvailable(stripeStatus)) {
       return apiError("Online card payments are not enabled for this business", 400);
     }
 
@@ -79,32 +83,33 @@ export async function POST(
     const cancelUrl = new URL(`/invoice/pay/${invoice.publicToken}?cancel=true`, request.url).toString();
 
     const stripe = getStripeClient();
-    const session = await stripe.checkout.sessions.create({
-      mode: "payment",
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      client_reference_id: invoice.id,
-      metadata: {
-        invoiceId: invoice.id,
-        publicToken: invoice.publicToken,
-        businessId: invoice.businessId,
-      },
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: invoice.currency.toLowerCase(),
-            unit_amount: amountInMinorUnit,
-            product_data: {
-              name: `Invoice ${invoice.invoiceNumber}`,
-              description: `Payment for invoice ${invoice.invoiceNumber}`,
+    const session = await stripe.checkout.sessions.create(
+      {
+        mode: "payment",
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+        client_reference_id: invoice.id,
+        metadata: {
+          invoiceId: invoice.id,
+          publicToken: invoice.publicToken,
+          businessId: invoice.businessId,
+        },
+        line_items: [
+          {
+            quantity: 1,
+            price_data: {
+              currency: invoice.currency.toLowerCase(),
+              unit_amount: amountInMinorUnit,
+              product_data: {
+                name: `Invoice ${invoice.invoiceNumber}`,
+                description: `Payment for invoice ${invoice.invoiceNumber}`,
+              },
             },
           },
-        },
-      ],
-    }, {
-      stripeAccount: stripeConnectStatus.stripeAccountId,
-    });
+        ],
+      },
+      getStripeRequestOptions(stripeStatus)
+    );
 
     if (!session.url) {
       return apiError("Could not create Stripe checkout session", 500);

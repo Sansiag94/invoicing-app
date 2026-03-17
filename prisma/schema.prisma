@@ -36,6 +36,7 @@ model Business {
   vatNumber      String?
   iban           String?
   logoUrl        String?
+  usesPlatformStripe Boolean @default(false)
   stripeAccountId String?
   stripeChargesEnabled Boolean @default(false)
   stripePayoutsEnabled Boolean @default(false)

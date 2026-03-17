@@ -6,7 +6,10 @@ import { generateSwissQRCodeRects, generateSwissQRPayload, getSwissQRBillMetadat
 import { getInvoiceSenderName } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
 import { hasRecentInvoiceEvent, logInvoiceEvent } from "@/lib/invoiceActivity";
-import { loadBusinessStripeConnectStatus } from "@/lib/stripeConnect";
+import {
+  isStripeCardPaymentAvailable,
+  loadResolvedBusinessStripeStatus,
+} from "@/lib/stripeConnect";
 
 export async function GET(
   request: Request,
@@ -122,7 +125,7 @@ export async function GET(
     };
 
     const senderName = getInvoiceSenderName(businessWithSender);
-    const stripeConnectStatus = await loadBusinessStripeConnectStatus(invoice.business.id);
+    const stripeStatus = await loadResolvedBusinessStripeStatus(invoice.business.id);
     const invoiceForQR = {
       ...invoice,
       totalAmount: computedTotals.totalAmount,
@@ -164,8 +167,7 @@ export async function GET(
       taxAmount: computedTotals.taxAmount,
       totalAmount: computedTotals.totalAmount,
       currency: normalizeInvoiceCurrency(invoice.currency, "CHF"),
-      cardPaymentAvailable:
-        stripeConnectStatus.stripeAccountId !== null && stripeConnectStatus.stripeChargesEnabled,
+      cardPaymentAvailable: isStripeCardPaymentAvailable(stripeStatus),
       qrBill,
     });
   } catch (error) {

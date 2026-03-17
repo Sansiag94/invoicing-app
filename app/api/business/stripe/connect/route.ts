@@ -17,6 +17,13 @@ export async function POST(request: Request) {
     const stripe = getStripeClient();
     const currentStatus = await refreshBusinessStripeConnectStatus(business.id);
 
+    if (currentStatus.usesPlatformStripe) {
+      return NextResponse.json({
+        connected: true,
+        redirectUrl: new URL("/settings", request.url).toString(),
+      });
+    }
+
     if (
       currentStatus.stripeAccountId &&
       currentStatus.stripeChargesEnabled &&
