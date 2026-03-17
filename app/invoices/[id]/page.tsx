@@ -75,6 +75,8 @@ function formatEventLabel(type: string): string {
       return "Viewed";
     case "paid":
       return "Paid";
+    case "payment_review":
+      return "Payment review";
     case "reopened":
       return "Reopened";
     case "duplicated":

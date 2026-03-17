@@ -56,6 +56,17 @@ export async function POST(
       return apiError("Checkout session does not match invoice", 400);
     }
 
+    if (
+      invoice.status === "paid" &&
+      typeof session.payment_intent === "string" &&
+      session.payment_status === "paid"
+    ) {
+      return NextResponse.json({
+        ok: true,
+        status: invoice.status,
+      });
+    }
+
     await recordStripePaymentFromSession(session);
 
     const refreshedInvoice = await prisma.invoice.findUnique({

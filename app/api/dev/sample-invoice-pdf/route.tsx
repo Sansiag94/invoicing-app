@@ -92,6 +92,8 @@ export async function GET(request: Request) {
       totalAmount: 0,
       notes: "Thank you for your business.",
       publicToken: null,
+      stripeCheckoutSessionId: null,
+      stripeCheckoutSessionExpiresAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
       business,

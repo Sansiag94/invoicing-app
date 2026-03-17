@@ -63,7 +63,14 @@ export async function POST(request: Request) {
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      await recordStripePaymentFromSession(session);
+      const result = await recordStripePaymentFromSession(session);
+
+      if (result.requiresReview) {
+        console.error("[stripe] Webhook received an additional paid session for an invoice", {
+          invoiceId: result.invoiceId,
+          sessionId: session.id,
+        });
+      }
     }
 
     if (event.type === "account.updated") {
