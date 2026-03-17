@@ -7,6 +7,7 @@ import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { isSupportedCountry } from "@/lib/countries";
 import { ClientDetails } from "@/lib/types";
+import { isValidEmail } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { ArrowLeft, Building2, PencilLine, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -106,6 +107,24 @@ export default function ClientDetailPage() {
     e.preventDefault();
 
     if (!id) {
+      return;
+    }
+
+    if (!companyName.trim() && !contactName.trim()) {
+      toast({
+        title: "Missing client name",
+        description: "Add either a company name or a contact name before saving.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (!isValidEmail(email.trim())) {
+      toast({
+        title: "Invalid email",
+        description: "Enter a valid email address for the client.",
+        variant: "error",
+      });
       return;
     }
 

@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { isSupportedCountry } from "@/lib/countries";
 import { ClientSummary } from "@/lib/types";
+import { isValidEmail } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,24 @@ function ClientsPageContent() {
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+
+    if (!companyName.trim() && !contactName.trim()) {
+      toast({
+        title: "Missing client name",
+        description: "Add either a company name or a contact name before saving.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (!isValidEmail(email.trim())) {
+      toast({
+        title: "Invalid email",
+        description: "Enter a valid email address for the client.",
+        variant: "error",
+      });
+      return;
+    }
 
     if (!isSupportedCountry(country)) {
       toast({
@@ -219,6 +238,7 @@ function ClientsPageContent() {
                   id="contactName"
                   value={contactName}
                   onChange={(event) => setContactName(event.target.value)}
+                  placeholder="Optional if company name is set"
                 />
               </div>
               <div className="space-y-2">
@@ -266,6 +286,7 @@ function ClientsPageContent() {
                   onChange={setCountry}
                   required
                 />
+                <p className="text-xs text-slate-500">Choose a country from the list so invoices and payment details stay consistent.</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="vatNumber">VAT Number</Label>

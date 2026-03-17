@@ -7,6 +7,7 @@ import { withStructuredAddress } from "@/lib/address";
 import { isSupportedInvoiceCurrency, normalizeInvoiceCurrency } from "@/lib/invoice";
 import { normalizeInvoiceSenderType } from "@/lib/business";
 import { loadResolvedBusinessStripeStatus } from "@/lib/stripeConnect";
+import { isValidBic, isValidEmail, isValidIban, normalizeBic, normalizeIban } from "@/lib/validation";
 
 type UpdateBusinessBody = {
   name: unknown;
@@ -96,6 +97,9 @@ export async function PATCH(request: Request) {
     const invoiceSenderType = normalizeInvoiceSenderType(
       typeof body.invoiceSenderType === "string" ? body.invoiceSenderType : null
     );
+    const normalizedEmail = asString(body.email);
+    const normalizedIban = normalizeIban(asString(body.iban));
+    const normalizedBic = normalizeBic(asString(body.bic));
 
     const structuredAddress = withStructuredAddress({
       address: asString(body.address),
@@ -114,6 +118,18 @@ export async function PATCH(request: Request) {
     }
     const normalizedCurrency = normalizeInvoiceCurrency(normalizedCurrencyCandidate);
 
+    if (normalizedEmail && !isValidEmail(normalizedEmail)) {
+      return apiError("Invalid business email address", 400);
+    }
+
+    if (normalizedIban && !isValidIban(normalizedIban)) {
+      return apiError("Invalid IBAN", 400);
+    }
+
+    if (normalizedBic && !isValidBic(normalizedBic)) {
+      return apiError("Invalid BIC / SWIFT code", 400);
+    }
+
     const business = await ensureBusiness(user.id);
 
     const updatedBusiness = await prisma.business.update({
@@ -125,13 +141,13 @@ export async function PATCH(request: Request) {
         postalCode: structuredAddress.postalCode,
         city: structuredAddress.city,
         phone: asString(body.phone),
-        email: asString(body.email),
+        email: normalizedEmail,
         website: asString(body.website),
         bankName: asString(body.bankName),
         country,
         currency: normalizedCurrency,
         vatNumber: asString(body.vatNumber),
-        iban: asString(body.iban),
+        iban: normalizedIban,
         logoUrl: body.logoUrl === undefined ? business.logoUrl : asString(body.logoUrl),
       },
     });
@@ -142,7 +158,7 @@ export async function PATCH(request: Request) {
         SET
           "ownerName" = ${ownerName},
           "invoiceSenderType" = ${invoiceSenderType},
-          "bic" = ${asString(body.bic)}
+          "bic" = ${normalizedBic}
         WHERE "uuid" = ${business.id}
       `;
     } catch (error) {

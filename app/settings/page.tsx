@@ -8,6 +8,7 @@ import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
 import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
+import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { supabase } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -106,6 +107,42 @@ export default function SettingsPage() {
       successMessage?: string;
     }
   ) {
+    if (!name.trim() || !street.trim() || !postalCode.trim() || !city.trim() || !country.trim()) {
+      toast({
+        title: "Missing required fields",
+        description: "Business name, street, postal code, city, and country are required.",
+        variant: "error",
+      });
+      return null;
+    }
+
+    if (email.trim() && !isValidEmail(email.trim())) {
+      toast({
+        title: "Invalid business email",
+        description: "Enter a valid business email address or leave it blank.",
+        variant: "error",
+      });
+      return null;
+    }
+
+    if (iban.trim() && !isValidIban(iban.trim())) {
+      toast({
+        title: "Invalid IBAN",
+        description: "Enter a valid IBAN or leave the field blank.",
+        variant: "error",
+      });
+      return null;
+    }
+
+    if (bic.trim() && !isValidBic(bic.trim())) {
+      toast({
+        title: "Invalid BIC / SWIFT",
+        description: "Enter a valid BIC / SWIFT code or leave the field blank.",
+        variant: "error",
+      });
+      return null;
+    }
+
     setIsSaving(true);
 
     const response = await authenticatedFetch("/api/business", {
@@ -585,6 +622,7 @@ export default function SettingsPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="Optional"
             />
+            <p className="text-xs text-slate-500">Use a shared inbox if you want replies and payment questions in one place.</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="website">Website</Label>
@@ -632,6 +670,7 @@ export default function SettingsPage() {
               onChange={(event) => setBic(event.target.value)}
               placeholder="Optional"
             />
+            <p className="text-xs text-slate-500">Use the 8 or 11 character bank code, for example `RAIFCH22XXX`.</p>
           </div>
           <div className="md:col-span-2">
             <Button onClick={handleSave} disabled={isSaving || isUploadingLogo}>

@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { withStructuredAddress } from "@/lib/address";
 import { isSupportedCountry } from "@/lib/countries";
+import { isValidEmail } from "@/lib/validation";
 
 type CreateClientBody = {
   email: unknown;
@@ -76,8 +77,7 @@ export async function POST(request: Request) {
       return apiError("Invalid country", 400);
     }
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmail(email)) {
       return apiError("Invalid email address", 400);
     }
 
