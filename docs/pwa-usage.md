@@ -8,7 +8,7 @@ When installed:
 
 - it appears on the home screen like an app
 - it opens in a standalone app window
-- core screens and the offline page are cached for weak connections
+- public pages and the offline screen are cached for weak connections
 
 ## Install Paths
 
@@ -35,9 +35,11 @@ Tell users:
 - the installed app is the same account and data as the web app
 - they still need internet for live data, sending emails, and payments
 - the offline screen is a fallback, not full offline editing
+- signing out clears the app cache on the device
 
 ## Current Implementation Notes
 
 - manifest is served from `/manifest.webmanifest`
 - service worker is served from `/sw.js`
 - install state is surfaced in the navbar and settings
+- authenticated app routes are not cached for offline use
