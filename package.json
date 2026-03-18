@@ -6,8 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "postinstall": "prisma generate",
     "lint": "eslint",
-    "test": "vitest run --config vitest.config.mjs --configLoader native"
+    "test": "vitest run --config vitest.config.mjs --configLoader native",
+    "prisma:generate": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
