@@ -43,7 +43,7 @@ export default function AuthSplitShell({
 }: AuthSplitShellProps) {
   return (
     <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-6xl items-center">
-      <div className="grid w-full overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] lg:grid-cols-[1.2fr_0.9fr]">
+      <div className="grid w-full overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900 lg:grid-cols-[1.2fr_0.9fr]">
         <section className="order-2 relative overflow-hidden bg-[linear-gradient(135deg,#0f172a_0%,#1d3557_45%,#264653_100%)] px-8 py-8 text-white md:px-12 md:py-14 lg:order-1">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_28%)]" />
           <div className="relative space-y-6 md:space-y-8">
@@ -112,7 +112,7 @@ export default function AuthSplitShell({
           </div>
         </section>
 
-        <section className="order-1 flex items-center bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-6 py-8 md:px-10 md:py-12 lg:order-2">
+        <section className="order-1 flex items-center bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-6 py-8 dark:bg-[linear-gradient(180deg,#cfd8e6_0%,#c0cbdb_100%)] md:px-10 md:py-12 lg:order-2">
           <div className="mx-auto w-full max-w-md space-y-6">
             <div className="space-y-3">
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -126,11 +126,11 @@ export default function AuthSplitShell({
 
             {children}
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600">
-              <p className="font-medium text-slate-900">{alternateText}</p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300">
+              <p className="font-medium text-slate-900 dark:text-slate-100">{alternateText}</p>
               <Link
                 href={alternateHref}
-                className="mt-2 inline-flex items-center gap-2 font-medium text-slate-900 underline underline-offset-4"
+                className="mt-2 inline-flex items-center gap-2 font-medium text-slate-900 underline underline-offset-4 dark:text-slate-100"
               >
                 {alternateLabel}
                 <ArrowRight className="h-4 w-4" />

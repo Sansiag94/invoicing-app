@@ -85,7 +85,7 @@ export default function LoginPage() {
           void handleLogin();
         }}
       >
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -110,21 +110,21 @@ export default function LoginPage() {
             <div className="flex justify-end">
               <Link
                 href="/forgot-password"
-                className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
+                className="text-sm font-medium text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100"
               >
                 Forgot password?
               </Link>
             </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
               <input
                 type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-900"
                 checked={rememberMe}
                 onChange={(event) => setRememberMe(event.target.checked)}
               />
               <span>
-                <span className="block font-medium text-slate-900">Keep me logged in</span>
-                <span className="block text-xs text-slate-500">
+                <span className="block font-medium text-slate-900 dark:text-slate-100">Keep me logged in</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400">
                   Stay signed in on this device after you close the browser.
                 </span>
               </span>

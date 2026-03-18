@@ -384,7 +384,7 @@ export default function PublicInvoicePage() {
   );
 
   return (
-    <div data-force-light className="min-h-screen bg-slate-100 py-4 text-slate-900 print:min-h-0 print:bg-white print:py-0">
+    <div className="min-h-screen bg-slate-100 py-4 text-slate-900 dark:bg-slate-800/60 dark:text-slate-100 print:min-h-0 print:bg-white print:py-0">
       <div className="invoice-print-shell mx-auto max-w-[210mm] space-y-4 px-4 py-6 print:space-y-0 print:px-0 print:py-0">
       <style jsx global>{`
         @page {
@@ -500,7 +500,7 @@ export default function PublicInvoicePage() {
       `}</style>
       <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <h1 className="text-xl font-semibold text-slate-900">Invoice {invoice.invoiceNumber}</h1>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Invoice {invoice.invoiceNumber}</h1>
           <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
@@ -551,6 +551,7 @@ export default function PublicInvoicePage() {
       ) : null}
 
       <article
+        data-force-light
         className={`invoice-document bg-white text-[11px] text-slate-900 shadow-sm print:shadow-none${
           shouldShareQrOnFirstPage ? " invoice-document--qr" : ""
         }`}
@@ -711,7 +712,10 @@ export default function PublicInvoicePage() {
       </article>
 
       {shouldRenderStandaloneQrPage ? (
-        <article className="invoice-document invoice-document--qr bg-white text-[11px] text-slate-900 shadow-sm print:break-before-page print:shadow-none">
+        <article
+          data-force-light
+          className="invoice-document invoice-document--qr bg-white text-[11px] text-slate-900 shadow-sm print:break-before-page print:shadow-none"
+        >
           {qrBillSection}
         </article>
       ) : null}
