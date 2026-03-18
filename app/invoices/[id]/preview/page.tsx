@@ -415,7 +415,7 @@ export default function InvoicePreviewPage() {
               </Button>
             ) : (
               <Button
-                variant="default"
+                variant="outline"
                 onClick={handleSendReminder}
                 disabled={isSendingReminder || isLoading || isDuplicating}
                 className="col-span-2 w-full sm:col-span-1 sm:w-auto"
