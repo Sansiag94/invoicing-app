@@ -386,7 +386,7 @@ export default function InvoicePreviewPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div data-force-light className="space-y-4 text-slate-900">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <Button asChild variant="outline" size="sm">
@@ -486,15 +486,15 @@ export default function InvoicePreviewPage() {
       </div>
 
       {successMessage ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800">
           {successMessage}
         </div>
       ) : null}
 
-      <Card className="overflow-hidden">
+      <Card className="overflow-hidden bg-white">
         <CardContent className="p-0">
           {loadError ? (
-            <div className="px-6 py-8 text-sm text-red-800 dark:text-red-100">{loadError}</div>
+            <div className="px-6 py-8 text-sm text-red-800">{loadError}</div>
           ) : isLoading || !pdfUrl ? (
             <div className="px-6 py-8 text-sm text-slate-600">Loading invoice preview...</div>
           ) : isMobile ? (
@@ -516,7 +516,7 @@ export default function InvoicePreviewPage() {
             <iframe
               title="Invoice PDF preview"
               src={`${pdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
-              className="h-[calc(100vh-12rem)] min-h-[720px] w-full bg-slate-100"
+              className="h-[calc(100vh-12rem)] min-h-[720px] w-full bg-white"
             />
           )}
         </CardContent>

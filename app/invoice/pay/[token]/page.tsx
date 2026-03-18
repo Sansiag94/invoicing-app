@@ -255,13 +255,13 @@ export default function PublicInvoicePage() {
       </div>
 
       <div
-        className="grid min-h-[105mm] gap-0"
+        className="qr-bill__row grid min-h-[105mm] gap-0"
         style={{
           gridTemplateColumns: "62mm 1fr",
           paddingTop: "5mm",
         }}
       >
-        <div className="flex h-full flex-col border-r border-dashed border-black pl-[4.5mm] pr-[4.5mm] pb-[3mm]">
+        <div className="qr-bill__receipt flex h-full flex-col border-r border-dashed border-black pl-[4.5mm] pr-[4.5mm] pb-[3mm]">
           <div>
             <p className="mb-[5mm] text-[11px] font-semibold text-black">Receipt</p>
 
@@ -302,17 +302,17 @@ export default function PublicInvoicePage() {
           </div>
         </div>
 
-        <div className="flex h-full flex-col pl-[4.5mm] pr-[4.5mm] pb-[3mm]">
+        <div className="qr-bill__payment flex h-full flex-col pl-[4.5mm] pr-[4.5mm] pb-[3mm]">
           <p className="mb-[5mm] text-[11px] font-semibold text-black">Payment part</p>
 
           <div
-            className="grid flex-1"
+            className="qr-bill__payment-grid grid flex-1"
             style={{
               gridTemplateColumns: "46mm 1fr",
               columnGap: "6mm",
             }}
           >
-            <div className="flex h-full flex-col justify-start">
+            <div className="qr-bill__qr-column flex h-full flex-col justify-start">
               <div className="h-[46mm] w-[46mm] bg-white">
                 {invoice.qrBill?.qrRects?.length ? (
                   <div className="relative h-full w-full">
@@ -354,7 +354,7 @@ export default function PublicInvoicePage() {
               </div>
             </div>
 
-            <div className="-mt-[10mm] space-y-[5mm] self-start text-[10px] leading-[1.16] text-black">
+            <div className="qr-bill__payment-details -mt-[10mm] space-y-[5mm] self-start text-[10px] leading-[1.16] text-black">
               <div>
                 <p className="mb-[0.8mm] text-[8px] font-semibold">Account / Payable to</p>
                 <p>{formatIban(invoice.qrBill?.account || invoice.business.iban)}</p>
@@ -384,7 +384,8 @@ export default function PublicInvoicePage() {
   );
 
   return (
-    <div className="invoice-print-shell mx-auto max-w-[210mm] space-y-4 px-4 py-6 print:space-y-0 print:px-0 print:py-0">
+    <div data-force-light className="min-h-screen bg-slate-100 py-4 text-slate-900 print:min-h-0 print:bg-white print:py-0">
+      <div className="invoice-print-shell mx-auto max-w-[210mm] space-y-4 px-4 py-6 print:space-y-0 print:px-0 print:py-0">
       <style jsx global>{`
         @page {
           size: A4;
@@ -392,15 +393,23 @@ export default function PublicInvoicePage() {
         }
 
         @media print {
+          .invoice-print-shell {
+            background: white !important;
+          }
+
           .invoice-document {
             padding: 0 !important;
             box-shadow: none !important;
+            border: none !important;
+            border-radius: 0 !important;
           }
         }
 
         .invoice-document {
           box-sizing: border-box;
           padding: 18mm 14mm;
+          border: 1px solid #e2e8f0;
+          border-radius: 24px;
         }
 
         .invoice-document--qr {
@@ -455,6 +464,39 @@ export default function PublicInvoicePage() {
           break-inside: avoid-page;
           page-break-inside: avoid;
         }
+
+        @media (max-width: 767px) {
+          .invoice-document {
+            padding: 20px 18px;
+            border-radius: 20px;
+          }
+
+          .qr-bill__row {
+            min-height: auto !important;
+            grid-template-columns: 1fr !important;
+            gap: 16px;
+            padding-top: 16px !important;
+          }
+
+          .qr-bill__receipt {
+            border-right: none !important;
+            border-bottom: 1px dashed #000;
+            padding-bottom: 16px !important;
+          }
+
+          .qr-bill__payment-grid {
+            grid-template-columns: 1fr !important;
+            row-gap: 16px;
+          }
+
+          .qr-bill__qr-column {
+            align-items: center;
+          }
+
+          .qr-bill__payment-details {
+            margin-top: 0 !important;
+          }
+        }
       `}</style>
       <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -488,22 +530,22 @@ export default function PublicInvoicePage() {
       </div>
 
       {paymentSuccess ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100 print:hidden">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 print:hidden">
           {isConfirmingPayment ? "Payment received. Updating invoice status..." : "Payment completed. Thank you."}
         </div>
       ) : null}
       {paymentCancelled ? (
-        <div className="rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-100 print:hidden">
+        <div className="rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 print:hidden">
           Payment was cancelled.
         </div>
       ) : null}
       {checkoutError ? (
-        <div className="rounded-md border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-100 print:hidden">
+        <div className="rounded-md border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800 print:hidden">
           {checkoutError}
         </div>
       ) : null}
       {!cardPaymentAvailable ? (
-        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 print:hidden">
+        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 print:hidden">
           Online card payment is not enabled for this business. Please use the payment details shown on the invoice.
         </div>
       ) : null}
@@ -673,6 +715,7 @@ export default function PublicInvoicePage() {
           {qrBillSection}
         </article>
       ) : null}
+      </div>
     </div>
   );
 }

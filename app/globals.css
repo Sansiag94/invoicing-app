@@ -90,3 +90,44 @@ html.dark input::placeholder,
 html.dark textarea::placeholder {
   color: #64748b !important;
 }
+
+html.dark [data-force-light] {
+  color-scheme: light;
+}
+
+html.dark [data-force-light] .bg-white,
+html.dark [data-force-light] .bg-white\/90 {
+  background-color: #ffffff !important;
+}
+
+html.dark [data-force-light] .bg-slate-50,
+html.dark [data-force-light] .bg-slate-50\/80 {
+  background-color: #f8fafc !important;
+}
+
+html.dark [data-force-light] .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html.dark [data-force-light] .border-slate-200,
+html.dark [data-force-light] .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+
+html.dark [data-force-light] .text-slate-900 {
+  color: #0f172a !important;
+}
+
+html.dark [data-force-light] .text-slate-700 {
+  color: #334155 !important;
+}
+
+html.dark [data-force-light] .text-slate-600,
+html.dark [data-force-light] .text-slate-500,
+html.dark [data-force-light] .text-slate-400 {
+  color: #475569 !important;
+}
+
+html.dark [data-force-light] .hover\:bg-slate-100:hover {
+  background-color: #f1f5f9 !important;
+}
