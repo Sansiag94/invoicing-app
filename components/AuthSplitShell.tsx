@@ -113,21 +113,21 @@ export default function AuthSplitShell({
           </div>
         </section>
 
-        <section className="order-1 flex items-center bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-6 py-8 dark:bg-[linear-gradient(180deg,#cfd8e6_0%,#c0cbdb_100%)] md:px-10 md:py-12 lg:order-2">
+        <section className="order-1 flex items-center bg-[linear-gradient(180deg,#f8fafc_0%,#ffffff_100%)] px-6 py-8 dark:bg-[linear-gradient(180deg,#0f172a_0%,#131c30_100%)] md:px-10 md:py-12 lg:order-2">
           <div className="mx-auto w-full max-w-md space-y-6">
             <div className="space-y-3">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
                 {eyebrow}
               </p>
               <div className="space-y-2">
-                <h2 className="text-3xl font-semibold tracking-tight text-slate-950">{title}</h2>
-                <p className="text-sm leading-6 text-slate-600">{description}</p>
+                <h2 className="text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{title}</h2>
+                <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">{description}</p>
               </div>
             </div>
 
             {children}
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/85 dark:text-slate-300">
               <p className="font-medium text-slate-900 dark:text-slate-100">{alternateText}</p>
               <Link
                 href={alternateHref}
