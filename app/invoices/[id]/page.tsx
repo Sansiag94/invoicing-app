@@ -1093,7 +1093,7 @@ export default function InvoiceDetailPage() {
         title="Send Invoice"
         description={
           <>
-            Send invoice <strong>{invoice.invoiceNumber}</strong> now?
+            Send this draft invoice now? An official invoice number will be assigned when it is sent.
           </>
         }
         confirmLabel="Send Invoice"

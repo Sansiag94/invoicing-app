@@ -8,9 +8,11 @@ import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
 import {
   calculateInvoiceTotals,
-  deriveClientInvoicePrefix,
+  formatDraftInvoiceNumber,
   formatSequentialInvoiceNumber,
+  normalizeInvoicePrefix,
   isSupportedInvoiceCurrency,
+  isDraftInvoiceNumber,
   normalizeInvoiceCurrency,
 } from "@/lib/invoice";
 
@@ -181,6 +183,8 @@ export async function POST(request: Request) {
       select: {
         id: true,
         currency: true,
+        invoicePrefix: true,
+        name: true,
       },
     });
 
@@ -222,60 +226,63 @@ export async function POST(request: Request) {
 
     const normalizedStatus = normalizeStatus(body.status);
 
-    const invoice = await prisma.$transaction(async (tx) => {
-      const updatedBusiness = await tx.business.update({
+    const invoice = await prisma.invoice.create({
+      data: {
+        businessId: business.id,
+        clientId,
+        invoiceNumber: formatDraftInvoiceNumber(issueDate, crypto.randomUUID().slice(0, 6)),
+        issueDate,
+        dueDate,
+        subject,
+        reference,
+        subtotal,
+        taxAmount,
+        totalAmount,
+        status: normalizedStatus,
+        currency: selectedCurrency,
+        notes: asString(body.notes),
+        publicToken: crypto.randomUUID(),
+        lineItems: {
+          create: parsedLineItems.map((item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            taxRate: item.taxRate,
+            total: item.total,
+          })),
+        },
+      },
+      include: {
+        lineItems: true,
+      },
+    });
+
+    if (normalizedStatus !== InvoiceStatus.draft && isDraftInvoiceNumber(invoice.invoiceNumber)) {
+      const updatedBusiness = await prisma.business.update({
         where: { id: business.id },
         data: { invoiceCounter: { increment: 1 } },
-        select: {
-          invoiceCounter: true,
-        },
+        select: { invoiceCounter: true },
       });
-
-      const clientDisplayName = client.companyName || client.contactName || client.email;
-      const invoicePrefix = deriveClientInvoicePrefix(clientDisplayName);
-      const invoiceNumber = formatSequentialInvoiceNumber(
-        invoicePrefix,
+      const officialInvoiceNumber = formatSequentialInvoiceNumber(
+        normalizeInvoicePrefix(business.invoicePrefix, business.name),
         issueDate,
         updatedBusiness.invoiceCounter
       );
-
-      return tx.invoice.create({
-        data: {
-          businessId: business.id,
-          clientId,
-          invoiceNumber,
-          issueDate,
-          dueDate,
-          subject,
-          reference,
-          subtotal,
-          taxAmount,
-          totalAmount,
-          status: normalizedStatus,
-          currency: selectedCurrency,
-          notes: asString(body.notes),
-          publicToken: crypto.randomUUID(),
-          lineItems: {
-            create: parsedLineItems.map((item) => ({
-              description: item.description,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              taxRate: item.taxRate,
-              total: item.total,
-            })),
-          },
-        },
-        include: {
-          lineItems: true,
-        },
+      await prisma.invoice.update({
+        where: { id: invoice.id },
+        data: { invoiceNumber: officialInvoiceNumber },
       });
-    });
+      invoice.invoiceNumber = officialInvoiceNumber;
+    }
 
     await logInvoiceEvent({
       invoiceId: invoice.id,
       type: "created",
       actor: user.email ?? "User",
-      details: `Invoice ${invoice.invoiceNumber} created`,
+      details:
+        normalizedStatus === InvoiceStatus.draft
+          ? "Draft invoice created"
+          : `Invoice ${invoice.invoiceNumber} created`,
     });
 
     return NextResponse.json(invoice, { status: 201 });

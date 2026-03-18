@@ -1,6 +1,7 @@
 import type { InvoiceCurrency } from "@/lib/types";
 
 export const SUPPORTED_INVOICE_CURRENCIES: readonly InvoiceCurrency[] = ["CHF", "EUR"];
+const DRAFT_INVOICE_PREFIX = "DRAFT-";
 
 export type ParsedPostalAddress = {
   street: string;
@@ -111,8 +112,47 @@ export function deriveClientInvoicePrefix(value: string | null | undefined): str
   return "IN";
 }
 
+export function normalizeInvoicePrefix(
+  prefix: string | null | undefined,
+  businessName?: string | null
+): string {
+  const normalized = (prefix || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .toUpperCase();
+
+  if (normalized && normalized !== "INV") {
+    return normalized.slice(0, 6);
+  }
+
+  if (businessName?.trim()) {
+    return deriveClientInvoicePrefix(businessName);
+  }
+
+  return normalized || "INV";
+}
+
 export function formatSequentialInvoiceNumber(prefix: string, issueDate: Date, sequence: number): string {
   const year = issueDate.getUTCFullYear();
   const normalizedSequence = Number.isFinite(sequence) ? Math.max(1, Math.floor(sequence)) : 1;
   return `${prefix}${year}-${String(normalizedSequence).padStart(3, "0")}`;
+}
+
+export function formatDraftInvoiceNumber(issueDate: Date, suffix: string): string {
+  const year = issueDate.getUTCFullYear();
+  const month = String(issueDate.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(issueDate.getUTCDate()).padStart(2, "0");
+  const normalizedSuffix = (suffix || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9]/g, "")
+    .toUpperCase()
+    .slice(0, 6) || "DRAFT";
+
+  return `${DRAFT_INVOICE_PREFIX}${year}${month}${day}-${normalizedSuffix}`;
+}
+
+export function isDraftInvoiceNumber(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.startsWith(DRAFT_INVOICE_PREFIX);
 }

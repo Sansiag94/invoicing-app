@@ -12,7 +12,12 @@ import {
 } from "@/lib/email";
 import crypto from "crypto";
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
-import { calculateInvoiceTotals } from "@/lib/invoice";
+import {
+  calculateInvoiceTotals,
+  formatSequentialInvoiceNumber,
+  isDraftInvoiceNumber,
+  normalizeInvoicePrefix,
+} from "@/lib/invoice";
 import InvoiceDocument from "@/lib/InvoiceDocument";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
@@ -66,6 +71,33 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     return apiError("Paid invoices cannot be sent again", 400);
   }
 
+  let officialInvoiceNumber = invoiceNumber;
+  if (isDraftInvoiceNumber(invoiceNumber)) {
+    const numberedInvoice = await prisma.$transaction(async (tx) => {
+      const updatedBusiness = await tx.business.update({
+        where: { id: existingInvoice.businessId },
+        data: { invoiceCounter: { increment: 1 } },
+        select: { invoiceCounter: true },
+      });
+
+      const nextInvoiceNumber = formatSequentialInvoiceNumber(
+        normalizeInvoicePrefix(existingInvoice.business.invoicePrefix, existingInvoice.business.name),
+        existingInvoice.issueDate,
+        updatedBusiness.invoiceCounter
+      );
+
+      await tx.invoice.update({
+        where: { id: existingInvoice.id },
+        data: { invoiceNumber: nextInvoiceNumber },
+      });
+
+      return nextInvoiceNumber;
+    });
+
+    officialInvoiceNumber = numberedInvoice;
+    existingInvoice.invoiceNumber = numberedInvoice;
+  }
+
   let publicToken = existingInvoice.publicToken;
 
   if (!publicToken) {
@@ -86,7 +118,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   const invoiceLink = buildPublicInvoiceLink(publicToken, request.url);
   console.log("[invoice-send] Sending invoice email", {
     clientEmail,
-    invoiceNumber,
+    invoiceNumber: officialInvoiceNumber,
     invoiceLink,
   });
 
@@ -127,7 +159,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     computedTotals.totalAmount > 0 ? computedTotals.totalAmount : existingInvoice.totalAmount;
   const clientDisplayName =
     existingInvoice.client.contactName || existingInvoice.client.companyName || clientEmail;
-  const pdfFilename = buildInvoicePdfFilename(invoiceNumber);
+  const pdfFilename = buildInvoicePdfFilename(officialInvoiceNumber);
   const pdfDocument = React.createElement(InvoiceDocument, {
     invoice: {
       ...existingInvoice,
@@ -148,7 +180,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
       ...senderPreferences,
     }),
     recipientName: clientDisplayName,
-    invoiceNumber,
+    invoiceNumber: officialInvoiceNumber,
     totalAmount: totalAmountForEmail,
     currency: existingInvoice.currency,
     dueDate: existingInvoice.dueDate,
@@ -172,12 +204,12 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     invoiceId: existingInvoice.id,
     type: "sent",
     actor: user.email ?? "User",
-    details: `Invoice emailed to ${clientEmail}`,
+    details: `Invoice ${officialInvoiceNumber} emailed to ${clientEmail}`,
   });
 
   console.log("[invoice-send] Invoice email sent and status updated", {
     invoiceId: existingInvoice.id,
-    invoiceNumber,
+    invoiceNumber: officialInvoiceNumber,
     clientEmail,
   });
 

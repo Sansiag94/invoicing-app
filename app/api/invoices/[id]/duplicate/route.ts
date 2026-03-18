@@ -6,8 +6,7 @@ import { InvoiceStatus } from "@prisma/client";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import {
   calculateInvoiceTotals,
-  deriveClientInvoicePrefix,
-  formatSequentialInvoiceNumber,
+  formatDraftInvoiceNumber,
 } from "@/lib/invoice";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
 
@@ -71,26 +70,11 @@ export async function POST(
     const totals = calculateInvoiceTotals(sourceInvoice.lineItems);
 
     const duplicatedInvoice = await prisma.$transaction(async (tx) => {
-      const updatedBusiness = await tx.business.update({
-        where: { id: business.id },
-        data: { invoiceCounter: { increment: 1 } },
-        select: { invoiceCounter: true },
-      });
-
-      const clientDisplayName =
-        sourceInvoice.client.companyName || sourceInvoice.client.contactName || sourceInvoice.client.email;
-      const invoicePrefix = deriveClientInvoicePrefix(clientDisplayName);
-      const invoiceNumber = formatSequentialInvoiceNumber(
-        invoicePrefix,
-        issueDate,
-        updatedBusiness.invoiceCounter
-      );
-
       return tx.invoice.create({
         data: {
           businessId: business.id,
           clientId: sourceInvoice.client.id,
-          invoiceNumber,
+          invoiceNumber: formatDraftInvoiceNumber(issueDate, crypto.randomUUID().slice(0, 6)),
           issueDate,
           dueDate,
           subject: sourceInvoice.subject,
@@ -124,7 +108,7 @@ export async function POST(
       invoiceId: duplicatedInvoice.id,
       type: "duplicated",
       actor: user.email ?? "User",
-      details: `Duplicated from ${sourceInvoice.invoiceNumber}`,
+      details: "Draft invoice duplicated from previous invoice",
     });
 
     return NextResponse.json(duplicatedInvoice, { status: 201 });
