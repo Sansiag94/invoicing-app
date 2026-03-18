@@ -386,7 +386,7 @@ export default function InvoicePreviewPage() {
   }
 
   return (
-    <div data-force-light className="space-y-4 text-slate-900">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <Button asChild variant="outline" size="sm">
@@ -401,7 +401,7 @@ export default function InvoicePreviewPage() {
           </div>
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
+        <div className="grid w-full grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
           {invoice?.status !== "paid" ? (
             invoice?.status === "draft" ? (
               <Button
@@ -477,7 +477,7 @@ export default function InvoicePreviewPage() {
             variant="outline"
             onClick={() => setShowDeleteDialog(true)}
             disabled={isDeleting || isLoading || isDuplicating}
-            className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:min-w-[10rem] sm:w-auto"
+            className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40 dark:hover:text-red-100 sm:min-w-[10rem] sm:w-auto"
           >
             <Trash2 className="h-4 w-4" />
             Delete
@@ -486,15 +486,15 @@ export default function InvoicePreviewPage() {
       </div>
 
       {successMessage ? (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800">
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
         </div>
       ) : null}
 
-      <Card className="overflow-hidden bg-white">
+      <Card className="overflow-hidden">
         <CardContent className="p-0">
           {loadError ? (
-            <div className="px-6 py-8 text-sm text-red-800">{loadError}</div>
+            <div className="px-6 py-8 text-sm text-red-800 dark:text-red-100">{loadError}</div>
           ) : isLoading || !pdfUrl ? (
             <div className="px-6 py-8 text-sm text-slate-600">Loading invoice preview...</div>
           ) : isMobile ? (

@@ -744,7 +744,7 @@ export default function InvoiceDetailPage() {
                 variant="outline"
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={isDeleting || isDuplicating}
-                className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 sm:min-w-[10rem] sm:w-auto"
+                className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40 dark:hover:text-red-100 sm:min-w-[10rem] sm:w-auto"
               >
                 <Trash2 className="h-4 w-4" />
                 Delete
