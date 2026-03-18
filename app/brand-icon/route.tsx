@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          background: "#ffffff",
+          background: "#000000",
           padding: `${Math.round(size * 0.08)}px`,
           boxSizing: "border-box",
         }}
