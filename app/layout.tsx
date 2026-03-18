@@ -6,7 +6,7 @@ import AppFrame from "@/components/AppFrame";
 import PwaProvider from "@/components/PwaProvider";
 import { ToastProvider } from "@/components/ui/toast";
 import { ThemeProvider } from "@/components/ui/theme";
-import { APP_BRAND_ICON_VERSION, APP_NAME } from "@/lib/appBrand";
+import { APP_BRAND_ICON_VERSION, APP_MANIFEST_VERSION, APP_NAME } from "@/lib/appBrand";
 
 validateRequiredEnv();
 
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
   title: APP_NAME,
   description: "Invoicing solutions for freelancers",
   applicationName: APP_NAME,
-  manifest: "/manifest.webmanifest",
+  manifest: `/manifest.webmanifest?v=${APP_MANIFEST_VERSION}`,
   icons: {
     icon: [
       { url: `/brand-icon?size=32&v=${APP_BRAND_ICON_VERSION}`, sizes: "32x32", type: "image/png" },

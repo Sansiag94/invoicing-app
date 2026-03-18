@@ -1,8 +1,9 @@
 import prisma from "@/lib/prisma";
 
-export const APP_NAME = "S-Invoices";
+export const APP_NAME = "Sierra Invoices";
 export const APP_SHORT_NAME = "S-Invoices";
 export const APP_BRAND_ICON_VERSION = "20260318-black-bg";
+export const APP_MANIFEST_VERSION = "20260318-short-name";
 
 function normalizeLogoUrl(value: string | null | undefined): string | null {
   const normalized = value?.trim() || "";
