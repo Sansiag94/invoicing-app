@@ -17,21 +17,21 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["business", "finance", "productivity"],
     icons: [
       {
-        src: "/pwa-192.svg",
+        src: "/brand-icon?size=192",
         sizes: "192x192",
-        type: "image/svg+xml",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: "/pwa-512.svg",
+        src: "/brand-icon?size=512",
         sizes: "512x512",
-        type: "image/svg+xml",
+        type: "image/png",
         purpose: "any",
       },
       {
-        src: "/pwa-512.svg",
+        src: "/brand-icon?size=512",
         sizes: "512x512",
-        type: "image/svg+xml",
+        type: "image/png",
         purpose: "maskable",
       },
     ],

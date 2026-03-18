@@ -15,9 +15,12 @@ export const metadata: Metadata = {
   applicationName: "Sierra Invoices",
   manifest: "/manifest.webmanifest",
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
-    apple: "/apple-touch-icon.svg",
+    icon: [
+      { url: "/brand-icon?size=32", sizes: "32x32", type: "image/png" },
+      { url: "/brand-icon?size=192", sizes: "192x192", type: "image/png" },
+    ],
+    shortcut: "/brand-icon?size=192",
+    apple: { url: "/brand-icon?size=180", sizes: "180x180", type: "image/png" },
   },
   appleWebApp: {
     capable: true,
