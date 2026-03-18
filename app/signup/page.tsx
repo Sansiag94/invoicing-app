@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
+import { APP_NAME } from "@/lib/appBrand";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -77,7 +78,7 @@ export default function SignupPage() {
 
         toast({
           title: "Account created",
-          description: "Welcome to Sierra Invoices.",
+          description: `Welcome to ${APP_NAME}.`,
           variant: "success",
         });
         router.push("/dashboard");
@@ -98,7 +99,7 @@ export default function SignupPage() {
   return (
     <AuthSplitShell
       eyebrow="Create account"
-      title="Start with Sierra Invoices"
+      title={`Start with ${APP_NAME}`}
       description="Set up your billing workspace and start sending client-ready invoices within minutes."
       alternateText="Already have an account?"
       alternateLabel="Log in"

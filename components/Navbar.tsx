@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { clearPwaAppCache } from "@/lib/pwaCache";
+import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { supabase } from "@/utils/supabase";
 import { cn } from "@/lib/utils";
@@ -129,7 +130,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   const [isAccountOpen, setIsAccountOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const brandName = businessBrand?.name || "Sierra Invoices";
+  const brandName = businessBrand?.name || APP_NAME;
   const brandInitials = getBrandInitials(brandName);
   const quickActions = useMemo<QuickAction[]>(
     () => [
@@ -401,7 +402,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     if (outcome === "accepted") {
       toast({
         title: "App installed",
-        description: "Sierra Invoices is now available from your device home screen.",
+        description: `${APP_NAME} is now available from your device home screen.`,
         variant: "success",
       });
       return;

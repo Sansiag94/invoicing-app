@@ -1,5 +1,6 @@
 import { Resend } from "resend";
 import { getResendApiKey } from "@/lib/env";
+import { APP_NAME } from "@/lib/appBrand";
 import {
   buildPublicInvoiceLink as buildPublicInvoiceLinkValue,
   getPublicInvoiceBaseUrl,
@@ -55,7 +56,7 @@ type SendWelcomeEmailInput = {
 let resendClient: Resend | null = null;
 const DEFAULT_RESEND_FROM_EMAIL = "Sierra Services <invoices@sierraservices.ch>";
 const DEFAULT_RESEND_REPLY_TO_EMAIL = "santiago@sierraservices.ch";
-const DEFAULT_WELCOME_FROM_NAME = "Sierra Invoices";
+const DEFAULT_WELCOME_FROM_NAME = APP_NAME;
 
 export class EmailConfigurationError extends Error {
   constructor(message: string) {
@@ -422,7 +423,7 @@ ${invoiceLink}`,
 
 export async function sendWelcomeEmail({
   to,
-  appName = "Sierra Invoices",
+  appName = APP_NAME,
   dashboardLink,
 }: SendWelcomeEmailInput) {
   const from = buildSenderIdentity(DEFAULT_WELCOME_FROM_NAME);

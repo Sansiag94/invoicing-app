@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APP_NAME } from "@/lib/appBrand";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -29,7 +30,7 @@ function getBrandInitials(name: string): string {
 
 export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
   const pathname = usePathname();
-  const brandName = businessBrand?.name || "Sierra Invoices";
+  const brandName = businessBrand?.name || APP_NAME;
 
   return (
     <div className="h-full overflow-y-auto bg-white">

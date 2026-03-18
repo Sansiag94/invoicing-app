@@ -6,14 +6,14 @@ import AppFrame from "@/components/AppFrame";
 import PwaProvider from "@/components/PwaProvider";
 import { ToastProvider } from "@/components/ui/toast";
 import { ThemeProvider } from "@/components/ui/theme";
-import { APP_BRAND_ICON_VERSION } from "@/lib/appBrand";
+import { APP_BRAND_ICON_VERSION, APP_NAME } from "@/lib/appBrand";
 
 validateRequiredEnv();
 
 export const metadata: Metadata = {
-  title: "Sierra Invoices",
+  title: APP_NAME,
   description: "Invoicing solutions for freelancers",
-  applicationName: "Sierra Invoices",
+  applicationName: APP_NAME,
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Sierra Invoices",
+    title: APP_NAME,
   },
 };
 

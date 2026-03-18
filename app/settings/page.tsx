@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { useTheme } from "@/components/ui/theme";
+import { APP_NAME } from "@/lib/appBrand";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -230,7 +231,7 @@ export default function SettingsPage() {
     if (outcome === "accepted") {
       toast({
         title: "App installed",
-        description: "Sierra Invoices is now available from your device home screen.",
+        description: `${APP_NAME} is now available from your device home screen.`,
         variant: "success",
       });
       return;
@@ -879,7 +880,7 @@ export default function SettingsPage() {
                         : "Open in a supported browser to install"}
                 </p>
                 <p className="text-sm text-slate-500">
-                  Installing gives Sierra Invoices its own home-screen icon and a cleaner app-like window. Core pages and the offline screen are cached for weak connections.
+                  Installing gives {APP_NAME} its own home-screen icon and a cleaner app-like window. Core pages and the offline screen are cached for weak connections.
                 </p>
                 {!isInstalled ? (
                   <p className="text-xs text-slate-500">{installHelpText}</p>

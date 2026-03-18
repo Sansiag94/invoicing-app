@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, CircleDollarSign, ReceiptSwissFranc, ShieldCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { APP_NAME } from "@/lib/appBrand";
 
 type AuthSplitShellProps = {
   eyebrow: string;
@@ -49,7 +50,7 @@ export default function AuthSplitShell({
           <div className="relative space-y-6 md:space-y-8">
             <div className="space-y-4">
               <p className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/85">
-                Sierra Invoices
+                {APP_NAME}
               </p>
               <div className="space-y-3">
                 <h1 className="max-w-xl text-3xl font-semibold leading-[1.02] tracking-tight md:text-5xl">

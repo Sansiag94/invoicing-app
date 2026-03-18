@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { APP_NAME } from "@/lib/appBrand";
 
 type AppFrameProps = {
   children: ReactNode;
@@ -60,7 +61,7 @@ export default function AppFrame({ children }: AppFrameProps) {
         }
 
         setBusinessBrand({
-          name: business.name?.trim() || "Sierra Invoices",
+          name: business.name?.trim() || APP_NAME,
           logoUrl: business.logoUrl ?? null,
         });
       } catch (error) {

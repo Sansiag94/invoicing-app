@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 
+export const APP_NAME = "S-Invoices";
+export const APP_SHORT_NAME = "S-Invoices";
 export const APP_BRAND_ICON_VERSION = "20260318-black-bg";
 
 function normalizeLogoUrl(value: string | null | undefined): string | null {

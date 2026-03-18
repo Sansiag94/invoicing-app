@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { APP_NAME } from "@/lib/appBrand";
 
 const benefitCards = [
   {
@@ -45,7 +46,7 @@ export default function LandingPage() {
             <div className="relative space-y-7">
               <div className="space-y-4">
                 <p className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600">
-                  Sierra Invoices
+                  {APP_NAME}
                 </p>
                 <div className="space-y-4">
                   <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl md:leading-[0.96]">

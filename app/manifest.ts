@@ -1,10 +1,10 @@
 import type { MetadataRoute } from "next";
-import { APP_BRAND_ICON_VERSION } from "@/lib/appBrand";
+import { APP_BRAND_ICON_VERSION, APP_NAME, APP_SHORT_NAME } from "@/lib/appBrand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Sierra Invoices",
-    short_name: "Sierra",
+    name: APP_NAME,
+    short_name: APP_SHORT_NAME,
     description: "Professional invoicing for Swiss businesses and freelancers.",
     id: "/",
     start_url: "/dashboard",
