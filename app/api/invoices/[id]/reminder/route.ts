@@ -12,6 +12,12 @@ import {
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
 import { calculateInvoiceTotals } from "@/lib/invoice";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
+import {
+  assertRateLimit,
+  buildRateLimitIdentifier,
+  createRateLimitErrorResponse,
+  isRateLimitError,
+} from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -22,6 +28,13 @@ export async function POST(
   try {
     const { id } = await context.params;
     const user = await getAuthenticatedUser(request);
+    await assertRateLimit({
+      request,
+      route: "invoice-reminder-manual",
+      limit: 8,
+      windowMs: 10 * 60 * 1000,
+      identifier: buildRateLimitIdentifier(request, user.id, id, "reminder"),
+    });
 
     const business = await prisma.business.findFirst({
       where: { userId: user.id },
@@ -100,6 +113,10 @@ export async function POST(
 
     return NextResponse.json({ message: "Reminder sent" });
   } catch (error) {
+    if (isRateLimitError(error)) {
+      return createRateLimitErrorResponse(error);
+    }
+
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
     }

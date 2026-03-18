@@ -10,6 +10,12 @@ import {
   isStripeCardPaymentAvailable,
   loadResolvedBusinessStripeStatus,
 } from "@/lib/stripeConnect";
+import {
+  assertRateLimit,
+  buildRateLimitIdentifier,
+  createRateLimitErrorResponse,
+  isRateLimitError,
+} from "@/lib/rateLimit";
 
 export async function GET(
   request: Request,
@@ -21,6 +27,14 @@ export async function GET(
     if (!token?.trim()) {
       return apiError("Token is required", 400);
     }
+
+    await assertRateLimit({
+      request,
+      route: "public-invoice-view",
+      limit: 120,
+      windowMs: 10 * 60 * 1000,
+      identifier: buildRateLimitIdentifier(request, token, "view"),
+    });
 
     const invoice = await prisma.invoice.findFirst({
       where: { publicToken: token },
@@ -171,6 +185,10 @@ export async function GET(
       qrBill,
     });
   } catch (error) {
+    if (isRateLimitError(error)) {
+      return createRateLimitErrorResponse(error);
+    }
+
     console.error("Error loading public invoice:", error);
     return apiError("Server error", 500);
   }

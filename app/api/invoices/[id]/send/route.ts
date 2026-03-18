@@ -16,6 +16,12 @@ import { calculateInvoiceTotals } from "@/lib/invoice";
 import InvoiceDocument from "@/lib/InvoiceDocument";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
+import {
+  assertRateLimit,
+  buildRateLimitIdentifier,
+  createRateLimitErrorResponse,
+  isRateLimitError,
+} from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -189,6 +195,13 @@ export async function POST(
   try {
     const { id } = await context.params;
     const user = await getAuthenticatedUser(request);
+    await assertRateLimit({
+      request,
+      route: "invoice-send",
+      limit: 6,
+      windowMs: 10 * 60 * 1000,
+      identifier: buildRateLimitIdentifier(request, user.id, id, "send"),
+    });
     const business = await prisma.business.findFirst({
       where: { userId: user.id },
       select: { id: true },
@@ -200,6 +213,10 @@ export async function POST(
 
     return await sendInvoice(id, business.id, request);
   } catch (error) {
+    if (isRateLimitError(error)) {
+      return createRateLimitErrorResponse(error);
+    }
+
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
     }

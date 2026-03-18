@@ -147,6 +147,20 @@ model InvoiceEvent {
   @@index([invoiceId, createdAt])
 }
 
+model RateLimitBucket {
+  id         String   @id @default(uuid()) @map("uuid")
+  route      String
+  identifier String
+  windowStart DateTime
+  count      Int      @default(1)
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([route, identifier, windowStart])
+  @@index([expiresAt])
+}
+
 model Expense {
   id          String          @id @default(uuid()) @map("uuid")
   businessId  String

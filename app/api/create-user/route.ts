@@ -5,10 +5,23 @@ import { ensureBusiness } from "@/lib/ensureBusiness";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { getPublicInvoiceBaseUrl } from "@/lib/publicInvoiceLink";
 import { sendWelcomeEmail } from "@/lib/email";
+import {
+  assertRateLimit,
+  buildRateLimitIdentifier,
+  createRateLimitErrorResponse,
+  isRateLimitError,
+} from "@/lib/rateLimit";
 
 export async function POST(request: Request) {
   try {
     const authUser = await getAuthenticatedUser(request);
+    await assertRateLimit({
+      request,
+      route: "create-user",
+      limit: 10,
+      windowMs: 10 * 60 * 1000,
+      identifier: buildRateLimitIdentifier(request, authUser.id, authUser.email ?? null),
+    });
     const email = authUser.email?.trim() ?? null;
 
     if (!email) {
@@ -51,6 +64,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json(user);
   } catch (error) {
+    if (isRateLimitError(error)) {
+      return createRateLimitErrorResponse(error);
+    }
+
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
     }

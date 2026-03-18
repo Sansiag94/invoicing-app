@@ -8,6 +8,12 @@ import {
   isStripeCardPaymentAvailable,
   loadResolvedBusinessStripeStatus,
 } from "@/lib/stripeConnect";
+import {
+  assertRateLimit,
+  buildRateLimitIdentifier,
+  createRateLimitErrorResponse,
+  isRateLimitError,
+} from "@/lib/rateLimit";
 
 type ConfirmCheckoutBody = {
   sessionId?: unknown;
@@ -31,6 +37,14 @@ export async function POST(
     if (!sessionId) {
       return apiError("Session ID is required", 400);
     }
+
+    await assertRateLimit({
+      request,
+      route: "public-invoice-checkout-confirm",
+      limit: 20,
+      windowMs: 10 * 60 * 1000,
+      identifier: buildRateLimitIdentifier(request, token, sessionId, "confirm"),
+    });
 
     const invoice = await prisma.invoice.findFirst({
       where: { publicToken: token },
@@ -79,6 +93,10 @@ export async function POST(
       status: refreshedInvoice?.status ?? invoice.status,
     });
   } catch (error) {
+    if (isRateLimitError(error)) {
+      return createRateLimitErrorResponse(error);
+    }
+
     console.error("Error confirming Stripe checkout session:", error);
     return apiError("Could not confirm payment", 500);
   }

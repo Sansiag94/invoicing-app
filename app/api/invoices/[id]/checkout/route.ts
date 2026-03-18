@@ -19,6 +19,12 @@ import {
   isPendingStripeCheckoutSessionId,
   toStripeCheckoutSessionExpiry,
 } from "@/lib/stripeCheckout";
+import {
+  assertRateLimit,
+  buildRateLimitIdentifier,
+  createRateLimitErrorResponse,
+  isRateLimitError,
+} from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 
@@ -76,6 +82,14 @@ export async function POST(
     if (!token) {
       return apiError("Token is required", 400);
     }
+
+    await assertRateLimit({
+      request,
+      route: "public-invoice-checkout",
+      limit: 12,
+      windowMs: 10 * 60 * 1000,
+      identifier: buildRateLimitIdentifier(request, id, token, "checkout"),
+    });
 
     const invoice = await prisma.invoice.findFirst({
       where: {
@@ -312,6 +326,10 @@ export async function POST(
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
+    if (isRateLimitError(error)) {
+      return createRateLimitErrorResponse(error);
+    }
+
     console.error("Error creating checkout session:", error);
     return apiError("Server error", 500);
   }
