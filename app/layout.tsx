@@ -6,6 +6,7 @@ import AppFrame from "@/components/AppFrame";
 import PwaProvider from "@/components/PwaProvider";
 import { ToastProvider } from "@/components/ui/toast";
 import { ThemeProvider } from "@/components/ui/theme";
+import { APP_BRAND_ICON_VERSION } from "@/lib/appBrand";
 
 validateRequiredEnv();
 
@@ -16,11 +17,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: {
     icon: [
-      { url: "/brand-icon?size=32", sizes: "32x32", type: "image/png" },
-      { url: "/brand-icon?size=192", sizes: "192x192", type: "image/png" },
+      { url: `/brand-icon?size=32&v=${APP_BRAND_ICON_VERSION}`, sizes: "32x32", type: "image/png" },
+      { url: `/brand-icon?size=192&v=${APP_BRAND_ICON_VERSION}`, sizes: "192x192", type: "image/png" },
     ],
-    shortcut: "/brand-icon?size=192",
-    apple: { url: "/brand-icon?size=180", sizes: "180x180", type: "image/png" },
+    shortcut: `/brand-icon?size=192&v=${APP_BRAND_ICON_VERSION}`,
+    apple: { url: `/brand-icon?size=180&v=${APP_BRAND_ICON_VERSION}`, sizes: "180x180", type: "image/png" },
   },
   appleWebApp: {
     capable: true,

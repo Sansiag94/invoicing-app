@@ -1,5 +1,7 @@
 import prisma from "@/lib/prisma";
 
+export const APP_BRAND_ICON_VERSION = "20260318-black-bg";
+
 function normalizeLogoUrl(value: string | null | undefined): string | null {
   const normalized = value?.trim() || "";
   return normalized.length > 0 ? normalized : null;

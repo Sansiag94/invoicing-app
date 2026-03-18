@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { APP_BRAND_ICON_VERSION } from "@/lib/appBrand";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -17,19 +18,19 @@ export default function manifest(): MetadataRoute.Manifest {
     categories: ["business", "finance", "productivity"],
     icons: [
       {
-        src: "/brand-icon?size=192",
+        src: `/brand-icon?size=192&v=${APP_BRAND_ICON_VERSION}`,
         sizes: "192x192",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/brand-icon?size=512",
+        src: `/brand-icon?size=512&v=${APP_BRAND_ICON_VERSION}`,
         sizes: "512x512",
         type: "image/png",
         purpose: "any",
       },
       {
-        src: "/brand-icon?size=512",
+        src: `/brand-icon?size=512&v=${APP_BRAND_ICON_VERSION}`,
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
