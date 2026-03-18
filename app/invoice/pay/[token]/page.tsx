@@ -465,6 +465,10 @@ export default function PublicInvoicePage() {
           page-break-inside: avoid;
         }
 
+        .invoice-line-mobile-meta {
+          display: none;
+        }
+
         @media (max-width: 767px) {
           .invoice-document {
             padding: 20px 18px;
@@ -496,12 +500,32 @@ export default function PublicInvoicePage() {
           .qr-bill__payment-details {
             margin-top: 0 !important;
           }
+
+          .invoice-table__col-qty,
+          .invoice-table__col-unit,
+          .invoice-table__col-amount {
+            display: none;
+          }
+
+          .invoice-line-mobile-meta {
+            display: grid;
+            gap: 2px;
+            margin-top: 6px;
+            color: #475569;
+            font-size: 10px;
+            line-height: 1.35;
+          }
         }
       `}</style>
       <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Invoice {invoice.invoiceNumber}</h1>
-          <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+          <Badge
+            variant={statusVariant(invoice.status)}
+            className="self-start px-2 py-px text-[11px] tracking-[0.08em] uppercase"
+          >
+            {invoice.status}
+          </Badge>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
           <Button
@@ -590,18 +614,18 @@ export default function PublicInvoicePage() {
         </section>
 
         <section className="overflow-x-auto">
-          <table className="invoice-table min-w-[34rem]">
+          <table className="invoice-table w-full md:min-w-[34rem]">
             <thead>
               <tr>
                 <th style={{ width: "8%" }}>Pos</th>
                 <th style={{ width: "46%" }}>Description</th>
-                <th style={{ width: "12%" }}>
+                <th className="invoice-table__col-qty" style={{ width: "12%" }}>
                   Qty
                 </th>
-                <th className="num" style={{ width: "16%" }}>
+                <th className="num invoice-table__col-unit" style={{ width: "16%" }}>
                   Unit price
                 </th>
-                <th className="num" style={{ width: "18%" }}>
+                <th className="num invoice-table__col-amount" style={{ width: "18%" }}>
                   Amount
                 </th>
               </tr>
@@ -610,10 +634,17 @@ export default function PublicInvoicePage() {
               {lineItems.map((item, index) => (
                 <tr key={`line-item-${index}`}>
                   <td>{index + 1}</td>
-                  <td>{item.description}</td>
-                  <td>{formatQuantity(item.quantity)}</td>
-                  <td className="num">{formatMoney(item.unitPrice)}</td>
-                  <td className="num">{formatMoney(item.lineTotal)}</td>
+                  <td>
+                    <div>{item.description}</div>
+                    <div className="invoice-line-mobile-meta">
+                      <span>Qty: {formatQuantity(item.quantity)}</span>
+                      <span>Unit price: {formatMoney(item.unitPrice)}</span>
+                      <span>Amount: {formatMoney(item.lineTotal)}</span>
+                    </div>
+                  </td>
+                  <td className="invoice-table__col-qty">{formatQuantity(item.quantity)}</td>
+                  <td className="num invoice-table__col-unit">{formatMoney(item.unitPrice)}</td>
+                  <td className="num invoice-table__col-amount">{formatMoney(item.lineTotal)}</td>
                 </tr>
               ))}
             </tbody>
