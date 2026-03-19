@@ -32,6 +32,7 @@ export type LegalProfile = {
   appName: string;
   serviceName: string;
   legalEntityName: string;
+  tradingName: string | null;
   contactEmail: string;
   supportEmail: string;
   postalAddress: string;
@@ -46,6 +47,7 @@ export type LegalProfile = {
 export function getLegalProfile(): LegalProfile {
   const websiteUrl = getPublicInvoiceBaseUrl();
   const legalEntityNameFromEnv = readOptionalEnv("LEGAL_ENTITY_NAME");
+  const tradingNameFromEnv = readOptionalEnv("LEGAL_TRADING_NAME");
   const contactEmailFromEnv =
     readOptionalEnv("LEGAL_CONTACT_EMAIL") ??
     extractEmailAddress(process.env.RESEND_REPLY_TO_EMAIL) ??
@@ -72,6 +74,7 @@ export function getLegalProfile(): LegalProfile {
     appName: APP_NAME,
     serviceName: readOptionalEnv("LEGAL_SERVICE_NAME") ?? APP_NAME,
     legalEntityName: legalEntityNameFromEnv ?? APP_NAME,
+    tradingName: tradingNameFromEnv,
     contactEmail: contactEmailFromEnv ?? PLACEHOLDER_CONTACT_EMAIL,
     supportEmail: readOptionalEnv("LEGAL_SUPPORT_EMAIL") ?? contactEmailFromEnv ?? PLACEHOLDER_CONTACT_EMAIL,
     postalAddress: postalAddressFromEnv ?? PLACEHOLDER_POSTAL_ADDRESS,

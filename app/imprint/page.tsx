@@ -36,7 +36,9 @@ export default function ImprintPage() {
       highlights={[
         {
           title: "Operator",
-          description: `${legalProfile.legalEntityName} operates ${legalProfile.serviceName}.`,
+          description: legalProfile.tradingName
+            ? `${legalProfile.legalEntityName} operates ${legalProfile.serviceName} under the trading name ${legalProfile.tradingName}.`
+            : `${legalProfile.legalEntityName} operates ${legalProfile.serviceName}.`,
         },
         {
           title: "Main contact",
@@ -58,6 +60,11 @@ export default function ImprintPage() {
         <p>
           <strong>Operator:</strong> {legalProfile.legalEntityName}
         </p>
+        {legalProfile.tradingName ? (
+          <p>
+            <strong>Trading name:</strong> {legalProfile.tradingName}
+          </p>
+        ) : null}
         <p>
           <strong>Service:</strong> {legalProfile.serviceName}
         </p>
