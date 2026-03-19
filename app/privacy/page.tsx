@@ -32,7 +32,29 @@ export default function PrivacyPage() {
   return (
     <LegalDocument
       title="Privacy Policy"
-      summary={`This Privacy Policy explains how ${legalProfile.legalEntityName} handles personal data when you use ${legalProfile.serviceName}, receive invoice emails, visit public invoice pages, or pay invoices online.`}
+      summary={`This Privacy Policy explains how ${legalProfile.legalEntityName} handles personal data when you use ${legalProfile.serviceName}, receive invoice emails, visit public invoice pages, or pay invoices online. It is written to make the practical parts clear first, then the legal detail underneath.`}
+      highlights={[
+        {
+          title: "We use your data to run the service",
+          description:
+            "Account, invoice, client, payment, and expense data are processed so the app can authenticate users, generate invoices, send reminders, and support payments.",
+        },
+        {
+          title: "Your business still controls its own client relationships",
+          description:
+            "When customers store client and invoice-recipient data here, they usually remain the primary controller for that customer data while we act as their service provider.",
+        },
+        {
+          title: "Public invoice links are intentionally shareable",
+          description:
+            "Anyone with a valid invoice link may be able to view the invoice details needed to review or pay it, so links should be shared carefully.",
+        },
+        {
+          title: "Some records cannot be deleted immediately",
+          description:
+            "Invoice, payment, expense, and bookkeeping records may need to be retained for legal, tax, or audit reasons even after access ends.",
+        },
+      ]}
     >
       <Section title="1. Who We Are">
         <p>
@@ -131,6 +153,11 @@ export default function PrivacyPage() {
             required for legal compliance, fraud prevention, enforcement, or dispute handling.
           </li>
         </ul>
+        <p>
+          We do not describe selling your personal data in this service model. If the way the
+          platform uses data changes materially, this policy will be updated before that new use is
+          relied on.
+        </p>
       </Section>
 
       <Section title="6. Public Invoice Links and Online Payment">

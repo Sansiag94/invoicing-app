@@ -32,7 +32,29 @@ export default function TermsPage() {
   return (
     <LegalDocument
       title="Terms of Service"
-      summary={`These Terms of Service govern access to and use of ${legalProfile.serviceName}. By creating an account, using the service, or sending invoices through it, you agree to these terms.`}
+      summary={`These Terms of Service govern access to and use of ${legalProfile.serviceName}. They are written to explain the practical deal first: what the app does, what stays your responsibility, and where legal limits apply.`}
+      highlights={[
+        {
+          title: "Use of the app means accepting the legal terms",
+          description:
+            "New account creation now requires acceptance of both the Terms of Service and the Privacy Policy before the account flow can complete.",
+        },
+        {
+          title: "Your invoice and expense data stays your responsibility",
+          description:
+            "You keep responsibility for lawful invoicing, tax treatment, retention duties, and making sure you have rights to the data you upload.",
+        },
+        {
+          title: "Third-party services still apply",
+          description:
+            "Stripe, Stripe Connect, hosting, auth, storage, and email providers may apply their own rules, fees, onboarding, and compliance requirements.",
+        },
+        {
+          title: "Closure is not the same as instant deletion",
+          description:
+            "Because business records may need to be retained, workspace closure may involve retention or archival steps instead of immediate erasure.",
+        },
+      ]}
     >
       <Section title="1. Service Provider">
         <p>
@@ -123,6 +145,11 @@ export default function TermsPage() {
           We may modify, improve, suspend, or discontinue features from time to time. We aim to
           operate the service responsibly, but we do not guarantee uninterrupted or error-free
           availability.
+        </p>
+        <p>
+          We may also update these terms as the product, payment model, or legal requirements
+          change. Material updates should be reflected by a revised last-updated date and updated
+          published terms page.
         </p>
       </Section>
 

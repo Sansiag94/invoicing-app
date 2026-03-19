@@ -6,12 +6,17 @@ import { getLegalProfile, LEGAL_LAST_UPDATED_LABEL } from "@/lib/legal";
 type LegalDocumentProps = {
   title: string;
   summary: string;
+  highlights?: Array<{
+    title: string;
+    description: string;
+  }>;
   children: ReactNode;
 };
 
 export default function LegalDocument({
   title,
   summary,
+  highlights,
   children,
 }: LegalDocumentProps) {
   const legalProfile = getLegalProfile();
@@ -48,6 +53,20 @@ export default function LegalDocument({
               <li key={item}>{item}</li>
             ))}
           </ul>
+        </section>
+      ) : null}
+
+      {highlights && highlights.length > 0 ? (
+        <section className="grid gap-4 md:grid-cols-2">
+          {highlights.map((item) => (
+            <div
+              key={item.title}
+              className="rounded-3xl border border-slate-200 bg-white px-6 py-5 shadow-sm"
+            >
+              <h2 className="text-base font-semibold text-slate-950">{item.title}</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
+            </div>
+          ))}
         </section>
       ) : null}
 

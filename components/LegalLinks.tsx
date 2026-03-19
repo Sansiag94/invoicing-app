@@ -15,6 +15,16 @@ export default function LegalLinks({
   return (
     <div className={cn("flex flex-wrap items-center gap-3 text-sm", className)}>
       <Link
+        href="/imprint"
+        className={cn(
+          "font-medium text-slate-600 underline underline-offset-4 transition-colors hover:text-slate-900",
+          linkClassName
+        )}
+      >
+        Imprint
+      </Link>
+      <span className={cn("text-slate-300", separatorClassName)}>|</span>
+      <Link
         href="/privacy"
         className={cn(
           "font-medium text-slate-600 underline underline-offset-4 transition-colors hover:text-slate-900",
