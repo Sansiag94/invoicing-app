@@ -164,18 +164,22 @@ export default function SignupPage() {
                 autoComplete="new-password"
               />
             </div>
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
+            <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
               <input
+                id="acceptedLegalTerms"
                 type="checkbox"
                 className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-900"
                 checked={acceptedLegalTerms}
                 onChange={(event) => setAcceptedLegalTerms(event.target.checked)}
               />
-              <span>
-                <span className="block font-medium text-slate-900 dark:text-slate-100">
+              <div>
+                <Label
+                  htmlFor="acceptedLegalTerms"
+                  className="block cursor-pointer font-medium text-slate-900 dark:text-slate-100"
+                >
                   I agree to the Terms and Privacy Policy
-                </span>
-                <span className="block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                </Label>
+                <p className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
                   I agree to the{" "}
                   <Link href="/terms" className="font-medium underline underline-offset-4">
                     Terms of Service
@@ -185,9 +189,9 @@ export default function SignupPage() {
                     Privacy Policy
                   </Link>
                   .
-                </span>
-              </span>
-            </label>
+                </p>
+              </div>
+            </div>
             <Button
               className="w-full"
               type="submit"

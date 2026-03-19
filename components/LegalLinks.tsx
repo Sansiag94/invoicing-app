@@ -23,7 +23,7 @@ export default function LegalLinks({
       >
         Privacy Policy
       </Link>
-      <span className={cn("text-slate-300", separatorClassName)}>•</span>
+      <span className={cn("text-slate-300", separatorClassName)}>|</span>
       <Link
         href="/terms"
         className={cn(
