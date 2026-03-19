@@ -132,6 +132,17 @@ export default function LoginPage() {
             <Button className="w-full" type="submit" disabled={isLoading || !email.trim() || !password.trim()}>
               {isLoading ? "Logging in..." : "Log in"}
             </Button>
+            <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+              Policy links:{" "}
+              <Link href="/terms" className="font-medium underline underline-offset-4">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link href="/privacy" className="font-medium underline underline-offset-4">
+                Privacy Policy
+              </Link>
+              .
+            </p>
           </div>
         </div>
       </form>

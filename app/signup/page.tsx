@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setRememberSession, supabase } from "@/utils/supabase";
@@ -9,11 +10,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/toast";
 import { APP_NAME } from "@/lib/appBrand";
+import { LEGAL_LAST_UPDATED_ISO } from "@/lib/legal";
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [acceptedLegalTerms, setAcceptedLegalTerms] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
@@ -28,12 +31,29 @@ export default function SignupPage() {
       return;
     }
 
+    if (!acceptedLegalTerms) {
+      toast({
+        title: "Acceptance required",
+        description: "Please accept the Terms of Service and Privacy Policy to create an account.",
+        variant: "error",
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       setRememberSession(true);
+      const acceptedAt = new Date().toISOString();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            accepted_legal_version: LEGAL_LAST_UPDATED_ISO,
+            accepted_terms_at: acceptedAt,
+            accepted_privacy_at: acceptedAt,
+          },
+        },
       });
 
       if (error) {
@@ -144,10 +164,40 @@ export default function SignupPage() {
                 autoComplete="new-password"
               />
             </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-900"
+                checked={acceptedLegalTerms}
+                onChange={(event) => setAcceptedLegalTerms(event.target.checked)}
+              />
+              <span>
+                <span className="block font-medium text-slate-900 dark:text-slate-100">
+                  I agree to the Terms and Privacy Policy
+                </span>
+                <span className="block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  I agree to the{" "}
+                  <Link href="/terms" className="font-medium underline underline-offset-4">
+                    Terms of Service
+                  </Link>{" "}
+                  and acknowledge the{" "}
+                  <Link href="/privacy" className="font-medium underline underline-offset-4">
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </span>
+            </label>
             <Button
               className="w-full"
               type="submit"
-              disabled={isLoading || !email.trim() || !password.trim() || !repeatPassword.trim()}
+              disabled={
+                isLoading ||
+                !email.trim() ||
+                !password.trim() ||
+                !repeatPassword.trim() ||
+                !acceptedLegalTerms
+              }
             >
               {isLoading ? "Creating account..." : "Create account"}
             </Button>

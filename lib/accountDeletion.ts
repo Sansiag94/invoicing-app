@@ -1,6 +1,3 @@
-import prisma from "@/lib/prisma";
-import { getSupabaseAdminClient } from "@/lib/supabase-admin";
-
 export class AccountDeletionError extends Error {
   readonly status: number;
 
@@ -12,19 +9,12 @@ export class AccountDeletionError extends Error {
 }
 
 export async function deleteUserAccount(userId: string): Promise<void> {
-  const supabaseAdmin = getSupabaseAdminClient();
-  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  void userId;
 
-  if (error) {
-    throw new AccountDeletionError(
-      "Could not delete the authentication account. Please try again.",
-      502
-    );
-  }
-
-  await prisma.user.deleteMany({
-    where: { id: userId },
-  });
+  throw new AccountDeletionError(
+    "Self-service account deletion is unavailable because invoice and accounting records may need to be retained. Export your records and close the workspace through an administrator-supported process instead.",
+    409
+  );
 }
 
 export function isAccountDeletionError(error: unknown): error is AccountDeletionError {

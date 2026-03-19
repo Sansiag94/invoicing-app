@@ -8,11 +8,9 @@ import { usePwa } from "@/components/PwaProvider";
 import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
-import { clearPwaAppCache } from "@/lib/pwaCache";
 import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
-import { supabase } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -55,8 +53,6 @@ export default function SettingsPage() {
   const [isRefreshingStripe, setIsRefreshingStripe] = useState(false);
   const [isDisconnectingStripe, setIsDisconnectingStripe] = useState(false);
   const [showDisconnectStripeDialog, setShowDisconnectStripeDialog] = useState(false);
-  const [deleteConfirmation, setDeleteConfirmation] = useState("");
-  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const { toast } = useToast();
 
   const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
@@ -251,47 +247,6 @@ export default function SettingsPage() {
       description: installHelpText,
       variant: "info",
     });
-  }
-
-  async function handleDeleteAccount() {
-    if (deleteConfirmation.trim() !== "DELETE") {
-      toast({
-        title: "Confirmation required",
-        description: 'Type "DELETE" exactly to confirm account removal.',
-        variant: "error",
-      });
-      return;
-    }
-
-    setIsDeletingAccount(true);
-
-    try {
-      const response = await authenticatedFetch("/api/account", {
-        method: "DELETE",
-      });
-      const result = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        throw new Error(result.error ?? "Could not delete account");
-      }
-
-      await supabase.auth.signOut();
-      await clearPwaAppCache();
-      toast({
-        title: "Account deleted",
-        description: "Your workspace and account have been removed.",
-        variant: "success",
-      });
-      router.push("/signup");
-    } catch (error) {
-      toast({
-        title: "Unable to delete account",
-        description: error instanceof Error ? error.message : "Could not delete account",
-        variant: "error",
-      });
-    } finally {
-      setIsDeletingAccount(false);
-    }
   }
 
   async function refreshStripeStatus(options?: { showSuccessToast?: boolean }) {
@@ -955,34 +910,20 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      <Card className="border-red-200">
+      <Card className="border-amber-200">
         <CardHeader>
-          <CardTitle>Danger Zone</CardTitle>
+          <CardTitle>Workspace Closure</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-slate-600">
-            Deleting your account permanently removes your business, clients, invoices, expenses, and login access.
+            Self-serve deletion is disabled because invoice, payment, expense, and accounting
+            records may need to be retained for tax, bookkeeping, and audit reasons.
           </p>
-          <div className="space-y-2">
-            <Label htmlFor="deleteConfirmation">Type DELETE to confirm</Label>
-            <Input
-              id="deleteConfirmation"
-              value={deleteConfirmation}
-              onChange={(event) => setDeleteConfirmation(event.target.value)}
-              placeholder="DELETE"
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAccount}
-              disabled={isDeletingAccount || deleteConfirmation.trim() !== "DELETE"}
-              className="w-full sm:w-auto"
-            >
-              {isDeletingAccount ? "Deleting..." : "Delete Account"}
-            </Button>
-            <p className="text-sm text-slate-500">This action cannot be undone.</p>
-          </div>
+          <p className="text-sm text-slate-500">
+            Before closing a workspace, make sure your records are exported or archived and review
+            the retention rules that apply to your business. Handle final closure as an
+            administrator-supported process rather than immediate deletion.
+          </p>
         </CardContent>
       </Card>
 

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
+import LegalFooter from "@/components/LegalFooter";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch, AUTH_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
@@ -173,10 +174,11 @@ export default function AppFrame({ children }: AppFrameProps) {
 
   if (hideShell) {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
+        <LegalFooter />
       </div>
     );
   }
@@ -219,6 +221,7 @@ export default function AppFrame({ children }: AppFrameProps) {
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
+        <LegalFooter />
       </div>
     </div>
   );

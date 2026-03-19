@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { getResendApiKey } from "@/lib/env";
 import { APP_NAME } from "@/lib/appBrand";
+import { getLegalProfile } from "@/lib/legal";
 import {
   buildPublicInvoiceLink as buildPublicInvoiceLinkValue,
   getPublicInvoiceBaseUrl,
@@ -131,6 +132,14 @@ function buildSenderIdentity(displayName: string): string {
   return `${normalizedDisplayName} <${getConfiguredFromEmailAddress()}>`;
 }
 
+function getLegalEmailLinks() {
+  const profile = getLegalProfile();
+  return {
+    privacyUrl: profile.privacyUrl,
+    termsUrl: profile.termsUrl,
+  };
+}
+
 export async function sendInvoiceEmail({
   to,
   businessName,
@@ -159,6 +168,8 @@ export async function sendInvoiceEmail({
   const safeFormattedTotal = escapeHtml(formattedTotal);
   const safeDueDateLabel = dueDateLabel ? escapeHtml(dueDateLabel) : null;
   const safePayLink = escapeHtml(effectivePayLink);
+  const { privacyUrl } = getLegalEmailLinks();
+  const safePrivacyUrl = escapeHtml(privacyUrl);
 
   const result = await getResendClient().emails.send({
     from,
@@ -175,6 +186,9 @@ ${dueDateLabel ? `Due date: ${dueDateLabel}\n` : ""}A PDF copy is attached for y
 
 View or pay online:
 ${effectivePayLink}
+
+Privacy notice:
+${privacyUrl}
 `,
     html: `
       <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
@@ -209,6 +223,9 @@ ${effectivePayLink}
           <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
             If the button does not work, copy and paste this link into your browser:<br />
             <span>${safePayLink}</span>
+          </p>
+          <p style="margin: 14px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.6;">
+            Privacy notice: <a href="${safePrivacyUrl}" style="color: #475569;">${safePrivacyUrl}</a>
           </p>
         </div>
       </div>
@@ -282,6 +299,8 @@ export async function sendInvoiceReminderEmail({
   const safeFormattedTotal = escapeHtml(formattedTotal);
   const safeTimingLine = escapeHtml(timingLine);
   const safeInvoiceLink = escapeHtml(invoiceLink);
+  const { privacyUrl } = getLegalEmailLinks();
+  const safePrivacyUrl = escapeHtml(privacyUrl);
 
   const result = await getResendClient().emails.send({
     from,
@@ -295,7 +314,10 @@ Amount: ${formattedTotal}
 ${timingLine}
 
 View invoice:
-${invoiceLink}`,
+${invoiceLink}
+
+Privacy notice:
+${privacyUrl}`,
     html: `
       <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
         <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 16px; padding: 28px;">
@@ -317,6 +339,9 @@ ${invoiceLink}`,
           <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
             If the button does not work, copy and paste this link into your browser:<br />
             <span>${safeInvoiceLink}</span>
+          </p>
+          <p style="margin: 14px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.6;">
+            Privacy notice: <a href="${safePrivacyUrl}" style="color: #475569;">${safePrivacyUrl}</a>
           </p>
         </div>
       </div>
@@ -373,6 +398,8 @@ export async function sendManualInvoiceReminderEmail({
   const safeFormattedTotal = escapeHtml(formattedTotal);
   const safeDueDateLabel = escapeHtml(dueDateLabel);
   const safeInvoiceLink = escapeHtml(invoiceLink);
+  const { privacyUrl } = getLegalEmailLinks();
+  const safePrivacyUrl = escapeHtml(privacyUrl);
 
   const result = await getResendClient().emails.send({
     from,
@@ -386,7 +413,10 @@ Amount: ${formattedTotal}
 Due date: ${dueDateLabel}
 
 View or pay online:
-${invoiceLink}`,
+${invoiceLink}
+
+Privacy notice:
+${privacyUrl}`,
     html: `
       <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
         <div style="max-width: 620px; margin: 0 auto; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 16px; padding: 28px;">
@@ -408,6 +438,9 @@ ${invoiceLink}`,
           <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
             If the button does not work, copy and paste this link into your browser:<br />
             <span>${safeInvoiceLink}</span>
+          </p>
+          <p style="margin: 14px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.6;">
+            Privacy notice: <a href="${safePrivacyUrl}" style="color: #475569;">${safePrivacyUrl}</a>
           </p>
         </div>
       </div>
@@ -431,6 +464,9 @@ export async function sendWelcomeEmail({
   const appLink = dashboardLink?.trim() || getPublicInvoiceBaseUrl();
   const safeAppName = escapeHtml(appName);
   const safeAppLink = escapeHtml(appLink);
+  const { privacyUrl, termsUrl } = getLegalEmailLinks();
+  const safePrivacyUrl = escapeHtml(privacyUrl);
+  const safeTermsUrl = escapeHtml(termsUrl);
 
   const result = await getResendClient().emails.send({
     from,
@@ -443,6 +479,12 @@ Your account has been created successfully.
 
 Open your workspace:
 ${appLink}
+
+Privacy Policy:
+${privacyUrl}
+
+Terms of Service:
+${termsUrl}
 `,
     html: `
       <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
@@ -460,6 +502,10 @@ ${appLink}
           <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
             If the button does not work, copy and paste this link into your browser:<br />
             <span>${safeAppLink}</span>
+          </p>
+          <p style="margin: 14px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.6;">
+            Privacy Policy: <a href="${safePrivacyUrl}" style="color: #475569;">${safePrivacyUrl}</a><br />
+            Terms of Service: <a href="${safeTermsUrl}" style="color: #475569;">${safeTermsUrl}</a>
           </p>
         </div>
       </div>

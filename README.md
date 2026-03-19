@@ -62,6 +62,13 @@ The app runs at `http://localhost:3000`.
 - `RESEND_REPLY_TO_EMAIL`
 - `SUPABASE_LOGOS_BUCKET` or `NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET`
 - `SUPABASE_EXPENSES_BUCKET` or `NEXT_PUBLIC_SUPABASE_EXPENSES_BUCKET`
+- `LEGAL_ENTITY_NAME`
+- `LEGAL_SERVICE_NAME`
+- `LEGAL_CONTACT_EMAIL`
+- `LEGAL_SUPPORT_EMAIL`
+- `LEGAL_POSTAL_ADDRESS`
+- `LEGAL_GOVERNING_LAW`
+- `LEGAL_JURISDICTION`
 
 ## Useful Commands
 
@@ -78,7 +85,8 @@ npx prisma generate --no-engine
 
 - Stripe platform and connect webhooks are both handled at `/api/stripe/webhook`.
 - Scheduled reminders now require `POST /api/cron/reminders` plus `Authorization: Bearer <CRON_SECRET>` or `x-cron-secret: <CRON_SECRET>`.
-- Account deletion deletes the Supabase auth user first, then removes local data through cascading deletes.
+- Privacy and terms pages are available at `/privacy` and `/terms`.
+- Self-serve account deletion is intentionally disabled until a retention-safe archival flow exists for invoice and accounting records.
 - The PWA service worker only caches public navigations and static shell assets. Authenticated app pages are intentionally not cached.
 
 ## Docs

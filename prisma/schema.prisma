@@ -8,12 +8,15 @@ datasource db {
 }
 
 model User {
-  id         String     @id @default(uuid()) @map("uuid")
-  email      String     @unique
-  name       String
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  businesses Business[]
+  id                   String     @id @default(uuid()) @map("uuid")
+  email                String     @unique
+  name                 String
+  acceptedPrivacyAt    DateTime?
+  acceptedTermsAt      DateTime?
+  acceptedLegalVersion String?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  businesses           Business[]
 }
 
 model Business {

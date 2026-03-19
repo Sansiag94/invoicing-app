@@ -48,11 +48,17 @@ Provide one of:
 
 `SUPABASE_SERVICE_ROLE_KEY` is required for:
 
-- account deletion
 - logo uploads
 - expense receipt uploads
 
 Without it, the app can still build, but those server-side admin operations will fail.
+
+## Legal and Retention Notes
+
+- Privacy and terms pages are published at `/privacy` and `/terms`.
+- Fill the legal profile environment variables before production so those pages show your real entity and contact details.
+- Self-serve destructive account deletion is disabled because invoice and accounting records may need to be retained.
+- Review [docs/compliance-checklist.md](docs/compliance-checklist.md) before launch.
 
 ## PWA Cache Behavior
 

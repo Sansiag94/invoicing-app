@@ -11,6 +11,44 @@ import {
   createRateLimitErrorResponse,
   isRateLimitError,
 } from "@/lib/rateLimit";
+import { LEGAL_LAST_UPDATED_ISO } from "@/lib/legal";
+
+function parseAcceptedAt(value: unknown): Date | null {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getLegalAcceptance(authUser: Awaited<ReturnType<typeof getAuthenticatedUser>>) {
+  const metadata =
+    authUser.user_metadata && typeof authUser.user_metadata === "object"
+      ? authUser.user_metadata
+      : {};
+
+  const acceptedTermsAt = parseAcceptedAt(
+    (metadata as Record<string, unknown>).accepted_terms_at
+  );
+  const acceptedPrivacyAt = parseAcceptedAt(
+    (metadata as Record<string, unknown>).accepted_privacy_at
+  );
+  const acceptedLegalVersionRaw = (metadata as Record<string, unknown>).accepted_legal_version;
+  const acceptedLegalVersion =
+    typeof acceptedLegalVersionRaw === "string" && acceptedLegalVersionRaw.trim()
+      ? acceptedLegalVersionRaw.trim()
+      : null;
+
+  const hasRecordedAcceptance = Boolean(acceptedTermsAt && acceptedPrivacyAt);
+
+  return {
+    acceptedTermsAt,
+    acceptedPrivacyAt,
+    acceptedLegalVersion:
+      acceptedLegalVersion ?? (hasRecordedAcceptance ? LEGAL_LAST_UPDATED_ISO : null),
+  };
+}
 
 export async function POST(request: Request) {
   try {
@@ -28,9 +66,16 @@ export async function POST(request: Request) {
       return apiError("Authenticated email is required", 400);
     }
 
+    const legalAcceptance = getLegalAcceptance(authUser);
+
     const existingUser = await prisma.user.findUnique({
       where: { id: authUser.id },
-      select: { id: true },
+      select: {
+        id: true,
+        acceptedPrivacyAt: true,
+        acceptedTermsAt: true,
+        acceptedLegalVersion: true,
+      },
     });
 
     const user = existingUser
@@ -39,6 +84,11 @@ export async function POST(request: Request) {
           data: {
             email,
             name: email,
+            acceptedPrivacyAt:
+              existingUser.acceptedPrivacyAt ?? legalAcceptance.acceptedPrivacyAt,
+            acceptedTermsAt: existingUser.acceptedTermsAt ?? legalAcceptance.acceptedTermsAt,
+            acceptedLegalVersion:
+              existingUser.acceptedLegalVersion ?? legalAcceptance.acceptedLegalVersion,
           },
         })
       : await prisma.user.create({
@@ -46,6 +96,9 @@ export async function POST(request: Request) {
             id: authUser.id,
             email,
             name: email,
+            acceptedPrivacyAt: legalAcceptance.acceptedPrivacyAt,
+            acceptedTermsAt: legalAcceptance.acceptedTermsAt,
+            acceptedLegalVersion: legalAcceptance.acceptedLegalVersion,
           },
         });
 
