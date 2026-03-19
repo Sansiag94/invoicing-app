@@ -3,7 +3,7 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { calculateInvoiceTotals, normalizeInvoiceCurrency } from "@/lib/invoice";
 import { generateSwissQRCodeRects, generateSwissQRPayload, getSwissQRBillMetadata } from "@/lib/qrbill";
-import { getInvoiceSenderName } from "@/lib/business";
+import { getBusinessSenderPreferences, getInvoiceSenderName } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
 import { hasRecentInvoiceEvent, logInvoiceEvent } from "@/lib/invoiceActivity";
 import {
@@ -67,10 +67,13 @@ export async function GET(
             email: true,
             website: true,
             bankName: true,
+            bic: true,
             country: true,
             vatNumber: true,
             currency: true,
             iban: true,
+            ownerName: true,
+            invoiceSenderType: true,
             user: {
               select: {
                 email: true,
@@ -101,35 +104,7 @@ export async function GET(
 
     const computedTotals = calculateInvoiceTotals(invoice.lineItems);
 
-    let senderPreferences: {
-      ownerName: string | null;
-      invoiceSenderType: "company" | "owner";
-      bic: string | null;
-    } = {
-      ownerName: null,
-      invoiceSenderType: "company",
-      bic: null,
-    };
-
-    try {
-      const rows = await prisma.$queryRaw<
-        Array<{ ownerName: string | null; invoiceSenderType: string | null; bic: string | null }>
-      >`
-        SELECT "ownerName", "invoiceSenderType", "bic"
-        FROM "Business"
-        WHERE "uuid" = ${invoice.business.id}
-        LIMIT 1
-      `;
-
-      const row = rows[0];
-      senderPreferences = {
-        ownerName: row?.ownerName ?? null,
-        invoiceSenderType: row?.invoiceSenderType?.toLowerCase() === "owner" ? "owner" : "company",
-        bic: row?.bic ?? null,
-      };
-    } catch (error) {
-      console.warn("Unable to load sender preferences (columns may not exist yet):", error);
-    }
+    const senderPreferences = getBusinessSenderPreferences(invoice.business);
 
     const { user: businessUser, ...businessCore } = invoice.business;
     const businessWithSender = {

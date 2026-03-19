@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
-import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
+import { authenticatedFetch, AUTH_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
+import { supabase } from "@/utils/supabase";
 
 type AppFrameProps = {
   children: ReactNode;
@@ -16,6 +18,8 @@ type ShellBusinessBrand = {
   name: string;
   logoUrl: string | null;
 };
+
+type AuthStatus = "checking" | "authenticated" | "unauthenticated";
 
 function shouldHideShell(pathname: string): boolean {
   return (
@@ -38,11 +42,92 @@ export default function AppFrame({ children }: AppFrameProps) {
     pathname: "",
   });
   const [businessBrand, setBusinessBrand] = useState<ShellBusinessBrand | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(hideShell ? "authenticated" : "checking");
   const mobileSidebarOpen =
     mobileSidebarState.open && mobileSidebarState.pathname === pathname;
 
   useEffect(() => {
     if (hideShell) {
+      return;
+    }
+
+    let mounted = true;
+
+    async function redirectToLogin() {
+      setBusinessBrand(null);
+      await supabase.auth.signOut({ scope: "local" });
+      await clearPwaAppCache();
+
+      if (mounted) {
+        setAuthStatus("unauthenticated");
+        window.location.replace("/login");
+      }
+    }
+
+    async function verifySession() {
+      setAuthStatus("checking");
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (sessionError || !session?.access_token) {
+        await redirectToLogin();
+        return;
+      }
+
+      const { data, error } = await supabase.auth.getUser();
+
+      if (!mounted) {
+        return;
+      }
+
+      if (error || !data.user) {
+        await redirectToLogin();
+        return;
+      }
+
+      setAuthStatus("authenticated");
+    }
+
+    function handleAuthenticationRequired() {
+      void redirectToLogin();
+    }
+
+    void verifySession();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) {
+        return;
+      }
+
+      if (!session?.access_token) {
+        setBusinessBrand(null);
+        setAuthStatus("unauthenticated");
+        return;
+      }
+
+      setAuthStatus("authenticated");
+    });
+
+    window.addEventListener(AUTH_REQUIRED_EVENT, handleAuthenticationRequired);
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+      window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthenticationRequired);
+    };
+  }, [hideShell]);
+
+  useEffect(() => {
+    if (hideShell || authStatus !== "authenticated") {
       return;
     }
 
@@ -72,7 +157,7 @@ export default function AppFrame({ children }: AppFrameProps) {
     return () => {
       mounted = false;
     };
-  }, [hideShell]);
+  }, [authStatus, hideShell]);
 
   const openMobileSidebar = () =>
     setMobileSidebarState({
@@ -91,6 +176,18 @@ export default function AppFrame({ children }: AppFrameProps) {
       <div className="min-h-screen bg-slate-50 text-slate-900">
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
+        </main>
+      </div>
+    );
+  }
+
+  if (authStatus !== "authenticated") {
+    return (
+      <div className="min-h-screen bg-slate-50 text-slate-900">
+        <main className="flex min-h-screen items-center justify-center px-4 py-6 md:px-8 md:py-8">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+            <p className="text-sm text-slate-500 dark:text-slate-400">Checking your session...</p>
+          </div>
         </main>
       </div>
     );

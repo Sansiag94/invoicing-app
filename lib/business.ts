@@ -4,6 +4,7 @@ type BusinessSenderFields = {
   name: string;
   ownerName?: string | null;
   invoiceSenderType?: string | null;
+  bic?: string | null;
 };
 
 function normalize(value: string | null | undefined): string {
@@ -24,4 +25,12 @@ export function getInvoiceSenderName(business: BusinessSenderFields): string {
   }
 
   return companyName || ownerName || "Business";
+}
+
+export function getBusinessSenderPreferences(business: Pick<BusinessSenderFields, "ownerName" | "invoiceSenderType" | "bic">) {
+  return {
+    ownerName: normalize(business.ownerName),
+    invoiceSenderType: normalizeInvoiceSenderType(business.invoiceSenderType),
+    bic: normalize(business.bic),
+  };
 }

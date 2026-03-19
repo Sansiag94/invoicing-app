@@ -11,7 +11,7 @@ import {
   sendInvoiceEmail,
 } from "@/lib/email";
 import crypto from "crypto";
-import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
+import { getBusinessSenderPreferences, getInvoiceSenderName } from "@/lib/business";
 import {
   calculateInvoiceTotals,
   formatSequentialInvoiceNumber,
@@ -122,37 +122,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     invoiceLink,
   });
 
-  let senderPreferences: {
-    ownerName: string | null;
-    invoiceSenderType: "company" | "owner";
-    bic: string | null;
-  } = {
-    ownerName: existingInvoice.business.ownerName ?? null,
-    invoiceSenderType: normalizeInvoiceSenderType(existingInvoice.business.invoiceSenderType ?? "company"),
-    bic: (existingInvoice.business as { bic?: string | null }).bic ?? null,
-  };
-
-  try {
-    const rows = await prisma.$queryRaw<
-      Array<{ ownerName: string | null; invoiceSenderType: string | null; bic: string | null }>
-    >`
-      SELECT "ownerName", "invoiceSenderType", "bic"
-      FROM "Business"
-      WHERE "uuid" = ${existingInvoice.businessId}
-      LIMIT 1
-    `;
-
-    const row = rows[0];
-    senderPreferences = {
-      ownerName: row?.ownerName ?? existingInvoice.business.ownerName ?? null,
-      invoiceSenderType: normalizeInvoiceSenderType(
-        row?.invoiceSenderType ?? existingInvoice.business.invoiceSenderType ?? "company"
-      ),
-      bic: row?.bic ?? (existingInvoice.business as { bic?: string | null }).bic ?? null,
-    };
-  } catch (error) {
-    console.warn("Unable to load business extras for invoice email PDF:", error);
-  }
+  const senderPreferences = getBusinessSenderPreferences(existingInvoice.business);
 
   const computedTotals = calculateInvoiceTotals(existingInvoice.lineItems);
   const totalAmountForEmail =
