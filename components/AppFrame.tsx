@@ -27,6 +27,8 @@ function shouldHideShell(pathname: string): boolean {
     pathname === "/" ||
     pathname === "/login" ||
     pathname === "/signup" ||
+    pathname === "/privacy" ||
+    pathname === "/terms" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password" ||
     pathname === "/settings/password" ||
