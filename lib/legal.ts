@@ -1,11 +1,16 @@
 import { APP_NAME } from "@/lib/appBrand";
 import { getPublicInvoiceBaseUrl } from "@/lib/publicInvoiceLink";
 
-export const LEGAL_LAST_UPDATED_ISO = "2026-03-19";
-export const LEGAL_LAST_UPDATED_LABEL = "March 19, 2026";
+export const LEGAL_LAST_UPDATED_ISO = "2026-03-20";
+export const LEGAL_LAST_UPDATED_LABEL = "March 20, 2026";
 
-const PLACEHOLDER_CONTACT_EMAIL = "legal@example.com";
-const PLACEHOLDER_POSTAL_ADDRESS = "Add your registered business address";
+const DEFAULT_SERVICE_NAME = "Sierra Invoices";
+const DEFAULT_LEGAL_ENTITY_NAME = "Santiago Sierra Aguirre";
+const DEFAULT_TRADING_NAME = "Sierra Services";
+const DEFAULT_CONTACT_EMAIL = "santiago@sierraservices.ch";
+const DEFAULT_POSTAL_ADDRESS = "8136 Gattikon - Zurich";
+const DEFAULT_GOVERNING_LAW = "Switzerland";
+const DEFAULT_JURISDICTION = "Zurich, Switzerland";
 
 function readOptionalEnv(key: string): string | null {
   const value = process.env[key];
@@ -56,30 +61,21 @@ export function getLegalProfile(): LegalProfile {
 
   const incompleteFields: string[] = [];
 
-  if (!legalEntityNameFromEnv) {
-    incompleteFields.push("Set LEGAL_ENTITY_NAME to your registered company or sole-trader name.");
-  }
-
-  if (!contactEmailFromEnv) {
-    incompleteFields.push("Set LEGAL_CONTACT_EMAIL to the inbox you want listed in your legal pages.");
-  }
-
-  if (!postalAddressFromEnv) {
-    incompleteFields.push(
-      "Set LEGAL_POSTAL_ADDRESS to a public correspondence address you are comfortable publishing, such as a PO box, c/o address, registered office, or coworking/virtual office."
-    );
-  }
+  const legalEntityName = legalEntityNameFromEnv ?? DEFAULT_LEGAL_ENTITY_NAME;
+  const tradingName = tradingNameFromEnv ?? DEFAULT_TRADING_NAME;
+  const contactEmail = contactEmailFromEnv ?? DEFAULT_CONTACT_EMAIL;
+  const postalAddress = postalAddressFromEnv ?? DEFAULT_POSTAL_ADDRESS;
 
   return {
     appName: APP_NAME,
-    serviceName: readOptionalEnv("LEGAL_SERVICE_NAME") ?? APP_NAME,
-    legalEntityName: legalEntityNameFromEnv ?? APP_NAME,
-    tradingName: tradingNameFromEnv,
-    contactEmail: contactEmailFromEnv ?? PLACEHOLDER_CONTACT_EMAIL,
-    supportEmail: readOptionalEnv("LEGAL_SUPPORT_EMAIL") ?? contactEmailFromEnv ?? PLACEHOLDER_CONTACT_EMAIL,
-    postalAddress: postalAddressFromEnv ?? PLACEHOLDER_POSTAL_ADDRESS,
-    governingLaw: readOptionalEnv("LEGAL_GOVERNING_LAW") ?? "Switzerland",
-    jurisdiction: readOptionalEnv("LEGAL_JURISDICTION") ?? "Zurich, Switzerland",
+    serviceName: readOptionalEnv("LEGAL_SERVICE_NAME") ?? DEFAULT_SERVICE_NAME,
+    legalEntityName,
+    tradingName,
+    contactEmail,
+    supportEmail: readOptionalEnv("LEGAL_SUPPORT_EMAIL") ?? contactEmail,
+    postalAddress,
+    governingLaw: readOptionalEnv("LEGAL_GOVERNING_LAW") ?? DEFAULT_GOVERNING_LAW,
+    jurisdiction: readOptionalEnv("LEGAL_JURISDICTION") ?? DEFAULT_JURISDICTION,
     websiteUrl,
     privacyUrl: new URL("/privacy", websiteUrl).toString(),
     termsUrl: new URL("/terms", websiteUrl).toString(),
