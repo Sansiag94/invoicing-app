@@ -1,5 +1,7 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
 import LegalLinks from "@/components/LegalLinks";
+import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/appBrand";
 import { getLegalProfile, LEGAL_LAST_UPDATED_LABEL } from "@/lib/legal";
 
@@ -73,6 +75,25 @@ export default function LegalDocument({
       <article className="space-y-6 rounded-[28px] border border-slate-200 bg-white px-6 py-8 shadow-sm md:px-8">
         {children}
       </article>
+
+      <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm md:px-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-slate-950">Return to the app</h2>
+            <p className="text-sm leading-6 text-slate-600">
+              Continue to your account or create a new workspace.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild variant="outline">
+              <Link href="/login">Log in</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/signup">Create account</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
