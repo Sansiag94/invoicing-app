@@ -72,10 +72,6 @@ export default function LegalDocument({
         </section>
       ) : null}
 
-      <article className="space-y-6 rounded-[28px] border border-slate-200 bg-white px-6 py-8 shadow-sm md:px-8">
-        {children}
-      </article>
-
       <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm md:px-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
@@ -94,6 +90,10 @@ export default function LegalDocument({
           </div>
         </div>
       </section>
+
+      <article className="space-y-6 rounded-[28px] border border-slate-200 bg-white px-6 py-8 shadow-sm md:px-8">
+        {children}
+      </article>
     </div>
   );
 }
