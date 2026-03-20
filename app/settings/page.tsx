@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
 import { usePwa } from "@/components/PwaProvider";
 import { buildAddressString } from "@/lib/address";
-import { parsePostalAddress } from "@/lib/invoice";
+import { formatSequentialInvoiceNumber, normalizeInvoicePrefix, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
 import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
@@ -29,6 +29,8 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [invoiceSenderType, setInvoiceSenderType] = useState<InvoiceSenderType>("company");
+  const [invoicePrefix, setInvoicePrefix] = useState("INV");
+  const [nextOfficialInvoiceSequence, setNextOfficialInvoiceSequence] = useState("1");
   const [street, setStreet] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
@@ -66,6 +68,15 @@ export default function SettingsPage() {
     ownerName,
     invoiceSenderType,
   });
+  const normalizedNextOfficialInvoiceSequence = (() => {
+    const parsed = Number(nextOfficialInvoiceSequence);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
+  })();
+  const nextOfficialInvoicePreview = formatSequentialInvoiceNumber(
+    normalizeInvoicePrefix(invoicePrefix, name),
+    new Date(),
+    normalizedNextOfficialInvoiceSequence
+  );
   const isStripeFullyEnabled =
     stripeChargesEnabled && stripePayoutsEnabled && stripeDetailsSubmitted;
   const stripeStatusTone = !usesPlatformStripe && !stripeAccountId
@@ -143,6 +154,15 @@ export default function SettingsPage() {
       return null;
     }
 
+    if (!Number.isInteger(Number(nextOfficialInvoiceSequence)) || Number(nextOfficialInvoiceSequence) <= 0) {
+      toast({
+        title: "Invalid next invoice number",
+        description: "Enter a whole number greater than 0 for the next official invoice number.",
+        variant: "error",
+      });
+      return null;
+    }
+
     setIsSaving(true);
 
     const response = await authenticatedFetch("/api/business", {
@@ -167,6 +187,7 @@ export default function SettingsPage() {
         currency,
         vatNumber,
         iban,
+        nextOfficialInvoiceSequence: Number(nextOfficialInvoiceSequence),
         logoUrl: options?.logoUrlOverride ?? logoUrl,
       }),
     });
@@ -187,6 +208,8 @@ export default function SettingsPage() {
     setName(updatedBusiness.name || "");
     setOwnerName(updatedBusiness.ownerName || "");
     setInvoiceSenderType(updatedBusiness.invoiceSenderType || "company");
+    setInvoicePrefix(updatedBusiness.invoicePrefix || "INV");
+    setNextOfficialInvoiceSequence(String(updatedBusiness.nextOfficialInvoiceSequence || 1));
     setStreet(updatedBusiness.street || "");
     setPostalCode(updatedBusiness.postalCode || "");
     setCity(updatedBusiness.city || "");
@@ -472,6 +495,8 @@ export default function SettingsPage() {
         setName(data?.name || "");
         setOwnerName(data?.ownerName || "");
         setInvoiceSenderType(data?.invoiceSenderType || "company");
+        setInvoicePrefix(data?.invoicePrefix || "INV");
+        setNextOfficialInvoiceSequence(String(data?.nextOfficialInvoiceSequence || 1));
         setStreet(data?.street || parsedAddress.street || "");
         setPostalCode(data?.postalCode || parsedAddress.postalCode || "");
         setCity(data?.city || parsedAddress.city || "");
@@ -684,6 +709,39 @@ export default function SettingsPage() {
               <Save className="h-4 w-4" />
               {isSaving ? "Saving..." : "Save Settings"}
             </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice Numbering</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="nextOfficialInvoiceSequence">Next Official Invoice Number</Label>
+            <Input
+              id="nextOfficialInvoiceSequence"
+              type="number"
+              min="1"
+              step="1"
+              value={nextOfficialInvoiceSequence}
+              onChange={(event) => setNextOfficialInvoiceSequence(event.target.value)}
+            />
+            <p className="text-xs text-slate-500">
+              If you already issued invoices elsewhere, set the next number here before sending
+              your first official invoice from this app. To continue from invoice 29, enter 29.
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Preview with today&apos;s date
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{nextOfficialInvoicePreview}</p>
+            <p className="mt-2 text-sm text-slate-600">
+              Prefix currently resolves to <strong>{normalizeInvoicePrefix(invoicePrefix, name)}</strong>.
+              Draft invoices still get a temporary draft number until they are sent.
+            </p>
           </div>
         </CardContent>
       </Card>

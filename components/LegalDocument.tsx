@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ArrowUp } from "lucide-react";
 import LegalLinks from "@/components/LegalLinks";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/appBrand";
@@ -24,7 +25,26 @@ export default function LegalDocument({
   const legalProfile = getLegalProfile();
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-8 py-8 md:py-10">
+    <div id="legal-top" className="mx-auto w-full max-w-4xl space-y-8 py-8 md:py-10">
+      <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm md:px-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold text-slate-950">Return to the app</h2>
+            <p className="text-sm leading-6 text-slate-600">
+              Continue to your account or create a new workspace.
+            </p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild variant="outline">
+              <Link href="/login">Log in</Link>
+            </Button>
+            <Button asChild>
+              <Link href="/signup">Create account</Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       <header className="space-y-4 rounded-[28px] border border-slate-200 bg-white px-6 py-8 shadow-sm md:px-8">
         <div className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
@@ -72,28 +92,17 @@ export default function LegalDocument({
         </section>
       ) : null}
 
-      <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm md:px-8">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-slate-950">Return to the app</h2>
-            <p className="text-sm leading-6 text-slate-600">
-              Continue to your account or create a new workspace.
-            </p>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild variant="outline">
-              <Link href="/login">Log in</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/signup">Create account</Link>
-            </Button>
-          </div>
-        </div>
-      </section>
-
       <article className="space-y-6 rounded-[28px] border border-slate-200 bg-white px-6 py-8 shadow-sm md:px-8">
         {children}
       </article>
+
+      <a
+        href="#legal-top"
+        aria-label="Back to top"
+        className="fixed bottom-6 right-6 z-20 inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-lg transition-colors hover:bg-slate-50 hover:text-slate-950"
+      >
+        <ArrowUp className="h-5 w-5" />
+      </a>
     </div>
   );
 }

@@ -55,6 +55,9 @@ export interface BusinessSettingsData {
   name: string;
   ownerName: string | null;
   invoiceSenderType: InvoiceSenderType;
+  invoicePrefix: string;
+  invoiceCounter: number;
+  nextOfficialInvoiceSequence: number;
   address: string;
   street?: string | null;
   postalCode?: string | null;

@@ -13,6 +13,7 @@ type UpdateBusinessBody = {
   name: unknown;
   ownerName?: unknown;
   invoiceSenderType?: unknown;
+  nextOfficialInvoiceSequence?: unknown;
   address: unknown;
   street?: unknown;
   postalCode?: unknown;
@@ -31,6 +32,21 @@ type UpdateBusinessBody = {
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function asPositiveInteger(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
 }
 
 type SenderPreferencesRow = {
@@ -75,6 +91,7 @@ export async function GET(request: Request) {
       ...business,
       ...senderPreferences,
       ...stripeConnectStatus,
+      nextOfficialInvoiceSequence: business.invoiceCounter + 1,
     });
   } catch (error) {
     if (isAuthenticationError(error)) {
@@ -100,6 +117,10 @@ export async function PATCH(request: Request) {
     const normalizedEmail = asString(body.email);
     const normalizedIban = normalizeIban(asString(body.iban));
     const normalizedBic = normalizeBic(asString(body.bic));
+    const requestedNextOfficialInvoiceSequence =
+      body.nextOfficialInvoiceSequence === undefined
+        ? null
+        : asPositiveInteger(body.nextOfficialInvoiceSequence);
 
     const structuredAddress = withStructuredAddress({
       address: asString(body.address),
@@ -130,7 +151,21 @@ export async function PATCH(request: Request) {
       return apiError("Invalid BIC / SWIFT code", 400);
     }
 
+    if (body.nextOfficialInvoiceSequence !== undefined && !requestedNextOfficialInvoiceSequence) {
+      return apiError("Next official invoice number must be a whole number greater than 0", 400);
+    }
+
     const business = await ensureBusiness(user.id);
+
+    if (
+      requestedNextOfficialInvoiceSequence !== null &&
+      requestedNextOfficialInvoiceSequence < business.invoiceCounter + 1
+    ) {
+      return apiError(
+        `Next official invoice number cannot be lower than ${business.invoiceCounter + 1}`,
+        400
+      );
+    }
 
     const updatedBusiness = await prisma.business.update({
       where: { id: business.id },
@@ -149,6 +184,10 @@ export async function PATCH(request: Request) {
         vatNumber: asString(body.vatNumber),
         iban: normalizedIban,
         logoUrl: body.logoUrl === undefined ? business.logoUrl : asString(body.logoUrl),
+        invoiceCounter:
+          requestedNextOfficialInvoiceSequence === null
+            ? business.invoiceCounter
+            : requestedNextOfficialInvoiceSequence - 1,
       },
     });
 
@@ -172,6 +211,7 @@ export async function PATCH(request: Request) {
       ...updatedBusiness,
       ...senderPreferences,
       ...stripeConnectStatus,
+      nextOfficialInvoiceSequence: updatedBusiness.invoiceCounter + 1,
     });
   } catch (error) {
     if (isAuthenticationError(error)) {
