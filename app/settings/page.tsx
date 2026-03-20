@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 
 import { useEffect, useEffectEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
 import { usePwa } from "@/components/PwaProvider";
@@ -968,19 +969,35 @@ export default function SettingsPage() {
         </Card>
       </div>
 
-      <Card className="border-amber-200">
+      <Card className="border-amber-200 bg-amber-50/50">
         <CardHeader>
-          <CardTitle>Workspace Closure</CardTitle>
+          <CardTitle>Close Workspace Safely</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-slate-600">
-            Self-serve deletion is disabled because invoice, payment, expense, and accounting
-            records may need to be retained for tax, bookkeeping, and audit reasons.
+            Self-serve hard deletion is disabled because invoice, payment, expense, and accounting
+            records may need to be retained for bookkeeping, tax, and audit reasons.
           </p>
+          <div className="rounded-xl border border-amber-200 bg-white p-4">
+            <p className="text-sm font-medium text-slate-900">Safer closure approach</p>
+            <ul className="mt-3 space-y-2 text-sm text-slate-600">
+              <li>Export or archive the invoices, expenses, and payment records your business still needs.</li>
+              <li>Disconnect Stripe first if you no longer want this workspace tied to a payment account.</li>
+              <li>Close the workspace through a support-led process so required records can be retained while access is removed.</li>
+              <li>Delete or anonymize non-essential data only where that does not conflict with legal retention duties.</li>
+            </ul>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild variant="outline">
+              <Link href="/imprint">View imprint</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/privacy">Review privacy policy</Link>
+            </Button>
+          </div>
           <p className="text-sm text-slate-500">
-            Before closing a workspace, make sure your records are exported or archived and review
-            the retention rules that apply to your business. Handle final closure as an
-            administrator-supported process rather than immediate deletion.
+            Use the contact details listed in the legal pages below if you want to request closure
+            of the workspace instead of immediate deletion.
           </p>
         </CardContent>
       </Card>

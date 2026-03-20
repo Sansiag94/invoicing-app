@@ -38,9 +38,14 @@ function shouldHideShell(pathname: string): boolean {
   );
 }
 
+function shouldShowLegalFooter(pathname: string, hideShell: boolean): boolean {
+  return hideShell || pathname === "/settings" || pathname.startsWith("/settings/");
+}
+
 export default function AppFrame({ children }: AppFrameProps) {
   const pathname = usePathname();
   const hideShell = useMemo(() => shouldHideShell(pathname), [pathname]);
+  const showLegalFooter = useMemo(() => shouldShowLegalFooter(pathname, hideShell), [hideShell, pathname]);
   const [mobileSidebarState, setMobileSidebarState] = useState({
     open: false,
     pathname: "",
@@ -181,7 +186,7 @@ export default function AppFrame({ children }: AppFrameProps) {
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
-        <LegalFooter />
+        {showLegalFooter ? <LegalFooter /> : null}
       </div>
     );
   }
@@ -224,7 +229,7 @@ export default function AppFrame({ children }: AppFrameProps) {
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
-        <LegalFooter />
+        {showLegalFooter ? <LegalFooter /> : null}
       </div>
     </div>
   );
