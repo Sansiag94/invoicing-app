@@ -146,6 +146,14 @@ export default function AppFrame({ children }: AppFrameProps) {
       try {
         const response = await authenticatedFetch("/api/business");
         if (!response.ok) {
+          if (response.status === 423) {
+            setBusinessBrand(null);
+            await supabase.auth.signOut({ scope: "local" });
+            await clearPwaAppCache();
+            if (mounted) {
+              window.location.replace("/login?workspace=closed");
+            }
+          }
           return;
         }
 

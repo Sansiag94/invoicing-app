@@ -46,6 +46,7 @@ model Business {
   stripeDetailsSubmitted Boolean @default(false)
   invoicePrefix  String
   invoiceCounter Int       @default(0)
+  closedAt       DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)

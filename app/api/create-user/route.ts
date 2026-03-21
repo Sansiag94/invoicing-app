@@ -12,6 +12,7 @@ import {
   isRateLimitError,
 } from "@/lib/rateLimit";
 import { LEGAL_LAST_UPDATED_ISO } from "@/lib/legal";
+import { assertWorkspaceOpen, isWorkspaceClosedError } from "@/lib/workspaceClosure";
 
 function parseAcceptedAt(value: unknown): Date | null {
   if (typeof value !== "string" || !value.trim()) {
@@ -102,7 +103,8 @@ export async function POST(request: Request) {
           },
         });
 
-    await ensureBusiness(user.id);
+    const business = await ensureBusiness(user.id);
+    await assertWorkspaceOpen(business.id);
 
     if (!existingUser) {
       try {
@@ -123,6 +125,10 @@ export async function POST(request: Request) {
 
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
+    }
+
+    if (isWorkspaceClosedError(error)) {
+      return apiError(error.message, error.status);
     }
 
     console.error("Error creating user:", error);

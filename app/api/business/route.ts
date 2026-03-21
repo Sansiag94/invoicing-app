@@ -8,6 +8,7 @@ import { isSupportedInvoiceCurrency, normalizeInvoiceCurrency } from "@/lib/invo
 import { normalizeInvoiceSenderType } from "@/lib/business";
 import { loadResolvedBusinessStripeStatus } from "@/lib/stripeConnect";
 import { isValidBic, isValidEmail, isValidIban, normalizeBic, normalizeIban } from "@/lib/validation";
+import { assertWorkspaceOpen, isWorkspaceClosedError } from "@/lib/workspaceClosure";
 
 type UpdateBusinessBody = {
   name: unknown;
@@ -84,6 +85,7 @@ export async function GET(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
     const business = await ensureBusiness(user.id);
+    await assertWorkspaceOpen(business.id);
     const senderPreferences = await loadSenderPreferences(business.id);
     const stripeConnectStatus = await loadResolvedBusinessStripeStatus(business.id);
 
@@ -96,6 +98,10 @@ export async function GET(request: Request) {
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
+    }
+
+    if (isWorkspaceClosedError(error)) {
+      return apiError(error.message, error.status);
     }
 
     console.error("Error loading business:", error);
@@ -156,6 +162,7 @@ export async function PATCH(request: Request) {
     }
 
     const business = await ensureBusiness(user.id);
+    await assertWorkspaceOpen(business.id);
 
     if (
       requestedNextOfficialInvoiceSequence !== null &&
@@ -216,6 +223,10 @@ export async function PATCH(request: Request) {
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
+    }
+
+    if (isWorkspaceClosedError(error)) {
+      return apiError(error.message, error.status);
     }
 
     console.error("Error updating business:", error);

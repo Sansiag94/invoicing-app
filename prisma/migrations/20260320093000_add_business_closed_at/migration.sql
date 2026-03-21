@@ -1,0 +1,2 @@
+ALTER TABLE "Business"
+ADD COLUMN "closedAt" TIMESTAMP(3);

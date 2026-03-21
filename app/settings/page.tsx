@@ -10,8 +10,10 @@ import { buildAddressString } from "@/lib/address";
 import { formatSequentialInvoiceNumber, normalizeInvoicePrefix, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
 import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
+import { clearPwaAppCache } from "@/lib/pwaCache";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { supabase } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -55,7 +57,9 @@ export default function SettingsPage() {
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isRefreshingStripe, setIsRefreshingStripe] = useState(false);
   const [isDisconnectingStripe, setIsDisconnectingStripe] = useState(false);
+  const [isClosingWorkspace, setIsClosingWorkspace] = useState(false);
   const [showDisconnectStripeDialog, setShowDisconnectStripeDialog] = useState(false);
+  const [showCloseWorkspaceDialog, setShowCloseWorkspaceDialog] = useState(false);
   const { toast } = useToast();
 
   const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
@@ -406,6 +410,34 @@ export default function SettingsPage() {
       });
     } finally {
       setIsDisconnectingStripe(false);
+    }
+  }
+
+  async function closeWorkspaceNow() {
+    setIsClosingWorkspace(true);
+
+    try {
+      const response = await authenticatedFetch("/api/account/close", {
+        method: "POST",
+      });
+      const result = (await response.json()) as { ok?: boolean; error?: string; message?: string };
+
+      if (!response.ok) {
+        throw new Error(result.error ?? "Could not close workspace");
+      }
+
+      await supabase.auth.signOut({ scope: "local" });
+      await clearPwaAppCache();
+      router.replace("/login?workspace=closed");
+    } catch (error) {
+      toast({
+        title: "Unable to close workspace",
+        description: error instanceof Error ? error.message : "Could not close workspace",
+        variant: "error",
+      });
+    } finally {
+      setShowCloseWorkspaceDialog(false);
+      setIsClosingWorkspace(false);
     }
   }
 
@@ -983,11 +1015,18 @@ export default function SettingsPage() {
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               <li>Export or archive the invoices, expenses, and payment records your business still needs.</li>
               <li>Disconnect Stripe first if you no longer want this workspace tied to a payment account.</li>
-              <li>Close the workspace through a support-led process so required records can be retained while access is removed.</li>
+              <li>Use the closure action below so access is removed while required records can still be retained.</li>
               <li>Delete or anonymize non-essential data only where that does not conflict with legal retention duties.</li>
             </ul>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              variant="destructive"
+              onClick={() => setShowCloseWorkspaceDialog(true)}
+              disabled={isClosingWorkspace || isDisconnectingStripe}
+            >
+              {isClosingWorkspace ? "Closing workspace..." : "Close workspace now"}
+            </Button>
             <Button asChild variant="outline">
               <Link href="/imprint">View imprint</Link>
             </Button>
@@ -996,8 +1035,8 @@ export default function SettingsPage() {
             </Button>
           </div>
           <p className="text-sm text-slate-500">
-            Use the contact details listed in the legal pages below if you want to request closure
-            of the workspace instead of immediate deletion.
+            The legal pages below explain the retention and contact details that still apply after
+            a workspace is closed.
           </p>
         </CardContent>
       </Card>
@@ -1012,6 +1051,18 @@ export default function SettingsPage() {
         isConfirming={isDisconnectingStripe}
         onConfirm={() => {
           void disconnectStripeNow();
+        }}
+      />
+      <ConfirmDialog
+        open={showCloseWorkspaceDialog}
+        onOpenChange={setShowCloseWorkspaceDialog}
+        title="Close workspace"
+        description="Close this workspace now? Access will be removed, Stripe will be disconnected where applicable, and legally required records may still be retained."
+        confirmLabel="Close workspace"
+        confirmVariant="destructive"
+        isConfirming={isClosingWorkspace}
+        onConfirm={() => {
+          void closeWorkspaceNow();
         }}
       />
     </div>

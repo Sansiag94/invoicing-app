@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getRememberSessionPreference, setRememberSession, supabase } from "@/utils/supabase";
 import AuthSplitShell from "@/components/AuthSplitShell";
@@ -15,8 +15,18 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(() => getRememberSessionPreference());
   const [isLoading, setIsLoading] = useState(false);
+  const [workspaceClosed, setWorkspaceClosed] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    setWorkspaceClosed(params.get("workspace") === "closed");
+  }, []);
 
   const handleLogin = async () => {
     setIsLoading(true);
@@ -55,6 +65,12 @@ export default function LoginPage() {
 
       if (!syncResponse.ok) {
         const result = (await syncResponse.json()) as { error?: string };
+        await supabase.auth.signOut({ scope: "local" });
+
+        if (syncResponse.status === 423) {
+          router.replace("/login?workspace=closed");
+        }
+
         toast({
           title: "Account setup failed",
           description: result?.error ?? "Failed to initialize account",
@@ -87,6 +103,12 @@ export default function LoginPage() {
       >
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="space-y-4">
+            {workspaceClosed ? (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                This workspace has been closed. Access has been removed, and legally required
+                records may still be retained.
+              </div>
+            ) : null}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
