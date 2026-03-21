@@ -18,20 +18,27 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-xl font-semibold tracking-tight text-slate-950">{title}</h2>
-      <div className="space-y-3 text-sm leading-7 text-slate-700 md:text-[15px]">
+      <h2 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">{title}</h2>
+      <div className="space-y-3 text-sm leading-7 text-slate-700 dark:text-slate-300 md:text-[15px]">
         {children}
       </div>
     </section>
   );
 }
 
-export default function ImprintPage() {
+export default async function ImprintPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
   const legalProfile = getLegalProfile();
+  const params = await searchParams;
+  const linkSource = params.from === "settings" ? "settings" : "public";
 
   return (
     <LegalDocument
       title="Imprint"
+      linkSource={linkSource}
       summary={`This page contains the basic legal notice and operator information for ${legalProfile.serviceName}. It is meant to keep the ownership and contact details easy to find from the public website and app.`}
       highlights={[
         {

@@ -46,6 +46,9 @@ export default function AppFrame({ children }: AppFrameProps) {
   const pathname = usePathname();
   const hideShell = useMemo(() => shouldHideShell(pathname), [pathname]);
   const showLegalFooter = useMemo(() => shouldShowLegalFooter(pathname, hideShell), [hideShell, pathname]);
+  const legalFooterSource = pathname === "/settings" || pathname.startsWith("/settings/")
+    ? "settings"
+    : "public";
   const [mobileSidebarState, setMobileSidebarState] = useState({
     open: false,
     pathname: "",
@@ -194,7 +197,7 @@ export default function AppFrame({ children }: AppFrameProps) {
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
-        {showLegalFooter ? <LegalFooter /> : null}
+        {showLegalFooter ? <LegalFooter linkSource={legalFooterSource} /> : null}
       </div>
     );
   }
@@ -237,7 +240,7 @@ export default function AppFrame({ children }: AppFrameProps) {
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
-        {showLegalFooter ? <LegalFooter /> : null}
+        {showLegalFooter ? <LegalFooter linkSource={legalFooterSource} /> : null}
       </div>
     </div>
   );

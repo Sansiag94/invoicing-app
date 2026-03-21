@@ -18,20 +18,27 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-xl font-semibold tracking-tight text-slate-950">{title}</h2>
-      <div className="space-y-3 text-sm leading-7 text-slate-700 md:text-[15px]">
+      <h2 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">{title}</h2>
+      <div className="space-y-3 text-sm leading-7 text-slate-700 dark:text-slate-300 md:text-[15px]">
         {children}
       </div>
     </section>
   );
 }
 
-export default function PrivacyPage() {
+export default async function PrivacyPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
   const legalProfile = getLegalProfile();
+  const params = await searchParams;
+  const linkSource = params.from === "settings" ? "settings" : "public";
 
   return (
     <LegalDocument
       title="Privacy Policy"
+      linkSource={linkSource}
       summary={`This Privacy Policy explains how ${legalProfile.legalEntityName} handles personal data when you use ${legalProfile.serviceName}, receive invoice emails, visit public invoice pages, or pay invoices online. It is written to make the practical parts clear first, then the legal detail underneath.`}
       highlights={[
         {

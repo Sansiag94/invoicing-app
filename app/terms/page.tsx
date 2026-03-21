@@ -18,20 +18,27 @@ function Section({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-xl font-semibold tracking-tight text-slate-950">{title}</h2>
-      <div className="space-y-3 text-sm leading-7 text-slate-700 md:text-[15px]">
+      <h2 className="text-xl font-semibold tracking-tight text-slate-950 dark:text-slate-100">{title}</h2>
+      <div className="space-y-3 text-sm leading-7 text-slate-700 dark:text-slate-300 md:text-[15px]">
         {children}
       </div>
     </section>
   );
 }
 
-export default function TermsPage() {
+export default async function TermsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
   const legalProfile = getLegalProfile();
+  const params = await searchParams;
+  const linkSource = params.from === "settings" ? "settings" : "public";
 
   return (
     <LegalDocument
       title="Terms of Service"
+      linkSource={linkSource}
       summary={`These Terms of Service govern access to and use of ${legalProfile.serviceName}. They are written to explain the practical deal first: what the app does, what stays your responsibility, and where legal limits apply.`}
       highlights={[
         {
