@@ -1,5 +1,13 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 type PageProps = {
   params: Promise<{ invoiceNumber: string }>;
@@ -45,4 +53,3 @@ export default async function PublicInvoiceNumberRedirectPage({ params }: PagePr
 
   redirect(`/invoice/pay/${publicToken}`);
 }
-
