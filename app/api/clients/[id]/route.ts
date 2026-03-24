@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { withStructuredAddress } from "@/lib/address";
 import { isSupportedCountry } from "@/lib/countries";
+import { isSupportedInvoiceLanguage, normalizeInvoiceLanguage } from "@/lib/invoiceLanguage";
 import { isValidEmail } from "@/lib/validation";
 
 type UpdateClientBody = {
@@ -16,6 +17,7 @@ type UpdateClientBody = {
   postalCode?: unknown;
   city?: unknown;
   country?: unknown;
+  language?: unknown;
   vatNumber?: unknown;
 };
 
@@ -102,6 +104,7 @@ export async function PATCH(
     const email = asString(body.email);
     const phone = asString(body.phone);
     const country = asString(body.country);
+    const language = asString(body.language);
     const vatNumber = asString(body.vatNumber);
     const structuredAddress = withStructuredAddress({
       address: asString(body.address),
@@ -122,6 +125,10 @@ export async function PATCH(
       return apiError("Invalid email address", 400);
     }
 
+    if (language && !isSupportedInvoiceLanguage(language)) {
+      return apiError("Invalid invoice language", 400);
+    }
+
     if (!companyName && !contactName) {
       return apiError("Client must have a company name or contact name", 400);
     }
@@ -138,6 +145,7 @@ export async function PATCH(
         postalCode: structuredAddress.postalCode,
         city: structuredAddress.city,
         country,
+        language: normalizeInvoiceLanguage(language),
         vatNumber,
       },
       include: {

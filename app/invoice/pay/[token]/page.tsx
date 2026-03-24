@@ -5,6 +5,15 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CreditCard, Download } from "lucide-react";
 import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
+import {
+  buildInvoiceAdditionalInformation,
+  buildDefaultInvoiceMessage,
+  formatInvoiceDate,
+  formatInvoiceMoney,
+  getInvoiceStrings,
+  normalizeInvoiceLanguage,
+  translateInvoiceStatus,
+} from "@/lib/invoiceLanguage";
 import { getInvoiceSenderName } from "@/lib/business";
 import { PublicInvoiceDetails } from "@/lib/types";
 import { buildPublicInvoiceLinkFromToken } from "@/lib/publicInvoiceLink";
@@ -16,23 +25,6 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
   if (status === "overdue") return "danger";
   if (status === "sent") return "warning";
   return "default";
-}
-
-function formatDate(value: string): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-  return new Intl.DateTimeFormat("de-CH", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
-}
-
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat("de-CH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function formatQuantity(value: number): string {
@@ -186,15 +178,6 @@ export default function PublicInvoicePage() {
     return ownerName && ownerName !== businessDisplayName ? ownerName : null;
   }, [businessDisplayName, invoice]);
 
-  const defaultMessage = useMemo(() => {
-    const firstName =
-      (invoice?.client.contactName || invoice?.client.companyName || clientName)
-        .split(" ")
-        .find((part) => part.trim().length > 0) || "there";
-    const senderFirstName = senderName.split(" ").find((part) => part.trim().length > 0) || senderName;
-
-    return `Hello ${firstName},\nThank you for your trust.\nPlease find here the breakdown of the services.\n\nBest regards,\n${senderFirstName}`;
-  }, [clientName, invoice?.client.companyName, invoice?.client.contactName, senderName]);
   const onlinePaymentLink = useMemo(() => {
     if (!token) return null;
 
@@ -215,6 +198,15 @@ export default function PublicInvoicePage() {
         invoice?.business.bic ||
         invoice?.business.bankName
     );
+  const invoiceLanguage = normalizeInvoiceLanguage(invoice?.client.language);
+  const strings = getInvoiceStrings(invoiceLanguage);
+  const defaultMessage = useMemo(() => {
+    return buildDefaultInvoiceMessage(
+      invoiceLanguage,
+      invoice?.client.contactName || invoice?.client.companyName || clientName,
+      senderName
+    );
+  }, [clientName, invoice?.client.companyName, invoice?.client.contactName, invoiceLanguage, senderName]);
 
   const handleCheckout = async () => {
     if (!invoice || !token) return;
@@ -244,7 +236,7 @@ export default function PublicInvoicePage() {
   };
 
   if (!invoice || !businessAddress || !clientAddress) {
-    return <div className="mx-auto max-w-[210mm] p-8 text-slate-600">Loading invoice...</div>;
+    return <div className="mx-auto max-w-[210mm] p-8 text-slate-600">{strings.loadingInvoice}</div>;
   }
 
   const qrBillSection = (
@@ -263,11 +255,10 @@ export default function PublicInvoicePage() {
       >
         <div className="qr-bill__receipt flex h-full flex-col border-r border-dashed border-black pl-[4.5mm] pr-[4.5mm] pb-[3mm]">
           <div>
-            <p className="mb-[5mm] text-[11px] font-semibold text-black">Receipt</p>
-
+            <p className="mb-[5mm] text-[11px] font-semibold text-black">{strings.receipt}</p>
             <div className="min-h-[46mm] space-y-[5mm] text-[8px] leading-[1.18] text-black">
               <div>
-                <p className="mb-[0.7mm] text-[6px] font-semibold">Account / Payable to</p>
+                <p className="mb-[0.7mm] text-[6px] font-semibold">{strings.accountPayableTo}</p>
                 <p>{formatIban(invoice.qrBill?.account || invoice.business.iban)}</p>
                 <p>{senderName}</p>
                 {toPaymentAddressLines(businessAddress).map((line, index) => (
@@ -276,7 +267,7 @@ export default function PublicInvoicePage() {
               </div>
 
               <div>
-                <p className="mb-[0.7mm] text-[6px] font-semibold">Payable by</p>
+                <p className="mb-[0.7mm] text-[6px] font-semibold">{strings.payableBy}</p>
                 <p>{clientName}</p>
                 {toPaymentAddressLines(clientAddress).map((line, index) => (
                   <p key={`receipt-debtor-${index}`}>{line}</p>
@@ -288,22 +279,22 @@ export default function PublicInvoicePage() {
           <div className="mt-[10mm]">
             <div className="grid grid-cols-2 gap-3 text-black">
               <div>
-                <p className="mb-[0.8mm] text-[8px] font-semibold">Currency</p>
+                <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.currency}</p>
                 <p className="text-[10px] leading-[1.16]">{invoice.currency}</p>
               </div>
               <div>
-                <p className="mb-[0.8mm] text-[8px] font-semibold">Amount</p>
-                <p className="text-[10px] leading-[1.16]">{formatMoney(totalAmountDue)}</p>
+                <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.amount}</p>
+                <p className="text-[10px] leading-[1.16]">{formatInvoiceMoney(totalAmountDue, invoiceLanguage)}</p>
               </div>
             </div>
             <div className="flex h-[7mm] items-end justify-end">
-              <p className="text-[8px] font-semibold text-black">Acceptance point</p>
+              <p className="text-[8px] font-semibold text-black">{strings.acceptancePoint}</p>
             </div>
           </div>
         </div>
 
         <div className="qr-bill__payment flex h-full flex-col pl-[4.5mm] pr-[4.5mm] pb-[3mm]">
-          <p className="mb-[5mm] text-[11px] font-semibold text-black">Payment part</p>
+          <p className="mb-[5mm] text-[11px] font-semibold text-black">{strings.paymentPart}</p>
 
           <div
             className="qr-bill__payment-grid grid flex-1"
@@ -335,7 +326,7 @@ export default function PublicInvoicePage() {
                   </div>
                 ) : (
                   <div className="flex h-full items-center justify-center text-center text-[10px] text-red-700">
-                    QR code unavailable
+                    {strings.qrCodeUnavailable}
                   </div>
                 )}
               </div>
@@ -343,12 +334,12 @@ export default function PublicInvoicePage() {
               <div className="mt-[10mm] text-black">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="mb-[0.8mm] text-[8px] font-semibold">Currency</p>
+                    <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.currency}</p>
                     <p className="text-[10px] leading-[1.16]">{invoice.currency}</p>
                   </div>
                   <div>
-                    <p className="mb-[0.8mm] text-[8px] font-semibold">Amount</p>
-                    <p className="text-[10px] leading-[1.16]">{formatMoney(totalAmountDue)}</p>
+                    <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.amount}</p>
+                    <p className="text-[10px] leading-[1.16]">{formatInvoiceMoney(totalAmountDue, invoiceLanguage)}</p>
                   </div>
                 </div>
               </div>
@@ -356,7 +347,7 @@ export default function PublicInvoicePage() {
 
             <div className="qr-bill__payment-details -mt-[10mm] space-y-[5mm] self-start text-[10px] leading-[1.16] text-black">
               <div>
-                <p className="mb-[0.8mm] text-[8px] font-semibold">Account / Payable to</p>
+                <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.accountPayableTo}</p>
                 <p>{formatIban(invoice.qrBill?.account || invoice.business.iban)}</p>
                 <p>{senderName}</p>
                 {toPaymentAddressLines(businessAddress).map((line, index) => (
@@ -365,12 +356,12 @@ export default function PublicInvoicePage() {
               </div>
 
               <div>
-                <p className="mb-[0.8mm] text-[8px] font-semibold">Additional information</p>
-                <p>{invoice.qrBill?.additionalInformation || `Invoice ${invoice.invoiceNumber}`}</p>
+                <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.additionalInformation}</p>
+                <p>{invoice.qrBill?.additionalInformation || buildInvoiceAdditionalInformation(invoice.invoiceNumber, invoiceLanguage)}</p>
               </div>
 
               <div>
-                <p className="mb-[0.8mm] text-[8px] font-semibold">Payable by</p>
+                <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.payableBy}</p>
                 <p>{clientName}</p>
                 {toPaymentAddressLines(clientAddress).map((line, index) => (
                   <p key={`payment-debtor-${index}`}>{line}</p>
@@ -519,12 +510,12 @@ export default function PublicInvoicePage() {
       `}</style>
       <div className="flex flex-col gap-3 print:hidden sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">Invoice {invoice.invoiceNumber}</h1>
+          <h1 className="text-xl font-semibold text-slate-900 dark:text-slate-100">{strings.invoice} {invoice.invoiceNumber}</h1>
           <Badge
             variant={statusVariant(invoice.status)}
             className="self-start px-2 py-px text-[11px] tracking-[0.08em] uppercase"
           >
-            {invoice.status}
+            {translateInvoiceStatus(invoice.status, invoiceLanguage)}
           </Badge>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
@@ -534,7 +525,7 @@ export default function PublicInvoicePage() {
             className="w-full sm:w-auto"
           >
             <Download className="h-4 w-4" />
-            Download PDF
+            {strings.downloadPdf}
           </Button>
           {cardPaymentAvailable ? (
             <Button
@@ -544,10 +535,10 @@ export default function PublicInvoicePage() {
             >
               <CreditCard className="h-4 w-4" />
               {isCheckoutLoading
-                ? "Redirecting to Stripe..."
+                ? strings.redirectingToStripe
                 : invoice.status === "paid"
-                  ? "Invoice already paid"
-                  : "Pay with Card"}
+                  ? strings.invoiceAlreadyPaid
+                  : strings.payWithCard}
             </Button>
           ) : null}
         </div>
@@ -555,12 +546,12 @@ export default function PublicInvoicePage() {
 
       {paymentSuccess ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 print:hidden">
-          {isConfirmingPayment ? "Payment received. Updating invoice status..." : "Payment completed. Thank you."}
+          {isConfirmingPayment ? strings.paymentReceivedUpdating : strings.paymentCompletedThankYou}
         </div>
       ) : null}
       {paymentCancelled ? (
         <div className="rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-800 print:hidden">
-          Payment was cancelled.
+          {strings.paymentCancelled}
         </div>
       ) : null}
       {checkoutError ? (
@@ -570,7 +561,7 @@ export default function PublicInvoicePage() {
       ) : null}
       {!cardPaymentAvailable ? (
         <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 print:hidden">
-          Online card payment is not enabled for this business. Please use the payment details shown on the invoice.
+          {strings.onlineCardPaymentUnavailable}
         </div>
       ) : null}
 
@@ -607,26 +598,26 @@ export default function PublicInvoicePage() {
         </header>
 
         <section className="mt-9 space-y-1">
-          <p className="text-[24px] font-semibold leading-none">Invoice: {invoice.invoiceNumber}</p>
-          <p className="text-slate-700">{formatDate(invoice.issueDate)}</p>
-          <p className="text-slate-700">Due date: {formatDate(invoice.dueDate)}</p>
-          {invoice.subject ? <p className="text-slate-700">Subject: {invoice.subject}</p> : null}
+          <p className="text-[24px] font-semibold leading-none">{strings.invoice}: {invoice.invoiceNumber}</p>
+          <p className="text-slate-700">{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</p>
+          <p className="text-slate-700">{strings.dueDate}: {formatInvoiceDate(invoice.dueDate, invoiceLanguage)}</p>
+          {invoice.subject ? <p className="text-slate-700">{strings.subject}: {invoice.subject}</p> : null}
         </section>
 
         <section className="overflow-x-auto">
           <table className="invoice-table w-full md:min-w-[34rem]">
             <thead>
               <tr>
-                <th style={{ width: "8%" }}>Pos</th>
-                <th style={{ width: "46%" }}>Description</th>
+                <th style={{ width: "8%" }}>{strings.position}</th>
+                <th style={{ width: "46%" }}>{strings.description}</th>
                 <th className="invoice-table__col-qty" style={{ width: "12%" }}>
-                  Qty
+                  {strings.quantity}
                 </th>
                 <th className="num invoice-table__col-unit" style={{ width: "16%" }}>
-                  Unit price
+                  {strings.unitPrice}
                 </th>
                 <th className="num invoice-table__col-amount" style={{ width: "18%" }}>
-                  Amount
+                  {strings.amount}
                 </th>
               </tr>
             </thead>
@@ -637,14 +628,14 @@ export default function PublicInvoicePage() {
                   <td>
                     <div>{item.description}</div>
                     <div className="invoice-line-mobile-meta">
-                      <span>Qty: {formatQuantity(item.quantity)}</span>
-                      <span>Unit price: {formatMoney(item.unitPrice)}</span>
-                      <span>Amount: {formatMoney(item.lineTotal)}</span>
+                      <span>{strings.quantity}: {formatQuantity(item.quantity)}</span>
+                      <span>{strings.unitPrice}: {formatInvoiceMoney(item.unitPrice, invoiceLanguage)}</span>
+                      <span>{strings.amount}: {formatInvoiceMoney(item.lineTotal, invoiceLanguage)}</span>
                     </div>
                   </td>
                   <td className="invoice-table__col-qty">{formatQuantity(item.quantity)}</td>
-                  <td className="num invoice-table__col-unit">{formatMoney(item.unitPrice)}</td>
-                  <td className="num invoice-table__col-amount">{formatMoney(item.lineTotal)}</td>
+                  <td className="num invoice-table__col-unit">{formatInvoiceMoney(item.unitPrice, invoiceLanguage)}</td>
+                  <td className="num invoice-table__col-amount">{formatInvoiceMoney(item.lineTotal, invoiceLanguage)}</td>
                 </tr>
               ))}
             </tbody>
@@ -654,23 +645,23 @@ export default function PublicInvoicePage() {
         <section className="mt-6 ml-auto w-full max-w-[80mm] text-[11px]">
           <div className="border-t border-slate-300 pt-3">
             <div className="mb-1 flex items-center justify-between text-slate-700">
-              <span>Subtotal</span>
+              <span>{strings.subtotal}</span>
               <span>
-                {invoice.currency} {formatMoney(subtotal)}
+                {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
               </span>
             </div>
             {taxAmount > 0 ? (
               <div className="mb-3 flex items-center justify-between text-slate-700">
-                <span>VAT</span>
+                <span>{strings.vat}</span>
                 <span>
-                  {invoice.currency} {formatMoney(taxAmount)}
+                  {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
                 </span>
               </div>
             ) : null}
             <div className="flex items-center justify-between text-[20px] font-semibold leading-none">
-              <span>Total</span>
+              <span>{strings.total}</span>
               <span>
-                {invoice.currency} {formatMoney(totalAmountDue)}
+                {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
               </span>
             </div>
           </div>
@@ -682,17 +673,17 @@ export default function PublicInvoicePage() {
 
         {shouldRenderManualTransferSection ? (
           <section className="manual-payment mt-8 border border-slate-300 p-4">
-            <h2 className="mb-3 text-[14px] font-semibold text-slate-900">Payment options</h2>
+            <h2 className="mb-3 text-[14px] font-semibold text-slate-900">{strings.paymentOptions}</h2>
             <div className="grid gap-4 md:grid-cols-2">
               {onlinePaymentLink ? (
                 <div className="border border-slate-200 p-3">
                   <p className="mb-2 text-[12px] font-semibold text-slate-900">
-                    {cardPaymentAvailable ? "Pay online" : "View invoice online"}
+                    {cardPaymentAvailable ? strings.payOnline : strings.viewInvoiceOnline}
                   </p>
                   <p className="mb-2 text-[10px] leading-[1.4] text-slate-700">
                     {cardPaymentAvailable
-                      ? "Use the secure payment page to review this invoice and pay online."
-                      : "Use the secure invoice page to review this invoice online."}
+                      ? strings.payOnlineDescription
+                      : strings.viewInvoiceOnlineDescription}
                   </p>
                   <p className="break-all text-[10px] leading-[1.4] text-slate-900 underline">
                     {onlinePaymentLink}
@@ -701,36 +692,36 @@ export default function PublicInvoicePage() {
               ) : null}
 
               <div className="border border-slate-200 p-3">
-                <p className="mb-2 text-[12px] font-semibold text-slate-900">International bank transfer</p>
+                <p className="mb-2 text-[12px] font-semibold text-slate-900">{strings.internationalBankTransfer}</p>
                 <dl className="space-y-2 text-[10px] leading-[1.4] text-slate-700">
                   <div className="flex items-start justify-between gap-3">
-                    <dt className="font-semibold text-slate-500">Account holder</dt>
+                    <dt className="font-semibold text-slate-500">{strings.accountHolder}</dt>
                     <dd className="text-right text-slate-900">{senderName}</dd>
                   </div>
                   {invoice.business.bankName ? (
                     <div className="flex items-start justify-between gap-3">
-                      <dt className="font-semibold text-slate-500">Bank</dt>
+                      <dt className="font-semibold text-slate-500">{strings.bank}</dt>
                       <dd className="text-right text-slate-900">{invoice.business.bankName}</dd>
                     </div>
                   ) : null}
                   <div className="flex items-start justify-between gap-3">
-                    <dt className="font-semibold text-slate-500">IBAN</dt>
+                    <dt className="font-semibold text-slate-500">{strings.iban}</dt>
                     <dd className="text-right text-slate-900">{formatIban(invoice.business.iban)}</dd>
                   </div>
                   {invoice.business.bic ? (
                     <div className="flex items-start justify-between gap-3">
-                      <dt className="font-semibold text-slate-500">BIC / SWIFT</dt>
+                      <dt className="font-semibold text-slate-500">{strings.bicSwift}</dt>
                       <dd className="text-right text-slate-900">{invoice.business.bic}</dd>
                     </div>
                   ) : null}
                   <div className="flex items-start justify-between gap-3">
-                    <dt className="font-semibold text-slate-500">Amount</dt>
+                    <dt className="font-semibold text-slate-500">{strings.amount}</dt>
                     <dd className="text-right text-slate-900">
-                      {invoice.currency} {formatMoney(totalAmountDue)}
+                      {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
                     </dd>
                   </div>
                   <div className="flex items-start justify-between gap-3">
-                    <dt className="font-semibold text-slate-500">Reference / message</dt>
+                    <dt className="font-semibold text-slate-500">{strings.referenceMessage}</dt>
                     <dd className="text-right text-slate-900">{paymentReference}</dd>
                   </div>
                 </dl>

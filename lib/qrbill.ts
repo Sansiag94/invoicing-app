@@ -1,12 +1,18 @@
 import { SwissQRBill, SwissQRCode } from "swissqrbill/svg";
 import type { Data } from "swissqrbill/types";
 import { normalizeInvoiceCurrency } from "@/lib/invoice";
+import {
+  buildInvoiceAdditionalInformation,
+  getQrBillLanguage,
+  normalizeInvoiceLanguage,
+} from "@/lib/invoiceLanguage";
 
 type InvoiceForQRBill = {
   invoiceNumber: string;
   reference?: string | null;
   totalAmount: number;
   currency: string;
+  language?: string | null;
 };
 
 type BusinessForQRBill = {
@@ -153,7 +159,10 @@ function getPayloadFields(
   const debtorAddress = parseAddress(client.address ?? "", debtorCountry);
   const debtorName =
     normalizeWhitespace(client.companyName || client.contactName || client.email || "").slice(0, 70) || "Customer";
-  const additionalInformation = `Invoice ${normalizeWhitespace(invoice.invoiceNumber) || "Invoice"}`.slice(0, 140);
+  const additionalInformation = buildInvoiceAdditionalInformation(
+    normalizeWhitespace(invoice.invoiceNumber) || "Invoice",
+    normalizeInvoiceLanguage(invoice.language)
+  ).slice(0, 140);
   const amount = Math.max(0, Number(invoice.totalAmount || 0)).toFixed(2);
   const currency = normalizeInvoiceCurrency(invoice.currency, "CHF");
 
@@ -198,7 +207,10 @@ export function getSwissQRBillMetadata(
   }
 
   const { referenceType, reference } = buildReference();
-  const additionalInformation = `Invoice ${normalizeWhitespace(invoice.invoiceNumber) || "Invoice"}`.slice(0, 140);
+  const additionalInformation = buildInvoiceAdditionalInformation(
+    normalizeWhitespace(invoice.invoiceNumber) || "Invoice",
+    normalizeInvoiceLanguage(invoice.language)
+  ).slice(0, 140);
 
   return {
     account,
@@ -228,7 +240,10 @@ function buildQRBillData(
 
   const amount = Number(Math.max(0, invoice.totalAmount || 0).toFixed(2));
   const currency = normalizeInvoiceCurrency(invoice.currency, "CHF");
-  const additionalInformation = `Invoice ${normalizeWhitespace(invoice.invoiceNumber) || "Invoice"}`.slice(0, 140);
+  const additionalInformation = buildInvoiceAdditionalInformation(
+    normalizeWhitespace(invoice.invoiceNumber) || "Invoice",
+    normalizeInvoiceLanguage(invoice.language)
+  ).slice(0, 140);
 
   const data: Data = {
     amount,
@@ -323,7 +338,7 @@ export function generateQRBill(
   client: ClientForQRBill
 ): string {
   const qrBill = new SwissQRBill(buildQRBillData(invoice, business, client).data, {
-    language: "EN",
+    language: getQrBillLanguage(normalizeInvoiceLanguage(invoice.language)),
   });
 
   return qrBill.toString();

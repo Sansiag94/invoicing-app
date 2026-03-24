@@ -51,6 +51,7 @@ export async function GET(request: Request) {
       postalCode: "8001",
       city: "Zurich",
       country: "Switzerland",
+      language: "en",
       vatNumber: null,
       createdAt: new Date(),
       updatedAt: new Date(),

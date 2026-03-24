@@ -6,6 +6,7 @@ import Link from "next/link";
 import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { isSupportedCountry } from "@/lib/countries";
+import { DEFAULT_INVOICE_LANGUAGE, INVOICE_LANGUAGE_OPTIONS, getInvoiceLanguageLabel } from "@/lib/invoiceLanguage";
 import { ClientDetails } from "@/lib/types";
 import { isValidEmail } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -17,6 +18,7 @@ import { CountryCombobox } from "@/components/ui/country-combobox";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
@@ -49,6 +51,7 @@ export default function ClientDetailPage() {
   const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
+  const [language, setLanguage] = useState(DEFAULT_INVOICE_LANGUAGE);
   const [vatNumber, setVatNumber] = useState("");
 
   useEffect(() => {
@@ -82,6 +85,7 @@ export default function ClientDetailPage() {
             setPostalCode(safeClient.postalCode ?? parsedAddress.postalCode ?? "");
             setCity(safeClient.city ?? parsedAddress.city ?? "");
             setCountry(safeClient.country ?? "");
+            setLanguage(safeClient.language ?? DEFAULT_INVOICE_LANGUAGE);
             setVatNumber(safeClient.vatNumber ?? "");
           }
         }
@@ -155,6 +159,7 @@ export default function ClientDetailPage() {
           postalCode,
           city,
           country,
+          language,
           vatNumber,
         }),
       });
@@ -199,6 +204,7 @@ export default function ClientDetailPage() {
     setPostalCode(client.postalCode ?? parsedAddress.postalCode ?? "");
     setCity(client.city ?? parsedAddress.city ?? "");
     setCountry(client.country ?? "");
+    setLanguage(client.language ?? DEFAULT_INVOICE_LANGUAGE);
     setVatNumber(client.vatNumber ?? "");
   }
 
@@ -340,6 +346,10 @@ export default function ClientDetailPage() {
               <p className="text-xs uppercase tracking-wide text-slate-500">Country</p>
               <p className="font-medium text-slate-900">{client.country}</p>
             </div>
+            <div>
+              <p className="text-xs uppercase tracking-wide text-slate-500">Invoice Language</p>
+              <p className="font-medium text-slate-900">{getInvoiceLanguageLabel(client.language)}</p>
+            </div>
             <div className="md:col-span-2">
               <p className="text-xs uppercase tracking-wide text-slate-500">Address</p>
               <p className="font-medium text-slate-900">
@@ -435,6 +445,16 @@ export default function ClientDetailPage() {
                   onChange={setCountry}
                   required
                 />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="language">Invoice Language</Label>
+                <Select id="language" value={language} onChange={(event) => setLanguage(event.target.value as typeof language)}>
+                  {INVOICE_LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="street">Street</Label>

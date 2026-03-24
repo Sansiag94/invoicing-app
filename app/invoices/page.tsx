@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FocusEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { buildDefaultInvoiceMessage } from "@/lib/invoiceLanguage";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -70,13 +71,12 @@ function getClientFirstName(client: ClientSummary | null): string {
   return rawName.split(/\s+/)[0] || "client_first_name";
 }
 
-function buildInvoiceNotesTemplate(clientFirstName: string, senderName: string): string {
-  return `Dear ${clientFirstName},
-
-Please find here the details of your invoice.
-
-Kind regards,
-${senderName}`;
+function buildInvoiceNotesTemplate(client: ClientSummary | null, senderName: string): string {
+  return buildDefaultInvoiceMessage(
+    client?.language ?? "en",
+    getClientFirstName(client),
+    senderName
+  );
 }
 
 function InvoicePageContent() {
@@ -95,7 +95,7 @@ function InvoicePageContent() {
   const [dueDate, setDueDate] = useState(getDefaultDueDate(defaultIssueDate));
   const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
-  const [notes, setNotes] = useState(buildInvoiceNotesTemplate("client_first_name", "User_name"));
+  const [notes, setNotes] = useState(buildInvoiceNotesTemplate(null, "User_name"));
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -231,13 +231,9 @@ function InvoicePageContent() {
   useEffect(() => {
     if (notesManuallyEdited && notes.trim().length > 0) return;
 
-    const selectedClient = clients.find((client) => client.id === clientId) ?? null;
-    const nextTemplate = buildInvoiceNotesTemplate(
-      getClientFirstName(selectedClient),
-      invoiceSenderName || "User_name"
-    );
+    const nextTemplate = buildInvoiceNotesTemplate(selectedClient, invoiceSenderName || "User_name");
     setNotes(nextTemplate);
-  }, [invoiceSenderName, clientId, clients, notes, notesManuallyEdited]);
+  }, [invoiceSenderName, notes, notesManuallyEdited, selectedClient]);
 
   const totals = useMemo(() => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -351,7 +347,7 @@ function InvoicePageContent() {
       setClientId("");
       setSubject("");
       setNotesManuallyEdited(false);
-      setNotes(buildInvoiceNotesTemplate("client_first_name", invoiceSenderName || "User_name"));
+      setNotes(buildInvoiceNotesTemplate(null, invoiceSenderName || "User_name"));
       setIsCreateFormOpen(false);
       setSuccessMessage("Invoice created successfully.");
 

@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronUp, UserPlus } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { isSupportedCountry } from "@/lib/countries";
+import { DEFAULT_INVOICE_LANGUAGE, INVOICE_LANGUAGE_OPTIONS, getInvoiceLanguageLabel } from "@/lib/invoiceLanguage";
 import { ClientSummary } from "@/lib/types";
 import { isValidEmail } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { CountryCombobox } from "@/components/ui/country-combobox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/components/ui/toast";
 
@@ -33,6 +35,7 @@ function ClientsPageContent() {
   const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
   const [country, setCountry] = useState("");
+  const [language, setLanguage] = useState(DEFAULT_INVOICE_LANGUAGE);
   const [vatNumber, setVatNumber] = useState("");
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -52,6 +55,7 @@ function ClientsPageContent() {
           client.email,
           client.phone ?? "",
           client.country,
+          getInvoiceLanguageLabel(client.language),
           client.vatNumber ?? "",
         ].join(" ");
 
@@ -124,6 +128,7 @@ function ClientsPageContent() {
           postalCode,
           city,
           country,
+          language,
           vatNumber,
         }),
       });
@@ -147,6 +152,7 @@ function ClientsPageContent() {
       setPostalCode("");
       setCity("");
       setCountry("");
+      setLanguage(DEFAULT_INVOICE_LANGUAGE);
       setVatNumber("");
       setIsCreateFormOpen(false);
       setSuccessMessage("Client created successfully.");
@@ -289,6 +295,17 @@ function ClientsPageContent() {
                 <p className="text-xs text-slate-500">Choose a country from the list so invoices and payment details stay consistent.</p>
               </div>
               <div className="space-y-2">
+                <Label htmlFor="language">Invoice Language</Label>
+                <Select id="language" value={language} onChange={(event) => setLanguage(event.target.value as typeof language)}>
+                  {INVOICE_LANGUAGE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-xs text-slate-500">This controls the language used on invoice PDFs and client-facing invoice pages.</p>
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="vatNumber">VAT Number</Label>
                 <Input
                   id="vatNumber"
@@ -344,6 +361,7 @@ function ClientsPageContent() {
                   <TableHead>Email</TableHead>
                   <TableHead>Phone</TableHead>
                   <TableHead>Country</TableHead>
+                  <TableHead>Invoice Language</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -374,6 +392,7 @@ function ClientsPageContent() {
                     <TableCell>{client.email}</TableCell>
                     <TableCell>{client.phone || "-"}</TableCell>
                     <TableCell>{client.country}</TableCell>
+                    <TableCell>{getInvoiceLanguageLabel(client.language)}</TableCell>
                     <TableCell>
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/invoices?clientId=${client.id}`} onClick={(event) => event.stopPropagation()}>
@@ -408,6 +427,7 @@ function ClientsPageContent() {
                       <p className="text-sm text-slate-600">{client.email}</p>
                       <p className="text-sm text-slate-600">{client.phone || "-"}</p>
                       <p className="text-sm text-slate-600">{client.country}</p>
+                      <p className="text-sm text-slate-600">{getInvoiceLanguageLabel(client.language)}</p>
                     </div>
                   </div>
                   <div className="mt-4">

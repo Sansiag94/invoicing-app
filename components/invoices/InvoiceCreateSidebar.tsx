@@ -1,6 +1,7 @@
 "use client";
 
 import { Building2, CalendarDays, FileText } from "lucide-react";
+import { getInvoiceLanguageLabel } from "@/lib/invoiceLanguage";
 import { ClientSummary, InvoiceCurrency } from "@/lib/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -44,6 +45,7 @@ export default function InvoiceCreateSidebar({
                 <p>{client.email}</p>
                 {client.phone ? <p>{client.phone}</p> : null}
                 <p>{client.country}</p>
+                <p>Invoice language: {getInvoiceLanguageLabel(client.language)}</p>
               </div>
             ) : (
               <p className="text-slate-500">Select a client to see billing details.</p>

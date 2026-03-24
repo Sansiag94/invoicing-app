@@ -6,6 +6,14 @@ import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
 import { generateSwissQRCodeRects, getSwissQRBillMetadata, type SwissQRBillMetadata } from "@/lib/qrbill";
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
+import {
+  buildDefaultInvoiceMessage,
+  buildInvoiceAdditionalInformation,
+  formatInvoiceDate,
+  formatInvoiceMoney,
+  getInvoiceStrings,
+  normalizeInvoiceLanguage,
+} from "@/lib/invoiceLanguage";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { buildPublicInvoiceLinkFromToken } from "@/lib/publicInvoiceLink";
 
@@ -412,26 +420,9 @@ const styles = StyleSheet.create({
   },
 });
 
-function formatDate(value: string | Date): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
-
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const year = date.getUTCFullYear();
-  return `${day}.${month}.${year}`;
-}
-
 function formatQuantity(value: number): string {
   if (Number.isInteger(value)) return String(value);
   return value.toFixed(2).replace(/\.?0+$/, "");
-}
-
-function formatMoney(value: number): string {
-  return new Intl.NumberFormat("de-CH", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
 }
 
 function formatIban(value: string | null | undefined): string {
@@ -496,19 +487,6 @@ function toPaymentAddressLines(address: ReturnType<typeof parsePostalAddress>): 
     .filter((line) => line && line.trim().length > 0);
 }
 
-function buildDefaultInvoiceMessage(clientName: string, senderName: string): string {
-  const firstName =
-    clientName
-      .split(" ")
-      .find((part) => part.trim().length > 0) || "there";
-  const senderFirstName =
-    senderName
-      .split(" ")
-      .find((part) => part.trim().length > 0) || senderName;
-
-  return `Hello ${firstName},\nThank you for your trust.\nPlease find here the breakdown of the services.\n\nBest regards,\n${senderFirstName}`;
-}
-
 function paginateWithoutQr<T>(items: T[]): T[][] {
   if (items.length <= FIRST_PAGE_ROWS_NO_QR) {
     return [items];
@@ -563,16 +541,19 @@ function paginateLineItems<T>(
 function InvoiceLineItemsTable(props: {
   lineItems: InvoiceWithRelations["lineItems"];
   startIndex: number;
+  language: ReturnType<typeof normalizeInvoiceLanguage>;
   continuation?: boolean;
 }) {
+  const strings = getInvoiceStrings(props.language);
+
   return (
     <View style={props.continuation ? styles.tableWrapContinuation : styles.tableWrap}>
       <View style={styles.tableHeader}>
-        <Text style={[styles.tableHeaderText, styles.colPos]}>Pos.</Text>
-        <Text style={[styles.tableHeaderText, styles.colDesc]}>Description</Text>
-        <Text style={[styles.tableHeaderText, styles.colQty]}>Qty</Text>
-        <Text style={[styles.tableHeaderText, styles.colUnit]}>Unit price</Text>
-        <Text style={[styles.tableHeaderText, styles.colTotal]}>Amount</Text>
+        <Text style={[styles.tableHeaderText, styles.colPos]}>{strings.position}</Text>
+        <Text style={[styles.tableHeaderText, styles.colDesc]}>{strings.description}</Text>
+        <Text style={[styles.tableHeaderText, styles.colQty]}>{strings.quantity}</Text>
+        <Text style={[styles.tableHeaderText, styles.colUnit]}>{strings.unitPrice}</Text>
+        <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
       </View>
 
       {props.lineItems.map((item, index) => (
@@ -580,8 +561,10 @@ function InvoiceLineItemsTable(props: {
           <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
           <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
           <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
-          <Text style={[styles.tableCellText, styles.colUnit]}>{formatMoney(item.unitPrice)}</Text>
-          <Text style={[styles.tableCellText, styles.colTotal]}>{formatMoney(item.quantity * item.unitPrice)}</Text>
+          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
+          <Text style={[styles.tableCellText, styles.colTotal]}>
+            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
+          </Text>
         </View>
       ))}
     </View>
@@ -613,6 +596,8 @@ const InvoiceDocument = ({
   const senderType = normalizeInvoiceSenderType(
     senderPreferences?.invoiceSenderType ?? invoice.business.invoiceSenderType ?? "company"
   );
+  const invoiceLanguage = normalizeInvoiceLanguage(invoice.client.language);
+  const strings = getInvoiceStrings(invoiceLanguage);
 
   const businessAddress = parsePostalAddress(invoice.business.address, invoice.business.country);
   const clientAddress = parsePostalAddress(invoice.client.address, invoice.client.country);
@@ -652,6 +637,7 @@ const InvoiceDocument = ({
   const invoiceForQR = {
     ...invoice,
     totalAmount: totalAmountDue,
+    language: invoiceLanguage,
   };
 
   const businessForQR = {
@@ -674,7 +660,8 @@ const InvoiceDocument = ({
   }
 
   const paymentAccount = qrMetadata ? formatIban(qrMetadata.account) : formatIban(invoice.business.iban);
-  const additionalInformation = qrMetadata?.additionalInformation || invoice.invoiceNumber;
+  const additionalInformation =
+    qrMetadata?.additionalInformation || buildInvoiceAdditionalInformation(invoice.invoiceNumber, invoiceLanguage);
   const paymentReference = normalizeLine(invoice.reference) ?? invoice.invoiceNumber;
   const onlinePaymentLink = buildPublicPaymentLink(invoice.publicToken);
   const bankName = normalizeLine(invoice.business.bankName);
@@ -683,7 +670,8 @@ const InvoiceDocument = ({
     !shouldRenderQRSection &&
     Boolean(onlinePaymentLink || invoice.business.iban || bic || bankName);
 
-  const messageText = normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(clientPrimaryName, senderName);
+  const messageText =
+    normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
   const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
 
   return (
@@ -737,10 +725,12 @@ const InvoiceDocument = ({
                   </View>
 
                   <View style={styles.invoiceHero}>
-                    <Text style={styles.invoiceTitle}>Invoice: {invoice.invoiceNumber}</Text>
-                    <Text style={styles.invoiceDate}>{formatDate(invoice.issueDate)}</Text>
-                    <Text style={styles.invoiceDueDate}>Due date: {formatDate(invoice.dueDate)}</Text>
-                    {invoice.subject ? <Text style={styles.invoiceSubject}>Subject: {invoice.subject}</Text> : null}
+                    <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
+                    <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
+                    <Text style={styles.invoiceDueDate}>
+                      {strings.dueDate}: {formatInvoiceDate(invoice.dueDate, invoiceLanguage)}
+                    </Text>
+                    {invoice.subject ? <Text style={styles.invoiceSubject}>{strings.subject}: {invoice.subject}</Text> : null}
                   </View>
                 </>
               ) : null}
@@ -749,6 +739,7 @@ const InvoiceDocument = ({
                 <InvoiceLineItemsTable
                   lineItems={lineItems}
                   startIndex={startIndex}
+                  language={invoiceLanguage}
                   continuation={!isFirstPage}
                 />
               ) : null}
@@ -758,23 +749,23 @@ const InvoiceDocument = ({
                   <View style={styles.totalsBox}>
                     <View style={styles.totalsRule}>
                       <View style={styles.totalsRow}>
-                        <Text style={styles.totalsLabel}>Subtotal</Text>
+                        <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
                         <Text style={styles.totalsValue}>
-                          {invoice.currency} {formatMoney(subtotal)}
+                          {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
                         </Text>
                       </View>
                       {taxAmount > 0 ? (
                         <View style={styles.totalsRow}>
-                          <Text style={styles.totalsLabel}>VAT</Text>
+                          <Text style={styles.totalsLabel}>{strings.vat}</Text>
                           <Text style={styles.totalsValue}>
-                            {invoice.currency} {formatMoney(taxAmount)}
+                            {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
                           </Text>
                         </View>
                       ) : null}
                       <View style={styles.totalsRow}>
-                        <Text style={styles.totalDueLabel}>Total</Text>
+                        <Text style={styles.totalDueLabel}>{strings.total}</Text>
                         <Text style={styles.totalDueValue}>
-                          {invoice.currency} {formatMoney(totalAmountDue)}
+                          {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
                         </Text>
                       </View>
                     </View>
@@ -786,14 +777,12 @@ const InvoiceDocument = ({
 
                   {shouldRenderManualTransferSection ? (
                     <View style={styles.manualPaymentSection}>
-                      <Text style={styles.manualPaymentTitle}>Payment options</Text>
+                      <Text style={styles.manualPaymentTitle}>{strings.paymentOptions}</Text>
                       <View style={styles.manualPaymentGrid}>
                         {onlinePaymentLink ? (
                           <View style={[styles.manualPaymentCard, styles.manualPaymentCardWithGap]}>
-                            <Text style={styles.manualPaymentCardTitle}>Pay online</Text>
-                            <Text style={styles.manualPaymentBody}>
-                              Review this invoice and pay online through the secure payment page.
-                            </Text>
+                            <Text style={styles.manualPaymentCardTitle}>{strings.payOnline}</Text>
+                            <Text style={styles.manualPaymentBody}>{strings.payOnlineDescription}</Text>
                             <Link src={onlinePaymentLink} style={styles.manualPaymentLink}>
                               {onlinePaymentLink}
                             </Link>
@@ -801,36 +790,36 @@ const InvoiceDocument = ({
                         ) : null}
 
                         <View style={styles.manualPaymentCard}>
-                          <Text style={styles.manualPaymentCardTitle}>International bank transfer</Text>
+                          <Text style={styles.manualPaymentCardTitle}>{strings.internationalBankTransfer}</Text>
                           <View style={styles.manualPaymentDetails}>
                             <View style={styles.manualPaymentRow}>
-                              <Text style={styles.manualPaymentLabel}>Account holder</Text>
+                              <Text style={styles.manualPaymentLabel}>{strings.accountHolder}</Text>
                               <Text style={styles.manualPaymentValue}>{paymentRecipientName}</Text>
                             </View>
                             {bankName ? (
                               <View style={styles.manualPaymentRow}>
-                                <Text style={styles.manualPaymentLabel}>Bank</Text>
+                                <Text style={styles.manualPaymentLabel}>{strings.bank}</Text>
                                 <Text style={styles.manualPaymentValue}>{bankName}</Text>
                               </View>
                             ) : null}
                             <View style={styles.manualPaymentRow}>
-                              <Text style={styles.manualPaymentLabel}>IBAN</Text>
+                              <Text style={styles.manualPaymentLabel}>{strings.iban}</Text>
                               <Text style={styles.manualPaymentValue}>{formatIban(invoice.business.iban)}</Text>
                             </View>
                             {bic ? (
                               <View style={styles.manualPaymentRow}>
-                                <Text style={styles.manualPaymentLabel}>BIC / SWIFT</Text>
+                                <Text style={styles.manualPaymentLabel}>{strings.bicSwift}</Text>
                                 <Text style={styles.manualPaymentValue}>{bic}</Text>
                               </View>
                             ) : null}
                             <View style={styles.manualPaymentRow}>
-                              <Text style={styles.manualPaymentLabel}>Amount</Text>
+                              <Text style={styles.manualPaymentLabel}>{strings.amount}</Text>
                               <Text style={styles.manualPaymentValue}>
-                                {invoice.currency} {formatMoney(totalAmountDue)}
+                                {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
                               </Text>
                             </View>
                             <View style={styles.manualPaymentRow}>
-                              <Text style={styles.manualPaymentLabel}>Reference / message</Text>
+                              <Text style={styles.manualPaymentLabel}>{strings.referenceMessage}</Text>
                               <Text style={styles.manualPaymentValue}>{paymentReference}</Text>
                             </View>
                           </View>
@@ -851,10 +840,10 @@ const InvoiceDocument = ({
 
                 <View style={styles.qrBillRow}>
                   <View style={styles.receiptCol}>
-                    <Text style={styles.qrTitle}>Receipt</Text>
+                    <Text style={styles.qrTitle}>{strings.receipt}</Text>
 
                     <View style={styles.receiptMain}>
-                      <Text style={styles.labelSmall}>Account / Payable to</Text>
+                      <Text style={styles.labelSmall}>{strings.accountPayableTo}</Text>
                       <Text style={styles.textSmall}>{paymentAccount}</Text>
                       {creditorLines.map((line, index) => (
                         <Text key={`receipt-creditor-${index}`} style={styles.textSmall}>
@@ -862,7 +851,7 @@ const InvoiceDocument = ({
                         </Text>
                       ))}
 
-                      <Text style={[styles.labelSmall, styles.blockGap]}>Payable by</Text>
+                      <Text style={[styles.labelSmall, styles.blockGap]}>{strings.payableBy}</Text>
                       {debtorLines.map((line, index) => (
                         <Text key={`receipt-debtor-${index}`} style={styles.textSmall}>
                           {line}
@@ -873,22 +862,22 @@ const InvoiceDocument = ({
                     <View style={styles.receiptFooter}>
                       <View style={styles.amountRow}>
                         <View style={styles.amountCol}>
-                          <Text style={styles.amountLabel}>Currency</Text>
+                          <Text style={styles.amountLabel}>{strings.currency}</Text>
                           <Text style={styles.amountValue}>{invoice.currency}</Text>
                         </View>
                         <View style={styles.amountCol}>
-                          <Text style={styles.amountLabel}>Amount</Text>
-                          <Text style={styles.amountValue}>{formatMoney(totalAmountDue)}</Text>
+                          <Text style={styles.amountLabel}>{strings.amount}</Text>
+                          <Text style={styles.amountValue}>{formatInvoiceMoney(totalAmountDue, invoiceLanguage)}</Text>
                         </View>
                       </View>
                       <View style={styles.acceptancePointWrap}>
-                        <Text style={styles.acceptancePoint}>Acceptance point</Text>
+                        <Text style={styles.acceptancePoint}>{strings.acceptancePoint}</Text>
                       </View>
                     </View>
                   </View>
 
                   <View style={styles.paymentPartCol}>
-                    <Text style={styles.qrTitle}>Payment part</Text>
+                    <Text style={styles.qrTitle}>{strings.paymentPart}</Text>
 
                     <View style={styles.paymentPartInner}>
                       <View style={styles.qrCol}>
@@ -910,26 +899,26 @@ const InvoiceDocument = ({
                               <Rect x={20.4} y={21.95} width={5.2} height={2.1} fill="#ffffff" />
                             </Svg>
                           ) : (
-                            <Text style={styles.qrFallback}>QR code unavailable</Text>
+                            <Text style={styles.qrFallback}>{strings.qrCodeUnavailable}</Text>
                           )}
                         </View>
 
                         <View style={styles.qrFooter}>
                           <View style={styles.amountRow}>
                             <View style={styles.amountCol}>
-                              <Text style={styles.amountLabel}>Currency</Text>
+                              <Text style={styles.amountLabel}>{strings.currency}</Text>
                               <Text style={styles.amountValue}>{invoice.currency}</Text>
                             </View>
                             <View style={styles.amountCol}>
-                              <Text style={styles.amountLabel}>Amount</Text>
-                              <Text style={styles.amountValue}>{formatMoney(totalAmountDue)}</Text>
+                              <Text style={styles.amountLabel}>{strings.amount}</Text>
+                              <Text style={styles.amountValue}>{formatInvoiceMoney(totalAmountDue, invoiceLanguage)}</Text>
                             </View>
                           </View>
                         </View>
                       </View>
 
                       <View style={styles.detailsCol}>
-                        <Text style={styles.paymentLabel}>Account / Payable to</Text>
+                        <Text style={styles.paymentLabel}>{strings.accountPayableTo}</Text>
                         <Text style={styles.textMedium}>{paymentAccount}</Text>
                         {creditorLines.map((line, index) => (
                           <Text key={`payment-creditor-${index}`} style={styles.textMedium}>
@@ -937,10 +926,10 @@ const InvoiceDocument = ({
                           </Text>
                         ))}
 
-                        <Text style={[styles.paymentLabel, styles.blockGap]}>Additional information</Text>
+                        <Text style={[styles.paymentLabel, styles.blockGap]}>{strings.additionalInformation}</Text>
                         <Text style={styles.textMedium}>{additionalInformation}</Text>
 
-                        <Text style={[styles.paymentLabel, styles.blockGap]}>Payable by</Text>
+                        <Text style={[styles.paymentLabel, styles.blockGap]}>{strings.payableBy}</Text>
                         {debtorLines.map((line, index) => (
                           <Text key={`payment-debtor-${index}`} style={styles.textMedium}>
                             {line}
@@ -965,10 +954,10 @@ const InvoiceDocument = ({
 
             <View style={styles.qrBillRow}>
               <View style={styles.receiptCol}>
-                <Text style={styles.qrTitle}>Receipt</Text>
+                <Text style={styles.qrTitle}>{strings.receipt}</Text>
 
                 <View style={styles.receiptMain}>
-                  <Text style={styles.labelSmall}>Account / Payable to</Text>
+                  <Text style={styles.labelSmall}>{strings.accountPayableTo}</Text>
                   <Text style={styles.textSmall}>{paymentAccount}</Text>
                   {creditorLines.map((line, index) => (
                     <Text key={`qr-only-receipt-creditor-${index}`} style={styles.textSmall}>
@@ -976,7 +965,7 @@ const InvoiceDocument = ({
                     </Text>
                   ))}
 
-                  <Text style={[styles.labelSmall, styles.blockGap]}>Payable by</Text>
+                  <Text style={[styles.labelSmall, styles.blockGap]}>{strings.payableBy}</Text>
                   {debtorLines.map((line, index) => (
                     <Text key={`qr-only-receipt-debtor-${index}`} style={styles.textSmall}>
                       {line}
@@ -987,22 +976,22 @@ const InvoiceDocument = ({
                 <View style={styles.receiptFooter}>
                   <View style={styles.amountRow}>
                     <View style={styles.amountCol}>
-                      <Text style={styles.amountLabel}>Currency</Text>
+                      <Text style={styles.amountLabel}>{strings.currency}</Text>
                       <Text style={styles.amountValue}>{invoice.currency}</Text>
                     </View>
                     <View style={styles.amountCol}>
-                      <Text style={styles.amountLabel}>Amount</Text>
-                      <Text style={styles.amountValue}>{formatMoney(totalAmountDue)}</Text>
+                      <Text style={styles.amountLabel}>{strings.amount}</Text>
+                      <Text style={styles.amountValue}>{formatInvoiceMoney(totalAmountDue, invoiceLanguage)}</Text>
                     </View>
                   </View>
                   <View style={styles.acceptancePointWrap}>
-                    <Text style={styles.acceptancePoint}>Acceptance point</Text>
+                    <Text style={styles.acceptancePoint}>{strings.acceptancePoint}</Text>
                   </View>
                 </View>
               </View>
 
               <View style={styles.paymentPartCol}>
-                <Text style={styles.qrTitle}>Payment part</Text>
+                <Text style={styles.qrTitle}>{strings.paymentPart}</Text>
 
                 <View style={styles.paymentPartInner}>
                   <View style={styles.qrCol}>
@@ -1024,26 +1013,26 @@ const InvoiceDocument = ({
                           <Rect x={20.4} y={21.95} width={5.2} height={2.1} fill="#ffffff" />
                         </Svg>
                       ) : (
-                        <Text style={styles.qrFallback}>QR code unavailable</Text>
+                        <Text style={styles.qrFallback}>{strings.qrCodeUnavailable}</Text>
                       )}
                     </View>
 
                     <View style={styles.qrFooter}>
                       <View style={styles.amountRow}>
                         <View style={styles.amountCol}>
-                          <Text style={styles.amountLabel}>Currency</Text>
+                          <Text style={styles.amountLabel}>{strings.currency}</Text>
                           <Text style={styles.amountValue}>{invoice.currency}</Text>
                         </View>
                         <View style={styles.amountCol}>
-                          <Text style={styles.amountLabel}>Amount</Text>
-                          <Text style={styles.amountValue}>{formatMoney(totalAmountDue)}</Text>
+                          <Text style={styles.amountLabel}>{strings.amount}</Text>
+                          <Text style={styles.amountValue}>{formatInvoiceMoney(totalAmountDue, invoiceLanguage)}</Text>
                         </View>
                       </View>
                     </View>
                   </View>
 
                   <View style={styles.detailsCol}>
-                    <Text style={styles.paymentLabel}>Account / Payable to</Text>
+                    <Text style={styles.paymentLabel}>{strings.accountPayableTo}</Text>
                     <Text style={styles.textMedium}>{paymentAccount}</Text>
                     {creditorLines.map((line, index) => (
                       <Text key={`qr-only-payment-creditor-${index}`} style={styles.textMedium}>
@@ -1051,10 +1040,10 @@ const InvoiceDocument = ({
                       </Text>
                     ))}
 
-                    <Text style={[styles.paymentLabel, styles.blockGap]}>Additional information</Text>
+                    <Text style={[styles.paymentLabel, styles.blockGap]}>{strings.additionalInformation}</Text>
                     <Text style={styles.textMedium}>{additionalInformation}</Text>
 
-                    <Text style={[styles.paymentLabel, styles.blockGap]}>Payable by</Text>
+                    <Text style={[styles.paymentLabel, styles.blockGap]}>{strings.payableBy}</Text>
                     {debtorLines.map((line, index) => (
                       <Text key={`qr-only-payment-debtor-${index}`} style={styles.textMedium}>
                         {line}

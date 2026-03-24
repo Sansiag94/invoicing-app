@@ -50,6 +50,7 @@ export async function GET(
             postalCode: true,
             city: true,
             country: true,
+            language: true,
             vatNumber: true,
           },
         },

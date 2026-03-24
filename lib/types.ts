@@ -1,3 +1,5 @@
+import type { InvoiceLanguage } from "@/lib/invoiceLanguage";
+
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue";
 export type InvoiceCurrency = "CHF" | "EUR";
 export type InvoiceSenderType = "company" | "owner";
@@ -47,6 +49,7 @@ export interface ClientSummary {
   postalCode?: string | null;
   city?: string | null;
   country: string;
+  language: InvoiceLanguage;
   vatNumber: string | null;
 }
 
@@ -280,6 +283,7 @@ export interface PublicInvoiceClientData {
   postalCode?: string | null;
   city?: string | null;
   country: string;
+  language: InvoiceLanguage;
   vatNumber: string | null;
 }
 
