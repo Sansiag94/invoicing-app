@@ -84,7 +84,9 @@ export async function PATCH(
           where: { id: invoice.id, businessId },
           include: {
             client: true,
-            lineItems: true,
+            lineItems: {
+              orderBy: { position: "asc" },
+            },
             business: true,
             payments: {
               orderBy: { createdAt: "desc" },
@@ -136,7 +138,9 @@ export async function PATCH(
         where: { id: invoice.id, businessId },
         include: {
           client: true,
-          lineItems: true,
+          lineItems: {
+            orderBy: { position: "asc" },
+          },
           business: true,
           payments: {
             orderBy: { createdAt: "desc" },

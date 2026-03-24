@@ -20,6 +20,7 @@ type UpdateInvoiceBody = {
   subject?: unknown;
   reference?: unknown;
   notes?: unknown;
+  paymentNote?: unknown;
   lineItems?: unknown;
 };
 
@@ -90,7 +91,9 @@ export async function GET(
       where: { id, businessId },
       include: {
         client: true,
-        lineItems: true,
+        lineItems: {
+          orderBy: { position: "asc" },
+        },
         business: true,
         payments: {
           orderBy: { createdAt: "desc" },
@@ -143,6 +146,7 @@ export async function PATCH(
         subject: true,
         reference: true,
         notes: true,
+        paymentNote: true,
         lineItems: {
           select: { id: true },
         },
@@ -218,7 +222,12 @@ export async function PATCH(
       return apiError("Invalid lineItems payload", 400);
     }
 
-    const computedTotals = calculateInvoiceTotals(parsedLineItems);
+    const lineItemsWithPosition = parsedLineItems.map((item, index) => ({
+      ...item,
+      position: index,
+    }));
+
+    const computedTotals = calculateInvoiceTotals(lineItemsWithPosition);
     const subtotal = computedTotals.subtotal;
     const taxAmount = computedTotals.taxAmount;
     const totalAmount = computedTotals.totalAmount;
@@ -228,6 +237,8 @@ export async function PATCH(
       body.reference === undefined ? existingInvoice.reference : asNullableString(body.reference);
     const notes =
       body.notes === undefined ? existingInvoice.notes : asNullableString(body.notes);
+    const paymentNote =
+      body.paymentNote === undefined ? existingInvoice.paymentNote : asNullableString(body.paymentNote);
 
     const updatedInvoice = await prisma.$transaction(async (tx) => {
       await tx.invoice.update({
@@ -238,14 +249,15 @@ export async function PATCH(
           subject,
           reference,
           notes,
+          paymentNote,
           subtotal,
           taxAmount,
           totalAmount,
         },
       });
 
-      const updatedItems = parsedLineItems.filter((item) => item.id);
-      const createdItems = parsedLineItems.filter((item) => !item.id);
+      const updatedItems = lineItemsWithPosition.filter((item) => item.id);
+      const createdItems = lineItemsWithPosition.filter((item) => !item.id);
       const keptItemIds = updatedItems.map((item) => item.id as string);
 
       if (keptItemIds.length > 0) {
@@ -267,6 +279,7 @@ export async function PATCH(
         await tx.lineItem.update({
           where: { id: item.id as string },
           data: {
+            position: item.position,
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
@@ -280,6 +293,7 @@ export async function PATCH(
         await tx.lineItem.createMany({
           data: createdItems.map((item) => ({
             invoiceId: existingInvoice.id,
+            position: item.position,
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
@@ -293,7 +307,9 @@ export async function PATCH(
         where: { id: existingInvoice.id, businessId },
         include: {
           client: true,
-          lineItems: true,
+          lineItems: {
+            orderBy: { position: "asc" },
+          },
           business: true,
           payments: {
             orderBy: { createdAt: "desc" },

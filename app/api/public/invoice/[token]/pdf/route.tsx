@@ -21,7 +21,9 @@ export async function GET(
       where: { publicToken: token },
       include: {
         client: true,
-        lineItems: true,
+        lineItems: {
+          orderBy: { position: "asc" },
+        },
         business: true,
       },
     });

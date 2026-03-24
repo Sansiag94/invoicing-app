@@ -48,7 +48,9 @@ export async function POST(
     const invoice = await prisma.invoice.findFirst({
       where: { id, businessId: business.id },
       include: {
-        lineItems: true,
+        lineItems: {
+          orderBy: { position: "asc" },
+        },
         business: true,
         client: true,
       },

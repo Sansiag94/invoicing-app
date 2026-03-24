@@ -92,6 +92,7 @@ export async function GET(request: Request) {
       taxAmount: 0,
       totalAmount: 0,
       notes: "Thank you for your business.",
+      paymentNote: null,
       publicToken: null,
       stripeCheckoutSessionId: null,
       stripeCheckoutSessionExpiresAt: null,
@@ -102,6 +103,7 @@ export async function GET(request: Request) {
       lineItems: Array.from({ length: rows }, (_, index) => ({
         id: `sample-line-${index + 1}`,
         invoiceId: "sample-invoice",
+        position: index,
         description: `Consulting block ${index + 1}`,
         quantity: 1 + (index % 3) * 0.5,
         unitPrice: 120 + index * 5,

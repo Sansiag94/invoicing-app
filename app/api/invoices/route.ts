@@ -32,6 +32,7 @@ type CreateInvoiceBody = {
   status?: unknown;
   currency?: unknown;
   notes?: unknown;
+  paymentNote?: unknown;
   lineItems?: unknown;
 };
 
@@ -131,6 +132,7 @@ export async function POST(request: Request) {
     const dueDate = asDate(body.dueDate);
     const subject = asString(body.subject);
     const reference = asString(body.reference);
+    const paymentNote = asString(body.paymentNote);
 
     if (!clientId || !issueDate || !dueDate) {
       return apiError("Missing required fields", 400);
@@ -241,9 +243,11 @@ export async function POST(request: Request) {
         status: normalizedStatus,
         currency: selectedCurrency,
         notes: asString(body.notes),
+        paymentNote,
         publicToken: crypto.randomUUID(),
         lineItems: {
-          create: parsedLineItems.map((item) => ({
+          create: parsedLineItems.map((item, index) => ({
+            position: index,
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
@@ -253,7 +257,9 @@ export async function POST(request: Request) {
         },
       },
       include: {
-        lineItems: true,
+        lineItems: {
+          orderBy: { position: "asc" },
+        },
       },
     });
 

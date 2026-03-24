@@ -671,6 +671,12 @@ export default function PublicInvoicePage() {
           {invoice.notes?.trim() ? invoice.notes.trim() : defaultMessage}
         </section>
 
+        {invoice.paymentNote?.trim() ? (
+          <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
+            {invoice.paymentNote.trim()}
+          </section>
+        ) : null}
+
         {shouldRenderManualTransferSection ? (
           <section className="manual-payment mt-8 border border-slate-300 p-4">
             <h2 className="mb-3 text-[14px] font-semibold text-slate-900">{strings.paymentOptions}</h2>

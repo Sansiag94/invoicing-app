@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { FocusEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { arrayMove } from "@/lib/arrayMove";
 import { buildDefaultInvoiceMessage } from "@/lib/invoiceLanguage";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -96,7 +97,10 @@ function InvoicePageContent() {
   const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate(null, "User_name"));
+  const [paymentNote, setPaymentNote] = useState("");
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
+  const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
+  const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
@@ -270,6 +274,30 @@ function InvoicePageContent() {
     setLineItems((current) => current.filter((_, i) => i !== index));
   };
 
+  const moveLineItem = (fromIndex: number, toIndex: number) => {
+    setLineItems((current) => arrayMove(current, fromIndex, toIndex));
+  };
+
+  const handleLineItemDragStart = (index: number) => {
+    setDraggedLineItemIndex(index);
+    setDragOverLineItemIndex(index);
+  };
+
+  const handleLineItemDrop = (index: number) => {
+    if (draggedLineItemIndex === null) {
+      return;
+    }
+
+    moveLineItem(draggedLineItemIndex, index);
+    setDraggedLineItemIndex(null);
+    setDragOverLineItemIndex(null);
+  };
+
+  const handleLineItemDragEnd = () => {
+    setDraggedLineItemIndex(null);
+    setDragOverLineItemIndex(null);
+  };
+
   const handleCreateInvoice = async () => {
     if (!clientId || !issueDate || !dueDate || lineItems.length === 0) {
       toast({
@@ -325,6 +353,7 @@ function InvoicePageContent() {
           subject,
           status: "draft",
           notes,
+          paymentNote,
           lineItems: normalizedLineItems,
         }),
       });
@@ -348,6 +377,7 @@ function InvoicePageContent() {
       setSubject("");
       setNotesManuallyEdited(false);
       setNotes(buildInvoiceNotesTemplate(null, invoiceSenderName || "User_name"));
+      setPaymentNote("");
       setIsCreateFormOpen(false);
       setSuccessMessage("Invoice created successfully.");
 
@@ -908,6 +938,16 @@ function InvoicePageContent() {
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="paymentNote">Payment Note</Label>
+                  <Input
+                    id="paymentNote"
+                    value={paymentNote}
+                    onChange={(event) => setPaymentNote(event.target.value)}
+                    placeholder="Optional short payment note, e.g. payment via TWINT possible at +41..."
+                  />
+                </div>
+
                 <div className="space-y-3">
                   <Label>Line Items</Label>
 
@@ -915,9 +955,37 @@ function InvoicePageContent() {
                     {lineItems.map((item, index) => (
                       <div
                         key={`${item.id ?? "new"}-${index}`}
-                        className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                        className={cn(
+                          "rounded-xl border bg-slate-50 p-4",
+                          dragOverLineItemIndex === index ? "border-slate-400" : "border-slate-200"
+                        )}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          if (draggedLineItemIndex !== null) {
+                            setDragOverLineItemIndex(index);
+                          }
+                        }}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          handleLineItemDrop(index);
+                        }}
                       >
                         <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                              Line Item {index + 1}
+                            </p>
+                            <button
+                              type="button"
+                              draggable
+                              className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-white"
+                              aria-label={`Drag line item ${index + 1}`}
+                              onDragStart={() => handleLineItemDragStart(index)}
+                              onDragEnd={handleLineItemDragEnd}
+                            >
+                              <GripVertical className="h-4 w-4" />
+                            </button>
+                          </div>
                           <div className="space-y-2">
                             <Label htmlFor={`description-${index}`}>Description</Label>
                             <Input
@@ -1012,6 +1080,7 @@ function InvoicePageContent() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-14">Move</TableHead>
                           <TableHead>Description</TableHead>
                           <TableHead>Qty</TableHead>
                           <TableHead>Unit Price</TableHead>
@@ -1022,7 +1091,32 @@ function InvoicePageContent() {
                       </TableHeader>
                       <TableBody>
                         {lineItems.map((item, index) => (
-                          <TableRow key={`${item.id ?? "new"}-${index}`}>
+                          <TableRow
+                            key={`${item.id ?? "new"}-${index}`}
+                            className={dragOverLineItemIndex === index ? "bg-slate-50" : undefined}
+                            onDragOver={(event) => {
+                              event.preventDefault();
+                              if (draggedLineItemIndex !== null) {
+                                setDragOverLineItemIndex(index);
+                              }
+                            }}
+                            onDrop={(event) => {
+                              event.preventDefault();
+                              handleLineItemDrop(index);
+                            }}
+                          >
+                            <TableCell>
+                              <button
+                                type="button"
+                                draggable
+                                className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+                                aria-label={`Drag line item ${index + 1}`}
+                                onDragStart={() => handleLineItemDragStart(index)}
+                                onDragEnd={handleLineItemDragEnd}
+                              >
+                                <GripVertical className="h-4 w-4" />
+                              </button>
+                            </TableCell>
                             <TableCell>
                               <Input
                                 value={item.description}
@@ -1086,7 +1180,7 @@ function InvoicePageContent() {
                               Add Line Item
                             </Button>
                           </TableCell>
-                          <TableCell colSpan={5} />
+                          <TableCell colSpan={6} />
                         </TableRow>
                       </TableBody>
                     </Table>

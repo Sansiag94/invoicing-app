@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, BellRing, CheckCircle2, Copy, Download, Eye, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, CheckCircle2, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { arrayMove } from "@/lib/arrayMove";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { InvoiceDetails, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -113,7 +114,10 @@ export default function InvoiceDetailPage() {
   const [dueDate, setDueDate] = useState("");
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
+  const [paymentNote, setPaymentNote] = useState("");
   const [lineItems, setLineItems] = useState<LineItemData[]>([]);
+  const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
+  const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
 
   const editedTotals = useMemo(() => calculateTotals(lineItems), [lineItems]);
 
@@ -127,9 +131,11 @@ export default function InvoiceDetailPage() {
     setDueDate(toDateInputValue(dataInvoice.dueDate));
     setSubject(dataInvoice.subject ?? "");
     setNotes(dataInvoice.notes ?? "");
+    setPaymentNote(dataInvoice.paymentNote ?? "");
     setLineItems(
       dataInvoice.lineItems.map((item) => ({
         id: item.id,
+        position: item.position,
         description: item.description,
         quantity: item.quantity,
         unitPrice: item.unitPrice,
@@ -419,6 +425,30 @@ export default function InvoiceDetailPage() {
     );
   };
 
+  const moveLineItem = (fromIndex: number, toIndex: number) => {
+    setLineItems((current) => arrayMove(current, fromIndex, toIndex));
+  };
+
+  const handleLineItemDragStart = (index: number) => {
+    setDraggedLineItemIndex(index);
+    setDragOverLineItemIndex(index);
+  };
+
+  const handleLineItemDrop = (index: number) => {
+    if (draggedLineItemIndex === null) {
+      return;
+    }
+
+    moveLineItem(draggedLineItemIndex, index);
+    setDraggedLineItemIndex(null);
+    setDragOverLineItemIndex(null);
+  };
+
+  const handleLineItemDragEnd = () => {
+    setDraggedLineItemIndex(null);
+    setDragOverLineItemIndex(null);
+  };
+
   const handleCancelEdit = () => {
     if (!invoice) {
       return;
@@ -516,6 +546,7 @@ export default function InvoiceDetailPage() {
           dueDate,
           subject,
           notes,
+          paymentNote,
           lineItems: normalizedLineItems.map((item) => ({
             id: item.id,
             description: item.description,
@@ -913,12 +944,27 @@ export default function InvoiceDetailPage() {
                   placeholder="Add the greeting or message shown on the invoice"
                 />
               </div>
+              <div className="space-y-2 md:col-span-3">
+                <Label htmlFor="paymentNote">Payment Note</Label>
+                <Input
+                  id="paymentNote"
+                  value={paymentNote}
+                  onChange={(event) => setPaymentNote(event.target.value)}
+                  placeholder="Optional short payment note, e.g. payment via TWINT possible at +41..."
+                />
+              </div>
             </>
           ) : (
-            <div className="md:col-span-3">
-              <p className="text-xs uppercase tracking-wide text-slate-500">Message</p>
-              <p className="font-medium text-slate-900">{invoice.notes || "-"}</p>
-            </div>
+            <>
+              <div className="md:col-span-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Message</p>
+                <p className="font-medium whitespace-pre-line text-slate-900">{invoice.notes || "-"}</p>
+              </div>
+              <div className="md:col-span-3">
+                <p className="text-xs uppercase tracking-wide text-slate-500">Payment Note</p>
+                <p className="font-medium whitespace-pre-line text-slate-900">{invoice.paymentNote || "-"}</p>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -932,6 +978,7 @@ export default function InvoiceDetailPage() {
           <Table>
             <TableHeader>
               <TableRow>
+                {isEditing ? <TableHead className="w-14">Move</TableHead> : null}
                 <TableHead>Description</TableHead>
                 <TableHead>Quantity</TableHead>
                 <TableHead>Unit Price</TableHead>
@@ -944,7 +991,32 @@ export default function InvoiceDetailPage() {
               {isEditing ? (
                 <>
                   {lineItems.map((item, index) => (
-                    <TableRow key={item.id ?? `editable-${index}`}>
+                    <TableRow
+                      key={item.id ?? `editable-${index}`}
+                      className={dragOverLineItemIndex === index ? "bg-slate-50" : undefined}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        if (draggedLineItemIndex !== null) {
+                          setDragOverLineItemIndex(index);
+                        }
+                      }}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        handleLineItemDrop(index);
+                      }}
+                    >
+                      <TableCell>
+                        <button
+                          type="button"
+                          draggable
+                          className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+                          aria-label={`Drag line item ${index + 1}`}
+                          onDragStart={() => handleLineItemDragStart(index)}
+                          onDragEnd={handleLineItemDragEnd}
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </button>
+                      </TableCell>
                       <TableCell>
                         <Input
                           value={item.description}
@@ -1033,7 +1105,7 @@ export default function InvoiceDetailPage() {
                         Add Line Item
                       </Button>
                     </TableCell>
-                    <TableCell colSpan={5} />
+                    <TableCell colSpan={6} />
                   </TableRow>
                 </>
               ) : (

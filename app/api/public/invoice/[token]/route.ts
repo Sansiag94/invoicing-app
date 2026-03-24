@@ -54,7 +54,9 @@ export async function GET(
             vatNumber: true,
           },
         },
-        lineItems: true,
+        lineItems: {
+          orderBy: { position: "asc" },
+        },
         business: {
           select: {
             id: true,

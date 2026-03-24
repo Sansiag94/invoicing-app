@@ -49,7 +49,9 @@ export async function POST(
             email: true,
           },
         },
-        lineItems: true,
+        lineItems: {
+          orderBy: { position: "asc" },
+        },
       },
     });
 
@@ -85,9 +87,11 @@ export async function POST(
           taxAmount: totals.taxAmount,
           totalAmount: totals.totalAmount,
           notes: sourceInvoice.notes,
+          paymentNote: sourceInvoice.paymentNote,
           publicToken: crypto.randomUUID(),
           lineItems: {
-            create: sourceInvoice.lineItems.map((item) => ({
+            create: sourceInvoice.lineItems.map((item, index) => ({
+              position: typeof item.position === "number" ? item.position : index,
               description: item.description,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
@@ -99,7 +103,9 @@ export async function POST(
         include: {
           client: true,
           business: true,
-          lineItems: true,
+          lineItems: {
+            orderBy: { position: "asc" },
+          },
         },
       });
     });

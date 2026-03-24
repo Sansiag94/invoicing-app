@@ -31,6 +31,7 @@ export interface InvoicePartyData {
 
 export interface LineItemData {
   id?: string;
+  position?: number;
   description: string;
   quantity: number;
   unitPrice: number;
@@ -97,6 +98,7 @@ export interface InvoiceSummary {
   taxAmount: number;
   totalAmount: number;
   notes: string | null;
+  paymentNote: string | null;
   publicToken: string | null;
 }
 
@@ -320,6 +322,7 @@ export interface PublicInvoiceDetails {
   taxAmount: number;
   totalAmount: number;
   notes: string | null;
+  paymentNote: string | null;
   publicToken: string | null;
   lineItems: LineItemData[];
   client: PublicInvoiceClientData;

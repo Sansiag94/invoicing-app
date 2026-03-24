@@ -28,7 +28,9 @@ export async function GET(
       where: { id, businessId: business.id },
       include: {
         client: true,
-        lineItems: true,
+        lineItems: {
+          orderBy: { position: "asc" },
+        },
         business: true,
       },
     });

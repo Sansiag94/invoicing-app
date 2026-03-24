@@ -44,7 +44,9 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   const existingInvoice = await prisma.invoice.findFirst({
     where: { id, businessId },
     include: {
-      lineItems: true,
+      lineItems: {
+        orderBy: { position: "asc" },
+      },
       business: true,
       client: true,
     },

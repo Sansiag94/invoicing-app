@@ -165,13 +165,16 @@ const styles = StyleSheet.create({
   },
   tableRow: {
     flexDirection: "row",
+    alignItems: "flex-start",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    paddingVertical: mm(2.1),
+    paddingTop: mm(2.1),
+    paddingBottom: mm(2.6),
     paddingHorizontal: mm(1.2),
   },
   tableCellText: {
     fontSize: 9.3,
+    lineHeight: 1.35,
   },
   colPos: { width: "8%" },
   colDesc: { width: "46%" },
@@ -215,6 +218,18 @@ const styles = StyleSheet.create({
   },
   closingText: {
     fontSize: 10,
+    lineHeight: 1.35,
+    color: "#374151",
+  },
+  paymentNoteBox: {
+    marginTop: mm(4),
+    width: mm(120),
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    padding: mm(3),
+  },
+  paymentNoteText: {
+    fontSize: 9.4,
     lineHeight: 1.35,
     color: "#374151",
   },
@@ -672,6 +687,7 @@ const InvoiceDocument = ({
 
   const messageText =
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
+  const paymentNote = normalizeLine(invoice.paymentNote);
   const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
 
   return (
@@ -774,6 +790,12 @@ const InvoiceDocument = ({
                   <View style={styles.closingTextBlock}>
                     <Text style={styles.closingText}>{messageText}</Text>
                   </View>
+
+                  {paymentNote ? (
+                    <View style={styles.paymentNoteBox}>
+                      <Text style={styles.paymentNoteText}>{paymentNote}</Text>
+                    </View>
+                  ) : null}
 
                   {shouldRenderManualTransferSection ? (
                     <View style={styles.manualPaymentSection}>
