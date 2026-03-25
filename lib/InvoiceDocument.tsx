@@ -88,19 +88,17 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    lineHeight: 16,
     marginBottom: mm(1.4),
   },
   sellerSecondary: {
     fontSize: 10,
-    lineHeight: 12.5,
     color: "#374151",
     marginBottom: mm(1.6),
   },
-  headerTextBlock: {
+  bodyLine: {
     fontSize: 9.6,
-    lineHeight: 13.2,
-    marginBottom: mm(1.5),
+    lineHeight: 12.6,
+    marginBottom: mm(0.8),
   },
   infoLabel: {
     fontSize: 7.2,
@@ -113,40 +111,35 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    lineHeight: 16,
     marginBottom: mm(1.4),
   },
   recipientSecondary: {
     fontSize: 10,
-    lineHeight: 12.5,
     color: "#374151",
     marginBottom: mm(1.6),
   },
   invoiceHero: {
-    marginBottom: mm(10),
+    marginBottom: mm(11),
   },
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    lineHeight: 21,
     marginBottom: mm(2.4),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
-    lineHeight: 13,
     color: "#374151",
-    marginBottom: mm(1.8),
+    marginBottom: mm(1.4),
   },
   invoiceSubject: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13,
+    lineHeight: 13.2,
     marginBottom: mm(1.8),
   },
   invoiceDueDate: {
     fontSize: 10,
-    lineHeight: 13,
     color: "#6b7280",
   },
   tableWrap: {
@@ -205,45 +198,42 @@ const styles = StyleSheet.create({
   totalsRule: {
     borderTopWidth: 1,
     borderTopColor: "#d1d5db",
-    paddingTop: mm(3),
+    paddingTop: mm(4),
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: mm(1.4),
+    alignItems: "flex-end",
+    marginBottom: mm(2),
   },
   totalsLabel: {
     fontSize: 10,
-    lineHeight: 12.5,
     color: "#374151",
   },
   totalsValue: {
     fontSize: 10,
-    lineHeight: 12.5,
     color: "#374151",
   },
   totalDueLabel: {
     fontSize: 15.5,
-    lineHeight: 18,
     fontWeight: "bold",
   },
   totalDueValue: {
     fontSize: 15.5,
-    lineHeight: 18,
     fontWeight: "bold",
   },
   closingTextBlock: {
     marginTop: mm(6),
     width: mm(120),
-    marginBottom: mm(1),
+    marginBottom: mm(2),
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 13.4,
+    lineHeight: 13.5,
     color: "#374151",
   },
   paymentNoteBox: {
-    marginTop: mm(14),
+    marginTop: mm(12),
     width: mm(120),
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -251,7 +241,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 12.8,
+    lineHeight: 13,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -677,7 +667,6 @@ const InvoiceDocument = ({
 
   const businessHeaderLines = collectLines(...toCompactAddressLines(businessAddress));
   const sellerContactLines = collectLines(businessEmail, businessPhone);
-  const clientHeaderLines = collectLines(...toCompactAddressLines(clientAddress));
   const creditorLines =
     senderType === "owner"
       ? collectLines(paymentRecipientName, ...toPaymentAddressLines(businessAddress))
@@ -759,12 +748,16 @@ const InvoiceDocument = ({
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
                       <Text style={styles.sellerName}>{headerPrimaryName}</Text>
                       {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
-                      {businessHeaderLines.length > 0 ? (
-                        <Text style={styles.headerTextBlock}>{businessHeaderLines.join("\n")}</Text>
-                      ) : null}
-                      {sellerContactLines.length > 0 ? (
-                        <Text style={styles.headerTextBlock}>{sellerContactLines.join("\n")}</Text>
-                      ) : null}
+                      {businessHeaderLines.map((line, index) => (
+                        <Text key={`seller-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
+                      {sellerContactLines.map((line, index) => (
+                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
                     </View>
 
                     <View style={styles.businessMetaCol}>
@@ -772,9 +765,11 @@ const InvoiceDocument = ({
                       {clientSecondaryName ? (
                         <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
                       ) : null}
-                      {clientHeaderLines.length > 0 ? (
-                        <Text style={styles.headerTextBlock}>{clientHeaderLines.join("\n")}</Text>
-                      ) : null}
+                      {toCompactAddressLines(clientAddress).map((line, index) => (
+                        <Text key={`client-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
                     </View>
                   </View>
 
