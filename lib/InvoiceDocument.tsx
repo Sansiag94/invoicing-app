@@ -38,6 +38,16 @@ const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
 const PAGE_TOP_MARGIN = mm(25);
 const PAGE_SIDE_MARGIN = mm(20);
 const PAGE_BOTTOM_MARGIN = mm(25);
+const CONTENT_WIDTH = mm(170);
+const HEADER_GAP = mm(10);
+const SELLER_COLUMN_WIDTH = mm(96);
+const CLIENT_COLUMN_WIDTH = CONTENT_WIDTH - SELLER_COLUMN_WIDTH - HEADER_GAP;
+const TABLE_POS_WIDTH = mm(12);
+const TABLE_DESC_WIDTH = mm(82);
+const TABLE_GAP_WIDTH = mm(4);
+const TABLE_QTY_WIDTH = mm(16);
+const TABLE_UNIT_WIDTH = mm(28);
+const TABLE_TOTAL_WIDTH = mm(28);
 const QR_BILL_HEIGHT = mm(105);
 const QR_CUT_LINE_SPACE = mm(4);
 const QR_BILL_TOTAL_SPACE = QR_BILL_HEIGHT + QR_CUT_LINE_SPACE;
@@ -67,17 +77,19 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: mm(16),
   },
+  headerGap: {
+    width: HEADER_GAP,
+  },
   sellerCol: {
-    width: "48%",
-    paddingRight: mm(6),
+    width: SELLER_COLUMN_WIDTH,
   },
   businessMetaCol: {
-    width: "36%",
+    width: CLIENT_COLUMN_WIDTH,
     alignItems: "flex-start",
-    marginTop: mm(28),
+    paddingTop: mm(28),
   },
   logo: {
     width: mm(24),
@@ -138,23 +150,26 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    lineHeight: 22,
     marginBottom: mm(1.3),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
     marginBottom: mm(1.1),
   },
   invoiceSubject: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 1.35,
+    lineHeight: 13.5,
     marginBottom: mm(1.1),
   },
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
+    lineHeight: 13,
   },
   tableWrap: {
     marginTop: mm(10),
@@ -169,16 +184,19 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1.2,
     borderBottomColor: "#111827",
     paddingBottom: mm(1.8),
-    paddingHorizontal: mm(1.2),
   },
   tableHeaderText: {
     fontSize: 8,
     fontWeight: "bold",
     color: "#374151",
     textTransform: "uppercase",
+    lineHeight: 10,
   },
   tableCell: {
     justifyContent: "flex-start",
+  },
+  tableSpacer: {
+    width: TABLE_GAP_WIDTH,
   },
   tableRow: {
     flexDirection: "row",
@@ -186,20 +204,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
     paddingTop: mm(2.1),
-    paddingBottom: mm(3),
-    paddingHorizontal: mm(1.2),
+    paddingBottom: mm(3.2),
   },
   tableCellText: {
     fontSize: 9.3,
     lineHeight: 12.5,
   },
-  colPos: { width: "7%" },
-  colDesc: { width: "45%", paddingRight: mm(4) },
-  colGap: { width: "4%" },
-  colQty: { width: "10%", paddingLeft: mm(2) },
-  colUnit: { width: "16%", alignItems: "flex-end" },
-  colTotal: { width: "18%", alignItems: "flex-end" },
-  qtyText: { textAlign: "left" },
+  tableDescriptionText: {
+    paddingRight: mm(2),
+  },
+  colPos: { width: TABLE_POS_WIDTH },
+  colDesc: { width: TABLE_DESC_WIDTH },
+  colQty: { width: TABLE_QTY_WIDTH },
+  colUnit: { width: TABLE_UNIT_WIDTH, alignItems: "flex-end" },
+  colTotal: { width: TABLE_TOTAL_WIDTH, alignItems: "flex-end" },
+  qtyText: { textAlign: "right" },
   amountText: { textAlign: "right" },
   totalsBox: {
     marginTop: mm(6),
@@ -238,7 +257,7 @@ const styles = StyleSheet.create({
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 1.35,
+    lineHeight: 14,
     color: "#374151",
   },
   paymentNoteBox: {
@@ -250,7 +269,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 13,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -590,7 +609,7 @@ function InvoiceLineItemsTable(props: {
         <View style={[styles.tableCell, styles.colDesc]}>
           <Text style={styles.tableHeaderText}>{strings.description}</Text>
         </View>
-        <View style={styles.colGap} />
+        <View style={styles.tableSpacer} />
         <View style={[styles.tableCell, styles.colQty]}>
           <Text style={[styles.tableHeaderText, styles.qtyText]}>{strings.quantity}</Text>
         </View>
@@ -603,14 +622,14 @@ function InvoiceLineItemsTable(props: {
       </View>
 
       {props.lineItems.map((item, index) => (
-        <View key={item.id} style={styles.tableRow}>
+        <View key={item.id} style={styles.tableRow} wrap={false}>
           <View style={[styles.tableCell, styles.colPos]}>
             <Text style={styles.tableCellText}>{props.startIndex + index}</Text>
           </View>
           <View style={[styles.tableCell, styles.colDesc]}>
-            <Text style={styles.tableCellText}>{item.description}</Text>
+            <Text style={[styles.tableCellText, styles.tableDescriptionText]}>{item.description}</Text>
           </View>
-          <View style={styles.colGap} />
+          <View style={styles.tableSpacer} />
           <View style={[styles.tableCell, styles.colQty]}>
             <Text style={[styles.tableCellText, styles.qtyText]}>{formatQuantity(item.quantity)}</Text>
           </View>
@@ -776,6 +795,8 @@ const InvoiceDocument = ({
                         </View>
                       ))}
                     </View>
+
+                    <View style={styles.headerGap} />
 
                     <View style={styles.businessMetaCol}>
                       <View style={styles.recipientNameBlock}>
