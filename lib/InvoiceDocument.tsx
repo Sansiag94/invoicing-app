@@ -88,17 +88,25 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
+  },
+  sellerNameBlock: {
     marginBottom: mm(1.2),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.4),
+    lineHeight: 12.5,
+  },
+  sellerSecondaryBlock: {
+    marginBottom: mm(1.2),
   },
   bodyLine: {
     fontSize: 9.4,
     lineHeight: 12.5,
-    marginBottom: mm(1),
+  },
+  bodyLineBlock: {
+    marginBottom: mm(0.9),
   },
   infoLabel: {
     fontSize: 7.2,
@@ -111,12 +119,18 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
+  },
+  recipientNameBlock: {
     marginBottom: mm(1.2),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.4),
+    lineHeight: 12.5,
+  },
+  recipientSecondaryBlock: {
+    marginBottom: mm(1.2),
   },
   invoiceHero: {
     marginBottom: mm(8),
@@ -172,7 +186,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
     paddingTop: mm(2.1),
-    paddingBottom: mm(3.2),
+    paddingBottom: mm(3),
     paddingHorizontal: mm(1.2),
   },
   tableCellText: {
@@ -180,11 +194,12 @@ const styles = StyleSheet.create({
     lineHeight: 12.5,
   },
   colPos: { width: "7%" },
-  colDesc: { width: "45%", paddingRight: mm(6) },
-  colQty: { width: "14%", paddingLeft: mm(4) },
-  colUnit: { width: "16%", paddingLeft: mm(2), alignItems: "flex-end" },
-  colTotal: { width: "18%", paddingLeft: mm(2), alignItems: "flex-end" },
-  qtyText: { textAlign: "right" },
+  colDesc: { width: "45%", paddingRight: mm(4) },
+  colGap: { width: "4%" },
+  colQty: { width: "10%", paddingLeft: mm(2) },
+  colUnit: { width: "16%", alignItems: "flex-end" },
+  colTotal: { width: "18%", alignItems: "flex-end" },
+  qtyText: { textAlign: "left" },
   amountText: { textAlign: "right" },
   totalsBox: {
     marginTop: mm(6),
@@ -575,6 +590,7 @@ function InvoiceLineItemsTable(props: {
         <View style={[styles.tableCell, styles.colDesc]}>
           <Text style={styles.tableHeaderText}>{strings.description}</Text>
         </View>
+        <View style={styles.colGap} />
         <View style={[styles.tableCell, styles.colQty]}>
           <Text style={[styles.tableHeaderText, styles.qtyText]}>{strings.quantity}</Text>
         </View>
@@ -594,6 +610,7 @@ function InvoiceLineItemsTable(props: {
           <View style={[styles.tableCell, styles.colDesc]}>
             <Text style={styles.tableCellText}>{item.description}</Text>
           </View>
+          <View style={styles.colGap} />
           <View style={[styles.tableCell, styles.colQty]}>
             <Text style={[styles.tableCellText, styles.qtyText]}>{formatQuantity(item.quantity)}</Text>
           </View>
@@ -740,29 +757,39 @@ const InvoiceDocument = ({
                   <View style={styles.header}>
                     <View style={styles.sellerCol}>
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
-                      <Text style={styles.sellerName}>{headerPrimaryName}</Text>
-                      {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
+                      <View style={styles.sellerNameBlock}>
+                        <Text style={styles.sellerName}>{headerPrimaryName}</Text>
+                      </View>
+                      {headerSecondaryName ? (
+                        <View style={styles.sellerSecondaryBlock}>
+                          <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text>
+                        </View>
+                      ) : null}
                       {businessHeaderLines.map((line, index) => (
-                        <Text key={`seller-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`seller-${index}`} style={styles.bodyLineBlock}>
+                          <Text style={styles.bodyLine}>{line}</Text>
+                        </View>
                       ))}
                       {sellerContactLines.map((line, index) => (
-                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`seller-contact-${index}`} style={styles.bodyLineBlock}>
+                          <Text style={styles.bodyLine}>{line}</Text>
+                        </View>
                       ))}
                     </View>
 
                     <View style={styles.businessMetaCol}>
-                      <Text style={styles.recipientName}>{clientPrimaryName}</Text>
+                      <View style={styles.recipientNameBlock}>
+                        <Text style={styles.recipientName}>{clientPrimaryName}</Text>
+                      </View>
                       {clientSecondaryName ? (
-                        <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
+                        <View style={styles.recipientSecondaryBlock}>
+                          <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
+                        </View>
                       ) : null}
                       {toCompactAddressLines(clientAddress).map((line, index) => (
-                        <Text key={`client-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`client-${index}`} style={styles.bodyLineBlock}>
+                          <Text style={styles.bodyLine}>{line}</Text>
+                        </View>
                       ))}
                     </View>
                   </View>
