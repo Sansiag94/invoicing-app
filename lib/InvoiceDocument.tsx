@@ -88,17 +88,17 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    marginBottom: mm(1.4),
+    marginBottom: mm(0.6),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.6),
+    marginBottom: mm(1),
   },
   bodyLine: {
-    fontSize: 9.6,
-    lineHeight: 12.6,
-    marginBottom: mm(0.8),
+    fontSize: 9.4,
+    lineHeight: 1.35,
+    marginBottom: mm(0.55),
   },
   infoLabel: {
     fontSize: 7.2,
@@ -111,32 +111,32 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    marginBottom: mm(1.4),
+    marginBottom: mm(0.6),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.6),
+    marginBottom: mm(1),
   },
   invoiceHero: {
-    marginBottom: mm(11),
+    marginBottom: mm(8),
   },
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: mm(2.4),
+    marginBottom: mm(1.3),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.4),
+    marginBottom: mm(1.1),
   },
   invoiceSubject: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13.2,
-    marginBottom: mm(1.8),
+    lineHeight: 1.35,
+    marginBottom: mm(1.1),
   },
   invoiceDueDate: {
     fontSize: 10,
@@ -154,7 +154,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottomWidth: 1.2,
     borderBottomColor: "#111827",
-    paddingBottom: mm(2.4),
+    paddingBottom: mm(1.8),
     paddingHorizontal: mm(1.2),
   },
   tableHeaderText: {
@@ -168,28 +168,19 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    paddingTop: mm(2.8),
-    paddingBottom: mm(5.2),
+    paddingTop: mm(2.1),
+    paddingBottom: mm(2.6),
     paddingHorizontal: mm(1.2),
-  },
-  tableCellBlock: {
-    justifyContent: "flex-start",
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 13,
+    lineHeight: 1.35,
   },
-  tableTextCenter: {
-    textAlign: "center",
-  },
-  tableTextRight: {
-    textAlign: "right",
-  },
-  colPos: { width: mm(12), paddingRight: mm(3) },
-  colDesc: { width: mm(84), paddingRight: mm(8) },
-  colQty: { width: mm(18), paddingLeft: mm(2) },
-  colUnit: { width: mm(26), paddingLeft: mm(3) },
-  colTotal: { width: mm(25), paddingLeft: mm(3) },
+  colPos: { width: "8%" },
+  colDesc: { width: "46%" },
+  colQty: { width: "12%", textAlign: "left" },
+  colUnit: { width: "16%", textAlign: "right" },
+  colTotal: { width: "18%", textAlign: "right" },
   totalsBox: {
     marginTop: mm(6),
     marginLeft: "auto",
@@ -198,13 +189,12 @@ const styles = StyleSheet.create({
   totalsRule: {
     borderTopWidth: 1,
     borderTopColor: "#d1d5db",
-    paddingTop: mm(4),
+    paddingTop: mm(3),
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: mm(2),
+    marginBottom: mm(1.4),
   },
   totalsLabel: {
     fontSize: 10,
@@ -225,23 +215,22 @@ const styles = StyleSheet.create({
   closingTextBlock: {
     marginTop: mm(6),
     width: mm(120),
-    marginBottom: mm(2),
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 13.5,
+    lineHeight: 1.35,
     color: "#374151",
   },
   paymentNoteBox: {
-    marginTop: mm(12),
+    marginTop: mm(4),
     width: mm(120),
     borderWidth: 1,
     borderColor: "#d1d5db",
-    padding: mm(3.5),
+    padding: mm(3),
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 13,
+    lineHeight: 1.35,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -277,7 +266,7 @@ const styles = StyleSheet.create({
   },
   manualPaymentBody: {
     fontSize: 9,
-    lineHeight: 12,
+    lineHeight: 1.35,
     color: "#374151",
     marginBottom: mm(2),
   },
@@ -285,7 +274,7 @@ const styles = StyleSheet.create({
     fontSize: 8.8,
     color: "#0f172a",
     textDecoration: "underline",
-    lineHeight: 11.5,
+    lineHeight: 1.3,
   },
   manualPaymentDetails: {
   },
@@ -304,7 +293,7 @@ const styles = StyleSheet.create({
     width: "64%",
     fontSize: 9,
     color: "#111827",
-    lineHeight: 12,
+    lineHeight: 1.3,
     textAlign: "right",
   },
   cutLineWrap: {
@@ -366,13 +355,13 @@ const styles = StyleSheet.create({
   },
   textSmall: {
     fontSize: 8,
-    lineHeight: 10.5,
+    lineHeight: 1.18,
     marginBottom: mm(0.35),
     color: "#000000",
   },
   textMedium: {
     fontSize: 10,
-    lineHeight: 12.5,
+    lineHeight: 1.16,
     marginBottom: mm(0.45),
     color: "#000000",
   },
@@ -575,44 +564,22 @@ function InvoiceLineItemsTable(props: {
   return (
     <View style={props.continuation ? styles.tableWrapContinuation : styles.tableWrap}>
       <View style={styles.tableHeader}>
-        <View style={[styles.tableCellBlock, styles.colPos]}>
-          <Text style={styles.tableHeaderText}>{strings.position}</Text>
-        </View>
-        <View style={[styles.tableCellBlock, styles.colDesc]}>
-          <Text style={styles.tableHeaderText}>{strings.description}</Text>
-        </View>
-        <View style={[styles.tableCellBlock, styles.colQty]}>
-          <Text style={[styles.tableHeaderText, styles.tableTextCenter]}>{strings.quantity}</Text>
-        </View>
-        <View style={[styles.tableCellBlock, styles.colUnit]}>
-          <Text style={[styles.tableHeaderText, styles.tableTextRight]}>{strings.unitPrice}</Text>
-        </View>
-        <View style={[styles.tableCellBlock, styles.colTotal]}>
-          <Text style={[styles.tableHeaderText, styles.tableTextRight]}>{strings.amount}</Text>
-        </View>
+        <Text style={[styles.tableHeaderText, styles.colPos]}>{strings.position}</Text>
+        <Text style={[styles.tableHeaderText, styles.colDesc]}>{strings.description}</Text>
+        <Text style={[styles.tableHeaderText, styles.colQty]}>{strings.quantity}</Text>
+        <Text style={[styles.tableHeaderText, styles.colUnit]}>{strings.unitPrice}</Text>
+        <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
       </View>
 
       {props.lineItems.map((item, index) => (
         <View key={item.id} style={styles.tableRow}>
-          <View style={[styles.tableCellBlock, styles.colPos]}>
-            <Text style={styles.tableCellText}>{props.startIndex + index}</Text>
-          </View>
-          <View style={[styles.tableCellBlock, styles.colDesc]}>
-            <Text style={styles.tableCellText}>{item.description}</Text>
-          </View>
-          <View style={[styles.tableCellBlock, styles.colQty]}>
-            <Text style={[styles.tableCellText, styles.tableTextCenter]}>{formatQuantity(item.quantity)}</Text>
-          </View>
-          <View style={[styles.tableCellBlock, styles.colUnit]}>
-            <Text style={[styles.tableCellText, styles.tableTextRight]}>
-              {formatInvoiceMoney(item.unitPrice, props.language)}
-            </Text>
-          </View>
-          <View style={[styles.tableCellBlock, styles.colTotal]}>
-            <Text style={[styles.tableCellText, styles.tableTextRight]}>
-              {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
-            </Text>
-          </View>
+          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
+          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
+          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
+          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
+          <Text style={[styles.tableCellText, styles.colTotal]}>
+            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
+          </Text>
         </View>
       ))}
     </View>
