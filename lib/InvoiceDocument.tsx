@@ -168,19 +168,19 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    paddingTop: mm(2.1),
-    paddingBottom: mm(2.6),
+    paddingTop: mm(2.4),
+    paddingBottom: mm(4),
     paddingHorizontal: mm(1.2),
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 1.35,
+    lineHeight: 1.45,
   },
   colPos: { width: "8%" },
-  colDesc: { width: "46%" },
-  colQty: { width: "12%", textAlign: "left" },
-  colUnit: { width: "16%", textAlign: "right" },
-  colTotal: { width: "18%", textAlign: "right" },
+  colDesc: { width: "48%", paddingRight: mm(6) },
+  colQty: { width: "10%", textAlign: "center", paddingLeft: mm(2.5), paddingRight: mm(1.5) },
+  colUnit: { width: "19%", textAlign: "right", paddingLeft: mm(2.5) },
+  colTotal: { width: "15%", textAlign: "right", paddingLeft: mm(2.5) },
   totalsBox: {
     marginTop: mm(6),
     marginLeft: "auto",
@@ -215,6 +215,7 @@ const styles = StyleSheet.create({
   closingTextBlock: {
     marginTop: mm(6),
     width: mm(120),
+    marginBottom: mm(2.5),
   },
   closingText: {
     fontSize: 10,
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
     color: "#374151",
   },
   paymentNoteBox: {
-    marginTop: mm(4),
+    marginTop: mm(7),
     width: mm(120),
     borderWidth: 1,
     borderColor: "#d1d5db",
