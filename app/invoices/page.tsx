@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { createPortal } from "react-dom";
 import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { arrayMove } from "@/lib/arrayMove";
 import { buildDefaultInvoiceMessage } from "@/lib/invoiceLanguage";
@@ -114,6 +115,7 @@ function InvoicePageContent() {
   const [bulkActionLabel, setBulkActionLabel] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [openActionsInvoiceId, setOpenActionsInvoiceId] = useState<string | null>(null);
+  const [actionsMenuPosition, setActionsMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
   const createInvoiceRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
@@ -761,12 +763,53 @@ function InvoicePageContent() {
       const target = event.target as HTMLElement;
       if (!target.closest("[data-invoice-actions]")) {
         setOpenActionsInvoiceId(null);
+        setActionsMenuPosition(null);
       }
     };
 
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
+
+  useEffect(() => {
+    if (!openActionsInvoiceId) {
+      return;
+    }
+
+    const handleViewportChange = () => {
+      setOpenActionsInvoiceId(null);
+      setActionsMenuPosition(null);
+    };
+
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+    };
+  }, [openActionsInvoiceId]);
+
+  const toggleActionMenu = (invoiceId: string, button: HTMLButtonElement) => {
+    if (openActionsInvoiceId === invoiceId) {
+      setOpenActionsInvoiceId(null);
+      setActionsMenuPosition(null);
+      return;
+    }
+
+    const rect = button.getBoundingClientRect();
+    const menuWidth = 208;
+    const viewportPadding = 12;
+    const left = Math.min(
+      Math.max(rect.right - menuWidth, viewportPadding),
+      window.innerWidth - menuWidth - viewportPadding
+    );
+
+    setOpenActionsInvoiceId(invoiceId);
+    setActionsMenuPosition({
+      top: rect.bottom + 8,
+      left,
+    });
+  };
 
   const renderActionMenu = (
     invoice: InvoiceRow,
@@ -783,15 +826,24 @@ function InvoicePageContent() {
         variant="outline"
         size="sm"
         className={cn("justify-center", buttonClassName ?? "w-[7rem]")}
-        onClick={() =>
-          setOpenActionsInvoiceId((current) => (current === invoice.id ? null : invoice.id))
-        }
+        onClick={(event) => {
+          event.stopPropagation();
+          toggleActionMenu(invoice.id, event.currentTarget);
+        }}
       >
         <MoreHorizontal className="h-4 w-4" />
         More
       </Button>
-      {openActionsInvoiceId === invoice.id ? (
-        <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg">
+      {openActionsInvoiceId === invoice.id && actionsMenuPosition ? createPortal(
+        <div
+          data-invoice-actions
+          className="fixed z-50 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+          style={{
+            top: actionsMenuPosition.top,
+            left: actionsMenuPosition.left,
+          }}
+          onClick={(event) => event.stopPropagation()}
+        >
           {invoice.status === "paid" ? (
             <button
               type="button"
@@ -799,6 +851,7 @@ function InvoicePageContent() {
               disabled={isUpdatingStatusId === invoice.id}
               onClick={() => {
                 setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
                 void handleManualStatusChange(invoice.id, "unpaid");
               }}
             >
@@ -812,6 +865,7 @@ function InvoicePageContent() {
               disabled={isUpdatingStatusId === invoice.id}
               onClick={() => {
                 setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
                 void handleManualStatusChange(invoice.id, "paid");
               }}
             >
@@ -824,6 +878,7 @@ function InvoicePageContent() {
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
             onClick={() => {
               setOpenActionsInvoiceId(null);
+              setActionsMenuPosition(null);
               handleOpenEdit(invoice);
             }}
           >
@@ -835,6 +890,7 @@ function InvoicePageContent() {
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
             onClick={() => {
               setOpenActionsInvoiceId(null);
+              setActionsMenuPosition(null);
               void handleDuplicateInvoice(invoice.id);
             }}
           >
@@ -846,13 +902,15 @@ function InvoicePageContent() {
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-red-700 hover:bg-red-50 hover:text-red-800")}
             onClick={() => {
               setOpenActionsInvoiceId(null);
+              setActionsMenuPosition(null);
               setDeleteTarget(invoice);
             }}
           >
             <Trash2 className="h-4 w-4" />
             Delete
           </button>
-        </div>
+        </div>,
+        document.body
       ) : null}
     </div>
   );
@@ -1082,13 +1140,13 @@ function InvoicePageContent() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-14">Move</TableHead>
-                          <TableHead>Description</TableHead>
-                          <TableHead>Qty</TableHead>
-                          <TableHead>Unit Price</TableHead>
-                          <TableHead>Tax %</TableHead>
-                          <TableHead>Line Total</TableHead>
-                          <TableHead>Action</TableHead>
+                          <TableHead className="w-12 px-2">Move</TableHead>
+                          <TableHead className="pl-2">Description</TableHead>
+                          <TableHead className="w-20 px-2">Qty</TableHead>
+                          <TableHead className="w-28 px-2">Unit Price</TableHead>
+                          <TableHead className="w-24 px-2">Tax %</TableHead>
+                          <TableHead className="w-24 px-2">Line Total</TableHead>
+                          <TableHead className="w-16 px-2">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1107,7 +1165,7 @@ function InvoicePageContent() {
                               handleLineItemDrop(index);
                             }}
                           >
-                            <TableCell>
+                            <TableCell className="w-12 px-2">
                               <button
                                 type="button"
                                 draggable
@@ -1119,14 +1177,14 @@ function InvoicePageContent() {
                                 <GripVertical className="h-4 w-4" />
                               </button>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="min-w-[12rem] pl-2 pr-3">
                               <Input
                                 value={item.description}
                                 placeholder="Description"
                                 onChange={(event) => updateLineItem(index, "description", event.target.value)}
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="px-2">
                               <Input
                                 type="number"
                                 min={0.01}
@@ -1143,7 +1201,7 @@ function InvoicePageContent() {
                                 }
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="px-2">
                               <Input
                                 type="number"
                                 min={0}
@@ -1155,7 +1213,7 @@ function InvoicePageContent() {
                                 }
                               />
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="px-2">
                               <Input
                                 type="number"
                                 min={0}
@@ -1167,8 +1225,8 @@ function InvoicePageContent() {
                                 }
                               />
                             </TableCell>
-                            <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                            <TableCell>
+                            <TableCell className="px-2">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                            <TableCell className="px-2">
                               <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1176,7 +1234,7 @@ function InvoicePageContent() {
                           </TableRow>
                         ))}
                         <TableRow>
-                          <TableCell>
+                          <TableCell className="px-2">
                             <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
                               <Plus className="h-4 w-4" />
                               Add Line Item

@@ -978,13 +978,13 @@ export default function InvoiceDetailPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                {isEditing ? <TableHead className="w-14">Move</TableHead> : null}
-                <TableHead>Description</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Unit Price</TableHead>
-                <TableHead>Tax %</TableHead>
-                <TableHead>Line Total</TableHead>
-                {isEditing ? <TableHead>Actions</TableHead> : null}
+                {isEditing ? <TableHead className="w-12 px-2">Move</TableHead> : null}
+                <TableHead className={isEditing ? "pl-2" : undefined}>Description</TableHead>
+                <TableHead className={isEditing ? "w-20 px-2" : undefined}>Quantity</TableHead>
+                <TableHead className={isEditing ? "w-28 px-2" : undefined}>Unit Price</TableHead>
+                <TableHead className={isEditing ? "w-24 px-2" : undefined}>Tax %</TableHead>
+                <TableHead className={isEditing ? "w-24 px-2" : undefined}>Line Total</TableHead>
+                {isEditing ? <TableHead className="w-16 px-2">Actions</TableHead> : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1005,7 +1005,7 @@ export default function InvoiceDetailPage() {
                         handleLineItemDrop(index);
                       }}
                     >
-                      <TableCell>
+                      <TableCell className="w-12 px-2">
                         <button
                           type="button"
                           draggable
@@ -1017,7 +1017,7 @@ export default function InvoiceDetailPage() {
                           <GripVertical className="h-4 w-4" />
                         </button>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="min-w-[12rem] pl-2 pr-3">
                         <Input
                           value={item.description}
                           placeholder="Description"
@@ -1026,7 +1026,7 @@ export default function InvoiceDetailPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-2">
                         <Input
                           type="number"
                           min={0.01}
@@ -1047,7 +1047,7 @@ export default function InvoiceDetailPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-2">
                         <Input
                           type="number"
                           min={0}
@@ -1063,7 +1063,7 @@ export default function InvoiceDetailPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="px-2">
                         <Input
                           type="number"
                           min={0}
@@ -1079,8 +1079,8 @@ export default function InvoiceDetailPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                      <TableCell>
+                      <TableCell className="px-2">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                      <TableCell className="px-2">
                         <Button
                           type="button"
                           variant="ghost"
@@ -1093,7 +1093,7 @@ export default function InvoiceDetailPage() {
                     </TableRow>
                   ))}
                   <TableRow>
-                    <TableCell>
+                    <TableCell className="px-2">
                       <Button
                         type="button"
                         variant="secondary"
