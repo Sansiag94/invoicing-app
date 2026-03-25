@@ -80,6 +80,8 @@ function buildInvoiceNotesTemplate(client: ClientSummary | null, senderName: str
   );
 }
 
+const DEFAULT_PAYMENT_NOTE = "Payment via TWINT possible at +41 76 231 02 35.";
+
 function InvoicePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -97,7 +99,7 @@ function InvoicePageContent() {
   const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate(null, "User_name"));
-  const [paymentNote, setPaymentNote] = useState("");
+  const [paymentNote, setPaymentNote] = useState(DEFAULT_PAYMENT_NOTE);
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
   const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
@@ -377,7 +379,7 @@ function InvoicePageContent() {
       setSubject("");
       setNotesManuallyEdited(false);
       setNotes(buildInvoiceNotesTemplate(null, invoiceSenderName || "User_name"));
-      setPaymentNote("");
+      setPaymentNote(DEFAULT_PAYMENT_NOTE);
       setIsCreateFormOpen(false);
       setSuccessMessage("Invoice created successfully.");
 
