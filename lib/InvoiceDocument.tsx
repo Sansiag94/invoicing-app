@@ -88,18 +88,18 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    lineHeight: 1.1,
+    lineHeight: 16,
     marginBottom: mm(1.4),
   },
   sellerSecondary: {
     fontSize: 10,
-    lineHeight: 1.3,
+    lineHeight: 12.5,
     color: "#374151",
     marginBottom: mm(1.6),
   },
   headerTextBlock: {
     fontSize: 9.6,
-    lineHeight: 1.45,
+    lineHeight: 13.2,
     marginBottom: mm(1.5),
   },
   infoLabel: {
@@ -113,12 +113,12 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    lineHeight: 1.1,
+    lineHeight: 16,
     marginBottom: mm(1.4),
   },
   recipientSecondary: {
     fontSize: 10,
-    lineHeight: 1.3,
+    lineHeight: 12.5,
     color: "#374151",
     marginBottom: mm(1.6),
   },
@@ -128,25 +128,25 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    lineHeight: 1.1,
+    lineHeight: 21,
     marginBottom: mm(2.4),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
-    lineHeight: 1.35,
+    lineHeight: 13,
     color: "#374151",
     marginBottom: mm(1.8),
   },
   invoiceSubject: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 1.35,
+    lineHeight: 13,
     marginBottom: mm(1.8),
   },
   invoiceDueDate: {
     fontSize: 10,
-    lineHeight: 1.35,
+    lineHeight: 13,
     color: "#6b7280",
   },
   tableWrap: {
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 1.45,
+    lineHeight: 13,
   },
   tableTextCenter: {
     textAlign: "center",
@@ -214,18 +214,22 @@ const styles = StyleSheet.create({
   },
   totalsLabel: {
     fontSize: 10,
+    lineHeight: 12.5,
     color: "#374151",
   },
   totalsValue: {
     fontSize: 10,
+    lineHeight: 12.5,
     color: "#374151",
   },
   totalDueLabel: {
     fontSize: 15.5,
+    lineHeight: 18,
     fontWeight: "bold",
   },
   totalDueValue: {
     fontSize: 15.5,
+    lineHeight: 18,
     fontWeight: "bold",
   },
   closingTextBlock: {
@@ -235,11 +239,11 @@ const styles = StyleSheet.create({
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 1.35,
+    lineHeight: 13.4,
     color: "#374151",
   },
   paymentNoteBox: {
-    marginTop: mm(11),
+    marginTop: mm(14),
     width: mm(120),
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -247,7 +251,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 12.8,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -283,7 +287,7 @@ const styles = StyleSheet.create({
   },
   manualPaymentBody: {
     fontSize: 9,
-    lineHeight: 1.35,
+    lineHeight: 12,
     color: "#374151",
     marginBottom: mm(2),
   },
@@ -291,7 +295,7 @@ const styles = StyleSheet.create({
     fontSize: 8.8,
     color: "#0f172a",
     textDecoration: "underline",
-    lineHeight: 1.3,
+    lineHeight: 11.5,
   },
   manualPaymentDetails: {
   },
@@ -310,7 +314,7 @@ const styles = StyleSheet.create({
     width: "64%",
     fontSize: 9,
     color: "#111827",
-    lineHeight: 1.3,
+    lineHeight: 12,
     textAlign: "right",
   },
   cutLineWrap: {
@@ -372,13 +376,13 @@ const styles = StyleSheet.create({
   },
   textSmall: {
     fontSize: 8,
-    lineHeight: 1.18,
+    lineHeight: 10.5,
     marginBottom: mm(0.35),
     color: "#000000",
   },
   textMedium: {
     fontSize: 10,
-    lineHeight: 1.16,
+    lineHeight: 12.5,
     marginBottom: mm(0.45),
     color: "#000000",
   },
