@@ -31,6 +31,36 @@ function mm(value: number): number {
   return value * POINTS_PER_MM;
 }
 
+function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return [];
+  }
+
+  const words = normalized.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (currentLine && nextLine.length > maxCharsPerLine) {
+      lines.push(currentLine);
+      currentLine = word;
+      continue;
+    }
+
+    currentLine = nextLine;
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
@@ -205,14 +235,21 @@ const styles = StyleSheet.create({
     color: "#374151",
     textTransform: "uppercase",
   },
-  tableRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
+  tableItemBlock: {
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
     paddingTop: mm(2.1),
     paddingBottom: mm(2.6),
     paddingHorizontal: mm(1.2),
+  },
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  tableContinuationRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: mm(0.55),
   },
   tableCellText: {
     fontSize: 9.3,
@@ -613,17 +650,37 @@ function InvoiceLineItemsTable(props: {
         <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
       </View>
 
-      {props.lineItems.map((item, index) => (
-        <View key={item.id} style={styles.tableRow}>
-          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
-          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
-          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
-          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
-          <Text style={[styles.tableCellText, styles.colTotal]}>
-            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
-          </Text>
-        </View>
-      ))}
+      {props.lineItems.map((item, index) => {
+        const descriptionLines = wrapTextLines(item.description, 42);
+        const firstLine = descriptionLines[0] ?? "";
+        const continuationLines = descriptionLines.slice(1);
+
+        return (
+          <View key={item.id} style={styles.tableItemBlock}>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
+              <Text style={[styles.tableCellText, styles.colDesc]}>{firstLine}</Text>
+              <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
+              <Text style={[styles.tableCellText, styles.colUnit]}>
+                {formatInvoiceMoney(item.unitPrice, props.language)}
+              </Text>
+              <Text style={[styles.tableCellText, styles.colTotal]}>
+                {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
+              </Text>
+            </View>
+
+            {continuationLines.map((line, continuationIndex) => (
+              <View key={`${item.id}-cont-${continuationIndex}`} style={styles.tableContinuationRow}>
+                <Text style={[styles.tableCellText, styles.colPos]} />
+                <Text style={[styles.tableCellText, styles.colDesc]}>{line}</Text>
+                <Text style={[styles.tableCellText, styles.colQty]} />
+                <Text style={[styles.tableCellText, styles.colUnit]} />
+                <Text style={[styles.tableCellText, styles.colTotal]} />
+              </View>
+            ))}
+          </View>
+        );
+      })}
     </View>
   );
 }
