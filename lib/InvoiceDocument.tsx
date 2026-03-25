@@ -31,6 +31,36 @@ function mm(value: number): number {
   return value * POINTS_PER_MM;
 }
 
+function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return [];
+  }
+
+  const words = normalized.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (currentLine && nextLine.length > maxCharsPerLine) {
+      lines.push(currentLine);
+      currentLine = word;
+      continue;
+    }
+
+    currentLine = nextLine;
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
@@ -91,10 +121,17 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginBottom: mm(1.1),
   },
-  partyBody: {
+  sellerSecondary: {
+    fontSize: 10,
+    color: "#374151",
+    lineHeight: 12.5,
+    marginBottom: mm(1.3),
+  },
+  bodyLine: {
     fontSize: 9.4,
     lineHeight: 12.5,
     color: "#111827",
+    marginBottom: mm(0.7),
   },
   infoLabel: {
     fontSize: 7.2,
@@ -109,6 +146,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     lineHeight: 16,
     marginBottom: mm(1.1),
+  },
+  recipientSecondary: {
+    fontSize: 10,
+    color: "#374151",
+    lineHeight: 12.5,
+    marginBottom: mm(1.3),
   },
   invoiceHero: {
     marginBottom: mm(8),
@@ -139,6 +182,11 @@ const styles = StyleSheet.create({
   },
   invoiceMetaBlock: {
     marginBottom: mm(1.1),
+  },
+  descriptionLine: {
+    fontSize: 9.3,
+    lineHeight: 12.5,
+    marginBottom: mm(0.5),
   },
   tableWrap: {
     marginTop: mm(10),
@@ -597,7 +645,14 @@ function InvoiceLineItemsTable(props: {
             <Text style={styles.tableCellText}>{props.startIndex + index}</Text>
           </View>
           <View style={[styles.tableCell, styles.colDesc, styles.descCell]}>
-            <Text style={styles.tableCellText}>{item.description}</Text>
+            {wrapTextLines(item.description, 42).map((line, lineIndex, lines) => (
+              <Text
+                key={`${item.id}-desc-${lineIndex}`}
+                style={lineIndex === lines.length - 1 ? [styles.descriptionLine, { marginBottom: 0 }] : styles.descriptionLine}
+              >
+                {line}
+              </Text>
+            ))}
           </View>
           <View style={[styles.tableCell, styles.colQty, styles.qtyCell]}>
             <Text style={styles.tableCellText}>{formatQuantity(item.quantity)}</Text>
@@ -662,13 +717,9 @@ const InvoiceDocument = ({
   const businessEmail = normalizeLine(invoice.business.email);
   const businessPhone = normalizeLine(invoice.business.phone);
   const headerPrimaryName = senderBusinessName;
-  const sellerBodyLines = collectLines(
-    sellerSecondaryName,
-    ...toCompactAddressLines(businessAddress),
-    businessEmail,
-    businessPhone
-  );
-  const clientBodyLines = collectLines(clientSecondaryName, ...toCompactAddressLines(clientAddress));
+  const businessHeaderLines = collectLines(...toCompactAddressLines(businessAddress));
+  const sellerContactLines = collectLines(businessEmail, businessPhone);
+  const clientAddressLines = collectLines(...toCompactAddressLines(clientAddress));
   const creditorLines =
     senderType === "owner"
       ? collectLines(paymentRecipientName, ...toPaymentAddressLines(businessAddress))
@@ -749,14 +800,27 @@ const InvoiceDocument = ({
                     <View style={styles.sellerCol}>
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
                       <Text style={styles.sellerName}>{headerPrimaryName}</Text>
-                      {sellerBodyLines.length > 0 ? (
-                        <Text style={styles.partyBody}>{sellerBodyLines.join("\n")}</Text>
-                      ) : null}
+                      {sellerSecondaryName ? <Text style={styles.sellerSecondary}>{sellerSecondaryName}</Text> : null}
+                      {businessHeaderLines.map((line, index) => (
+                        <Text key={`seller-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
+                      {sellerContactLines.map((line, index) => (
+                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
                     </View>
 
                     <View style={styles.businessMetaCol}>
                       <Text style={styles.recipientName}>{clientPrimaryName}</Text>
-                      {clientBodyLines.length > 0 ? <Text style={styles.partyBody}>{clientBodyLines.join("\n")}</Text> : null}
+                      {clientSecondaryName ? <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text> : null}
+                      {clientAddressLines.map((line, index) => (
+                        <Text key={`client-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
                     </View>
                   </View>
 
