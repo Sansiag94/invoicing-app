@@ -31,36 +31,6 @@ function mm(value: number): number {
   return value * POINTS_PER_MM;
 }
 
-function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
-  const normalized = value.replace(/\s+/g, " ").trim();
-
-  if (!normalized) {
-    return [];
-  }
-
-  const words = normalized.split(" ");
-  const lines: string[] = [];
-  let currentLine = "";
-
-  for (const word of words) {
-    const nextLine = currentLine ? `${currentLine} ${word}` : word;
-
-    if (currentLine && nextLine.length > maxCharsPerLine) {
-      lines.push(currentLine);
-      currentLine = word;
-      continue;
-    }
-
-    currentLine = nextLine;
-  }
-
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  return lines;
-}
-
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
@@ -170,13 +140,15 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: mm(1.3),
+    lineHeight: 22,
+    marginBottom: mm(2),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.1),
+    lineHeight: 13,
+    marginBottom: mm(1.5),
   },
   invoiceSubject: {
     fontSize: 10,
@@ -187,6 +159,7 @@ const styles = StyleSheet.create({
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
+    lineHeight: 13,
   },
   tableWrap: {
     marginTop: mm(10),
@@ -209,50 +182,38 @@ const styles = StyleSheet.create({
     color: "#374151",
     textTransform: "uppercase",
   },
-  tableCell: {
-    justifyContent: "flex-start",
-  },
   tableRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    paddingTop: mm(2.4),
-    paddingBottom: mm(3.2),
+    paddingTop: mm(2.1),
+    paddingBottom: mm(2.6),
     paddingHorizontal: mm(1.2),
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 12.5,
-  },
-  descriptionLine: {
-    fontSize: 9.3,
-    lineHeight: 12.5,
-    marginBottom: mm(0.5),
+    lineHeight: 1.35,
   },
   colPos: { width: "8%" },
-  colDesc: { width: "44%" },
-  colQty: { width: "14%" },
-  colUnit: { width: "16%" },
-  colTotal: { width: "18%" },
-  descCell: { paddingRight: mm(2.2) },
-  qtyCell: { paddingLeft: mm(1.2), alignItems: "flex-start" },
-  rightCell: { alignItems: "flex-end" },
-  rightText: { textAlign: "right" },
+  colDesc: { width: "46%" },
+  colQty: { width: "12%", textAlign: "left" },
+  colUnit: { width: "16%", textAlign: "right" },
+  colTotal: { width: "18%", textAlign: "right" },
   totalsBox: {
-    marginTop: mm(6),
+    marginTop: mm(8),
     marginLeft: "auto",
     width: mm(80),
   },
   totalsRule: {
     borderTopWidth: 1,
     borderTopColor: "#d1d5db",
-    paddingTop: mm(3),
+    paddingTop: mm(4),
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: mm(1.4),
+    marginBottom: mm(2),
   },
   totalsLabel: {
     fontSize: 10,
@@ -271,16 +232,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   closingTextBlock: {
-    marginTop: mm(6),
+    marginTop: mm(8),
     width: mm(120),
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 1.35,
+    lineHeight: 14,
     color: "#374151",
   },
   paymentNoteBox: {
-    marginTop: mm(4),
+    marginTop: mm(8),
     width: mm(120),
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -288,7 +249,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 13,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -622,51 +583,22 @@ function InvoiceLineItemsTable(props: {
   return (
     <View style={props.continuation ? styles.tableWrapContinuation : styles.tableWrap}>
       <View style={styles.tableHeader}>
-        <View style={[styles.tableCell, styles.colPos]}>
-          <Text style={styles.tableHeaderText}>{strings.position}</Text>
-        </View>
-        <View style={[styles.tableCell, styles.colDesc, styles.descCell]}>
-          <Text style={styles.tableHeaderText}>{strings.description}</Text>
-        </View>
-        <View style={[styles.tableCell, styles.colQty, styles.qtyCell]}>
-          <Text style={styles.tableHeaderText}>{strings.quantity}</Text>
-        </View>
-        <View style={[styles.tableCell, styles.colUnit, styles.rightCell]}>
-          <Text style={[styles.tableHeaderText, styles.rightText]}>{strings.unitPrice}</Text>
-        </View>
-        <View style={[styles.tableCell, styles.colTotal, styles.rightCell]}>
-          <Text style={[styles.tableHeaderText, styles.rightText]}>{strings.amount}</Text>
-        </View>
+        <Text style={[styles.tableHeaderText, styles.colPos]}>{strings.position}</Text>
+        <Text style={[styles.tableHeaderText, styles.colDesc]}>{strings.description}</Text>
+        <Text style={[styles.tableHeaderText, styles.colQty]}>{strings.quantity}</Text>
+        <Text style={[styles.tableHeaderText, styles.colUnit]}>{strings.unitPrice}</Text>
+        <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
       </View>
 
       {props.lineItems.map((item, index) => (
         <View key={item.id} style={styles.tableRow}>
-          <View style={[styles.tableCell, styles.colPos]}>
-            <Text style={styles.tableCellText}>{props.startIndex + index}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colDesc, styles.descCell]}>
-            {wrapTextLines(item.description, 42).map((line, lineIndex, lines) => (
-              <Text
-                key={`${item.id}-desc-${lineIndex}`}
-                style={lineIndex === lines.length - 1 ? [styles.descriptionLine, { marginBottom: 0 }] : styles.descriptionLine}
-              >
-                {line}
-              </Text>
-            ))}
-          </View>
-          <View style={[styles.tableCell, styles.colQty, styles.qtyCell]}>
-            <Text style={styles.tableCellText}>{formatQuantity(item.quantity)}</Text>
-          </View>
-          <View style={[styles.tableCell, styles.colUnit, styles.rightCell]}>
-            <Text style={[styles.tableCellText, styles.rightText]}>
-              {formatInvoiceMoney(item.unitPrice, props.language)}
-            </Text>
-          </View>
-          <View style={[styles.tableCell, styles.colTotal, styles.rightCell]}>
-            <Text style={[styles.tableCellText, styles.rightText]}>
-              {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
-            </Text>
-          </View>
+          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
+          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
+          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
+          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
+          <Text style={[styles.tableCellText, styles.colTotal]}>
+            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
+          </Text>
         </View>
       ))}
     </View>
