@@ -88,16 +88,18 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
     marginBottom: mm(1.1),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 12.5,
     marginBottom: mm(1.3),
   },
   bodyLine: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 12.5,
     marginBottom: mm(0.9),
   },
   infoLabel: {
@@ -111,11 +113,13 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
     marginBottom: mm(1.1),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 12.5,
     marginBottom: mm(1.3),
   },
   invoiceHero: {
@@ -124,12 +128,14 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    lineHeight: 21,
     marginBottom: mm(2.2),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
     marginBottom: mm(1.8),
   },
   invoiceSubject: {
@@ -141,6 +147,7 @@ const styles = StyleSheet.create({
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
+    lineHeight: 13,
   },
   tableWrap: {
     marginTop: mm(10),
@@ -162,6 +169,10 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: "#374151",
     textTransform: "uppercase",
+    lineHeight: 10,
+  },
+  tableCell: {
+    justifyContent: "flex-start",
   },
   tableRow: {
     flexDirection: "row",
@@ -174,13 +185,17 @@ const styles = StyleSheet.create({
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 1.5,
+    lineHeight: 12.5,
   },
   colPos: { width: "8%" },
-  colDesc: { width: "44%", paddingRight: mm(2.2) },
-  colQty: { width: "14%", textAlign: "left", paddingLeft: mm(1.2) },
-  colUnit: { width: "16%", textAlign: "right" },
-  colTotal: { width: "18%", textAlign: "right" },
+  colDesc: { width: "44%" },
+  colQty: { width: "14%" },
+  colUnit: { width: "16%" },
+  colTotal: { width: "18%" },
+  descCell: { paddingRight: mm(2.2) },
+  qtyCell: { paddingLeft: mm(1.2), alignItems: "flex-start" },
+  rightCell: { alignItems: "flex-end" },
+  rightText: { textAlign: "right" },
   totalsBox: {
     marginTop: mm(8),
     marginLeft: "auto",
@@ -199,18 +214,22 @@ const styles = StyleSheet.create({
   totalsLabel: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
   },
   totalsValue: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
   },
   totalDueLabel: {
     fontSize: 15.5,
     fontWeight: "bold",
+    lineHeight: 18,
   },
   totalDueValue: {
     fontSize: 15.5,
     fontWeight: "bold",
+    lineHeight: 18,
   },
   closingTextBlock: {
     marginTop: mm(8),
@@ -218,7 +237,7 @@ const styles = StyleSheet.create({
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 1.35,
+    lineHeight: 14,
     color: "#374151",
   },
   paymentNoteBox: {
@@ -230,7 +249,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 13,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -564,22 +583,44 @@ function InvoiceLineItemsTable(props: {
   return (
     <View style={props.continuation ? styles.tableWrapContinuation : styles.tableWrap}>
       <View style={styles.tableHeader}>
-        <Text style={[styles.tableHeaderText, styles.colPos]}>{strings.position}</Text>
-        <Text style={[styles.tableHeaderText, styles.colDesc]}>{strings.description}</Text>
-        <Text style={[styles.tableHeaderText, styles.colQty]}>{strings.quantity}</Text>
-        <Text style={[styles.tableHeaderText, styles.colUnit]}>{strings.unitPrice}</Text>
-        <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
+        <View style={[styles.tableCell, styles.colPos]}>
+          <Text style={styles.tableHeaderText}>{strings.position}</Text>
+        </View>
+        <View style={[styles.tableCell, styles.colDesc, styles.descCell]}>
+          <Text style={styles.tableHeaderText}>{strings.description}</Text>
+        </View>
+        <View style={[styles.tableCell, styles.colQty, styles.qtyCell]}>
+          <Text style={styles.tableHeaderText}>{strings.quantity}</Text>
+        </View>
+        <View style={[styles.tableCell, styles.colUnit, styles.rightCell]}>
+          <Text style={[styles.tableHeaderText, styles.rightText]}>{strings.unitPrice}</Text>
+        </View>
+        <View style={[styles.tableCell, styles.colTotal, styles.rightCell]}>
+          <Text style={[styles.tableHeaderText, styles.rightText]}>{strings.amount}</Text>
+        </View>
       </View>
 
       {props.lineItems.map((item, index) => (
         <View key={item.id} style={styles.tableRow}>
-          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
-          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
-          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
-          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
-          <Text style={[styles.tableCellText, styles.colTotal]}>
-            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
-          </Text>
+          <View style={[styles.tableCell, styles.colPos]}>
+            <Text style={styles.tableCellText}>{props.startIndex + index}</Text>
+          </View>
+          <View style={[styles.tableCell, styles.colDesc, styles.descCell]}>
+            <Text style={styles.tableCellText}>{item.description}</Text>
+          </View>
+          <View style={[styles.tableCell, styles.colQty, styles.qtyCell]}>
+            <Text style={styles.tableCellText}>{formatQuantity(item.quantity)}</Text>
+          </View>
+          <View style={[styles.tableCell, styles.colUnit, styles.rightCell]}>
+            <Text style={[styles.tableCellText, styles.rightText]}>
+              {formatInvoiceMoney(item.unitPrice, props.language)}
+            </Text>
+          </View>
+          <View style={[styles.tableCell, styles.colTotal, styles.rightCell]}>
+            <Text style={[styles.tableCellText, styles.rightText]}>
+              {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
+            </Text>
+          </View>
         </View>
       ))}
     </View>
