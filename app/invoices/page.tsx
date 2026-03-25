@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import { arrayMove } from "@/lib/arrayMove";
-import { buildDefaultInvoiceMessage } from "@/lib/invoiceLanguage";
+import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
 import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -81,7 +81,11 @@ function buildInvoiceNotesTemplate(client: ClientSummary | null, senderName: str
   );
 }
 
-const DEFAULT_PAYMENT_NOTE = "Payment via TWINT possible at +41 76 231 02 35.";
+const DEFAULT_TWINT_PHONE_NUMBER = "+41 76 231 02 35";
+
+function buildInvoicePaymentNoteTemplate(client: ClientSummary | null): string {
+  return buildDefaultInvoicePaymentNote(client?.language ?? "en", DEFAULT_TWINT_PHONE_NUMBER);
+}
 
 function InvoicePageContent() {
   const router = useRouter();
@@ -100,8 +104,9 @@ function InvoicePageContent() {
   const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate(null, "User_name"));
-  const [paymentNote, setPaymentNote] = useState(DEFAULT_PAYMENT_NOTE);
+  const [paymentNote, setPaymentNote] = useState(buildInvoicePaymentNoteTemplate(null));
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
+  const [paymentNoteManuallyEdited, setPaymentNoteManuallyEdited] = useState(false);
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
   const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
@@ -243,6 +248,12 @@ function InvoicePageContent() {
     setNotes(nextTemplate);
   }, [invoiceSenderName, notes, notesManuallyEdited, selectedClient]);
 
+  useEffect(() => {
+    if (paymentNoteManuallyEdited) return;
+
+    setPaymentNote(buildInvoicePaymentNoteTemplate(selectedClient));
+  }, [paymentNoteManuallyEdited, selectedClient]);
+
   const totals = useMemo(() => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const taxAmount = lineItems.reduce(
@@ -381,7 +392,8 @@ function InvoicePageContent() {
       setSubject("");
       setNotesManuallyEdited(false);
       setNotes(buildInvoiceNotesTemplate(null, invoiceSenderName || "User_name"));
-      setPaymentNote(DEFAULT_PAYMENT_NOTE);
+      setPaymentNoteManuallyEdited(false);
+      setPaymentNote(buildInvoicePaymentNoteTemplate(null));
       setIsCreateFormOpen(false);
       setSuccessMessage("Invoice created successfully.");
 
@@ -1003,7 +1015,10 @@ function InvoicePageContent() {
                   <Input
                     id="paymentNote"
                     value={paymentNote}
-                    onChange={(event) => setPaymentNote(event.target.value)}
+                    onChange={(event) => {
+                      setPaymentNote(event.target.value);
+                      setPaymentNoteManuallyEdited(true);
+                    }}
                     placeholder="Optional short payment note, e.g. payment via TWINT possible at +41..."
                   />
                 </div>

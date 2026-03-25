@@ -406,3 +406,23 @@ export function buildDefaultInvoiceMessage(
 
   return `Hello ${firstName},\nThank you for your trust.\nPlease find here the breakdown of the services.\n\nBest regards,\n${senderFirstName}`;
 }
+
+export function buildDefaultInvoicePaymentNote(language: InvoiceLanguage, phoneNumber: string): string {
+  if (language === "de") {
+    return `Zahlung via TWINT moeglich unter ${phoneNumber}.`;
+  }
+
+  if (language === "es") {
+    return `Pago por TWINT posible en ${phoneNumber}.`;
+  }
+
+  if (language === "fr") {
+    return `Paiement par TWINT possible au ${phoneNumber}.`;
+  }
+
+  if (language === "it") {
+    return `Pagamento tramite TWINT possibile al numero ${phoneNumber}.`;
+  }
+
+  return `Payment via TWINT possible at ${phoneNumber}.`;
+}

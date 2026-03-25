@@ -1137,7 +1137,11 @@ export default function InvoiceDetailPage() {
                 <TableHead className={isEditing ? "w-28 px-2" : undefined}>Unit Price</TableHead>
                 <TableHead className={isEditing ? "w-24 px-2" : undefined}>Tax %</TableHead>
                 <TableHead className={isEditing ? "w-24 px-2" : undefined}>Line Total</TableHead>
-                {isEditing ? <TableHead className="w-16 px-2">Actions</TableHead> : null}
+                {isEditing ? (
+                  <TableHead className="w-12 px-1 text-center">
+                    <span className="sr-only">Actions</span>
+                  </TableHead>
+                ) : null}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1233,14 +1237,15 @@ export default function InvoiceDetailPage() {
                         />
                       </TableCell>
                       <TableCell className="px-2">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                      <TableCell className="px-2">
+                      <TableCell className="w-12 px-1 text-center">
                         <Button
                           type="button"
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          aria-label={`Remove line item ${index + 1}`}
                           onClick={() => handleRemoveLineItem(index)}
                         >
-                          Remove
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>

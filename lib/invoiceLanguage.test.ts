@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildDefaultInvoiceMessage,
+  buildDefaultInvoicePaymentNote,
   formatInvoiceDate,
   getInvoiceLanguageLabel,
   getInvoiceStrings,
@@ -30,6 +31,12 @@ describe("invoice language helpers", () => {
 
   it("builds translated default messages and qr-bill languages", () => {
     expect(buildDefaultInvoiceMessage("it", "Mario Rossi", "Luca Bianchi")).toContain("Buongiorno Mario");
+    expect(buildDefaultInvoicePaymentNote("de", "+41 76 231 02 35")).toBe(
+      "Zahlung via TWINT moeglich unter +41 76 231 02 35."
+    );
+    expect(buildDefaultInvoicePaymentNote("fr", "+41 76 231 02 35")).toBe(
+      "Paiement par TWINT possible au +41 76 231 02 35."
+    );
     expect(getQrBillLanguage("es")).toBe("EN");
     expect(getQrBillLanguage("fr")).toBe("FR");
     expect(getInvoiceStrings("de").paymentOptions).toBe("Zahlungsoptionen");
