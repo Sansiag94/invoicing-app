@@ -126,7 +126,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
   },
   de: {
     invoice: "Rechnung",
-    dueDate: "Faellig am",
+    dueDate: "Fällig am",
     subject: "Betreff",
     position: "Pos.",
     description: "Beschreibung",
@@ -139,9 +139,9 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     paymentOptions: "Zahlungsoptionen",
     payOnline: "Online bezahlen",
     viewInvoiceOnline: "Rechnung online ansehen",
-    payOnlineDescription: "Pruefen Sie diese Rechnung und bezahlen Sie sicher online.",
-    viewInvoiceOnlineDescription: "Pruefen Sie diese Rechnung auf der sicheren Rechnungsseite.",
-    internationalBankTransfer: "Internationale Bankueberweisung",
+    payOnlineDescription: "Prüfen Sie diese Rechnung und bezahlen Sie sicher online.",
+    viewInvoiceOnlineDescription: "Prüfen Sie diese Rechnung auf der sicheren Rechnungsseite.",
+    internationalBankTransfer: "Internationale Banküberweisung",
     accountHolder: "Kontoinhaber",
     bank: "Bank",
     iban: "IBAN",
@@ -151,10 +151,10 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     paymentPart: "Zahlteil",
     accountPayableTo: "Konto / Zahlbar an",
     payableBy: "Zahlbar durch",
-    currency: "Waehrung",
+    currency: "Währung",
     acceptancePoint: "Annahmestelle",
-    additionalInformation: "Zusaetzliche Informationen",
-    qrCodeUnavailable: "QR-Code nicht verfuegbar",
+    additionalInformation: "Zusätzliche Informationen",
+    qrCodeUnavailable: "QR-Code nicht verfügbar",
     loadingInvoice: "Rechnung wird geladen...",
     downloadPdf: "PDF herunterladen",
     payWithCard: "Mit Karte bezahlen",
@@ -164,12 +164,12 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     paymentCompletedThankYou: "Zahlung abgeschlossen. Vielen Dank.",
     paymentCancelled: "Die Zahlung wurde abgebrochen.",
     onlineCardPaymentUnavailable:
-      "Online-Kartenzahlung ist fuer dieses Unternehmen nicht aktiviert. Bitte verwenden Sie die Zahlungsangaben auf der Rechnung.",
+      "Online-Kartenzahlung ist für dieses Unternehmen nicht aktiviert. Bitte verwenden Sie die Zahlungsangaben auf der Rechnung.",
     status: {
       draft: "Entwurf",
       sent: "Gesendet",
       paid: "Bezahlt",
-      overdue: "Ueberfaellig",
+      overdue: "Überfällig",
     },
   },
   es: {
@@ -389,7 +389,7 @@ export function buildDefaultInvoiceMessage(
       .find((part) => part.trim().length > 0) || senderName;
 
   if (language === "de") {
-    return `Hallo ${firstName},\nVielen Dank fur Ihr Vertrauen.\nHier finden Sie die Aufstellung der erbrachten Leistungen.\n\nFreundliche Grusse,\n${senderFirstName}`;
+    return `Hallo ${firstName},\nVielen Dank für Ihr Vertrauen.\nHier finden Sie die Aufstellung der erbrachten Leistungen.\n\nFreundliche Grüsse,\n${senderFirstName}`;
   }
 
   if (language === "es") {
@@ -409,7 +409,7 @@ export function buildDefaultInvoiceMessage(
 
 export function buildDefaultInvoicePaymentNote(language: InvoiceLanguage, phoneNumber: string): string {
   if (language === "de") {
-    return `Zahlung via TWINT moeglich unter ${phoneNumber}.`;
+    return `Zahlung via TWINT möglich unter ${phoneNumber}.`;
   }
 
   if (language === "es") {
