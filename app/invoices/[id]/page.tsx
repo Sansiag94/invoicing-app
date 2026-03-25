@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
+import { cn } from "@/lib/utils";
 
 function parseNumberInput(value: string): number {
   const parsed = Number(value);
@@ -974,12 +975,164 @@ export default function InvoiceDetailPage() {
           <CardTitle>Line Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-          <Table>
+          {isEditing ? (
+            <div className="space-y-3 lg:hidden">
+              {lineItems.map((item, index) => (
+                <div
+                  key={item.id ?? `editable-card-${index}`}
+                  className={cn(
+                    "rounded-xl border bg-slate-50 p-4",
+                    dragOverLineItemIndex === index ? "border-slate-400" : "border-slate-200"
+                  )}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    if (draggedLineItemIndex !== null) {
+                      setDragOverLineItemIndex(index);
+                    }
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    handleLineItemDrop(index);
+                  }}
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Line Item {index + 1}
+                      </p>
+                      <button
+                        type="button"
+                        draggable
+                        className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-white"
+                        aria-label={`Drag line item ${index + 1}`}
+                        onDragStart={() => handleLineItemDragStart(index)}
+                        onDragEnd={handleLineItemDragEnd}
+                      >
+                        <GripVertical className="h-4 w-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor={`edit-description-${index}`}>Description</Label>
+                      <Input
+                        id={`edit-description-${index}`}
+                        value={item.description}
+                        placeholder="Description"
+                        onChange={(event) =>
+                          handleLineItemChange(index, "description", event.target.value)
+                        }
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor={`edit-quantity-${index}`}>Quantity</Label>
+                        <Input
+                          id={`edit-quantity-${index}`}
+                          type="number"
+                          min={0.01}
+                          step="0.01"
+                          value={item.quantity}
+                          onFocus={handleNumberInputFocus}
+                          onBlur={(event) => {
+                            if (parseNumberInput(event.target.value) <= 0) {
+                              handleLineItemChange(index, "quantity", MIN_QUANTITY);
+                            }
+                          }}
+                          onChange={(event) =>
+                            handleLineItemChange(
+                              index,
+                              "quantity",
+                              Math.max(0, parseNumberInput(event.target.value))
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor={`edit-unit-price-${index}`}>Unit Price</Label>
+                        <Input
+                          id={`edit-unit-price-${index}`}
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={item.unitPrice}
+                          onFocus={handleNumberInputFocus}
+                          onChange={(event) =>
+                            handleLineItemChange(
+                              index,
+                              "unitPrice",
+                              Math.max(0, parseNumberInput(event.target.value))
+                            )
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor={`edit-tax-rate-${index}`}>Tax %</Label>
+                        <Input
+                          id={`edit-tax-rate-${index}`}
+                          type="number"
+                          min={0}
+                          step="0.1"
+                          value={item.taxRate}
+                          onFocus={handleNumberInputFocus}
+                          onChange={(event) =>
+                            handleLineItemChange(
+                              index,
+                              "taxRate",
+                              Math.max(0, parseNumberInput(event.target.value))
+                            )
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Line Total</Label>
+                        <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium">
+                          {(item.quantity * item.unitPrice).toFixed(2)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleRemoveLineItem(index)}
+                      className="w-full"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Remove Line Item
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={handleAddLineItem}
+                className="w-full justify-center"
+              >
+                <Plus className="h-4 w-4" />
+                Add Line Item
+              </Button>
+            </div>
+          ) : null}
+
+          <div className={cn("overflow-x-auto", isEditing ? "hidden lg:block" : "block")}>
+          <Table className={isEditing ? "table-fixed" : undefined}>
             <TableHeader>
               <TableRow>
-                {isEditing ? <TableHead className="w-12 px-2">Move</TableHead> : null}
-                <TableHead className={isEditing ? "pl-2" : undefined}>Description</TableHead>
+                {isEditing ? (
+                  <TableHead className="w-10 px-1">
+                    <span className="sr-only">Reorder</span>
+                  </TableHead>
+                ) : null}
+                <TableHead className={isEditing ? "pl-1" : undefined}>Description</TableHead>
                 <TableHead className={isEditing ? "w-20 px-2" : undefined}>Quantity</TableHead>
                 <TableHead className={isEditing ? "w-28 px-2" : undefined}>Unit Price</TableHead>
                 <TableHead className={isEditing ? "w-24 px-2" : undefined}>Tax %</TableHead>
@@ -1005,11 +1158,11 @@ export default function InvoiceDetailPage() {
                         handleLineItemDrop(index);
                       }}
                     >
-                      <TableCell className="w-12 px-2">
+                      <TableCell className="w-10 px-1">
                         <button
                           type="button"
                           draggable
-                          className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+                          className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50"
                           aria-label={`Drag line item ${index + 1}`}
                           onDragStart={() => handleLineItemDragStart(index)}
                           onDragEnd={handleLineItemDragEnd}
@@ -1017,7 +1170,7 @@ export default function InvoiceDetailPage() {
                           <GripVertical className="h-4 w-4" />
                         </button>
                       </TableCell>
-                      <TableCell className="min-w-[12rem] pl-2 pr-3">
+                      <TableCell className="min-w-[14rem] pl-1 pr-2">
                         <Input
                           value={item.description}
                           placeholder="Description"

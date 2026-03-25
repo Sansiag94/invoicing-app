@@ -1011,7 +1011,7 @@ function InvoicePageContent() {
                 <div className="space-y-3">
                   <Label>Line Items</Label>
 
-                  <div className="space-y-3 md:hidden">
+                  <div className="space-y-3 lg:hidden">
                     {lineItems.map((item, index) => (
                       <div
                         key={`${item.id ?? "new"}-${index}`}
@@ -1136,12 +1136,14 @@ function InvoicePageContent() {
                     </Button>
                   </div>
 
-                  <div className="hidden overflow-x-auto md:block">
-                    <Table>
+                  <div className="hidden overflow-x-auto lg:block">
+                    <Table className="table-fixed">
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-12 px-2">Move</TableHead>
-                          <TableHead className="pl-2">Description</TableHead>
+                          <TableHead className="w-10 px-1">
+                            <span className="sr-only">Reorder</span>
+                          </TableHead>
+                          <TableHead className="pl-1">Description</TableHead>
                           <TableHead className="w-20 px-2">Qty</TableHead>
                           <TableHead className="w-28 px-2">Unit Price</TableHead>
                           <TableHead className="w-24 px-2">Tax %</TableHead>
@@ -1165,11 +1167,11 @@ function InvoicePageContent() {
                               handleLineItemDrop(index);
                             }}
                           >
-                            <TableCell className="w-12 px-2">
+                            <TableCell className="w-10 px-1">
                               <button
                                 type="button"
                                 draggable
-                                className="rounded-md border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"
+                                className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50"
                                 aria-label={`Drag line item ${index + 1}`}
                                 onDragStart={() => handleLineItemDragStart(index)}
                                 onDragEnd={handleLineItemDragEnd}
@@ -1177,7 +1179,7 @@ function InvoicePageContent() {
                                 <GripVertical className="h-4 w-4" />
                               </button>
                             </TableCell>
-                            <TableCell className="min-w-[12rem] pl-2 pr-3">
+                            <TableCell className="min-w-[14rem] pl-1 pr-2">
                               <Input
                                 value={item.description}
                                 placeholder="Description"
