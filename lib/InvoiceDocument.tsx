@@ -88,17 +88,33 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
+    marginBottom: mm(0.9),
+  },
+  sellerNameBlock: {
     marginBottom: mm(0.6),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1),
+    lineHeight: 12.5,
+    marginBottom: mm(0.9),
+  },
+  sellerSecondaryBlock: {
+    marginBottom: mm(0.5),
   },
   bodyLine: {
     fontSize: 9.4,
-    lineHeight: 1.35,
-    marginBottom: mm(0.55),
+    lineHeight: 12.5,
+    marginBottom: mm(0.7),
+  },
+  sellerLineBlock: {
+    marginBottom: mm(0.7),
+  },
+  sellerLine: {
+    fontSize: 9.4,
+    lineHeight: 12.5,
+    color: "#111827",
   },
   infoLabel: {
     fontSize: 7.2,
@@ -141,14 +157,18 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     lineHeight: 22,
-    marginBottom: mm(2),
     letterSpacing: 0.2,
+  },
+  invoiceTitleBlock: {
+    marginBottom: mm(2),
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
     lineHeight: 13,
-    marginBottom: mm(1.5),
+  },
+  invoiceDateBlock: {
+    marginBottom: mm(1.3),
   },
   invoiceSubject: {
     fontSize: 10,
@@ -160,6 +180,9 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#6b7280",
     lineHeight: 13,
+  },
+  invoiceDueDateBlock: {
+    marginBottom: mm(1.1),
   },
   tableWrap: {
     marginTop: mm(10),
@@ -732,17 +755,23 @@ const InvoiceDocument = ({
                   <View style={styles.header}>
                     <View style={styles.sellerCol}>
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
-                      <Text style={styles.sellerName}>{headerPrimaryName}</Text>
-                      {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
+                      <View style={styles.sellerNameBlock}>
+                        <Text style={styles.sellerName}>{headerPrimaryName}</Text>
+                      </View>
+                      {headerSecondaryName ? (
+                        <View style={styles.sellerSecondaryBlock}>
+                          <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text>
+                        </View>
+                      ) : null}
                       {businessHeaderLines.map((line, index) => (
-                        <Text key={`seller-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`seller-${index}`} style={styles.sellerLineBlock}>
+                          <Text style={styles.sellerLine}>{line}</Text>
+                        </View>
                       ))}
                       {sellerContactLines.map((line, index) => (
-                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`seller-contact-${index}`} style={styles.sellerLineBlock}>
+                          <Text style={styles.sellerLine}>{line}</Text>
+                        </View>
                       ))}
                     </View>
 
@@ -764,11 +793,17 @@ const InvoiceDocument = ({
                   </View>
 
                   <View style={styles.invoiceHero}>
-                    <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
-                    <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
-                    <Text style={styles.invoiceDueDate}>
-                      {strings.dueDate}: {formatInvoiceDate(invoice.dueDate, invoiceLanguage)}
-                    </Text>
+                    <View style={styles.invoiceTitleBlock}>
+                      <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
+                    </View>
+                    <View style={styles.invoiceDateBlock}>
+                      <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
+                    </View>
+                    <View style={styles.invoiceDueDateBlock}>
+                      <Text style={styles.invoiceDueDate}>
+                        {strings.dueDate}: {formatInvoiceDate(invoice.dueDate, invoiceLanguage)}
+                      </Text>
+                    </View>
                     {invoice.subject ? <Text style={styles.invoiceSubject}>{strings.subject}: {invoice.subject}</Text> : null}
                   </View>
                 </>
