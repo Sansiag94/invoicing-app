@@ -88,17 +88,25 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    marginBottom: mm(0.6),
+    lineHeight: 16,
+  },
+  sellerNameBlock: {
+    marginBottom: mm(1.4),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1),
+    lineHeight: 12.5,
+  },
+  sellerSecondaryBlock: {
+    marginBottom: mm(1.3),
   },
   bodyLine: {
     fontSize: 9.4,
-    lineHeight: 1.35,
-    marginBottom: mm(0.55),
+    lineHeight: 12.5,
+  },
+  bodyLineBlock: {
+    marginBottom: mm(0.9),
   },
   infoLabel: {
     fontSize: 7.2,
@@ -111,12 +119,18 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    marginBottom: mm(0.6),
+    lineHeight: 16,
+  },
+  recipientNameBlock: {
+    marginBottom: mm(1.4),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1),
+    lineHeight: 12.5,
+  },
+  recipientSecondaryBlock: {
+    marginBottom: mm(1.3),
   },
   invoiceHero: {
     marginBottom: mm(8),
@@ -124,23 +138,26 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: mm(1.3),
+    lineHeight: 21,
+    marginBottom: mm(2.1),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1.1),
+    lineHeight: 13,
+    marginBottom: mm(1.6),
   },
   invoiceSubject: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 1.35,
-    marginBottom: mm(1.1),
+    lineHeight: 13.5,
+    marginBottom: mm(1.5),
   },
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
+    lineHeight: 13,
   },
   tableWrap: {
     marginTop: mm(10),
@@ -168,33 +185,33 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    paddingTop: mm(2.1),
-    paddingBottom: mm(2.6),
+    paddingTop: mm(2.8),
+    paddingBottom: mm(3.8),
     paddingHorizontal: mm(1.2),
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 1.35,
+    lineHeight: 12.5,
   },
   colPos: { width: "8%" },
-  colDesc: { width: "46%" },
-  colQty: { width: "12%", textAlign: "left" },
+  colDesc: { width: "44%", paddingRight: mm(3) },
+  colQty: { width: "14%", textAlign: "left", paddingLeft: mm(2) },
   colUnit: { width: "16%", textAlign: "right" },
   colTotal: { width: "18%", textAlign: "right" },
   totalsBox: {
-    marginTop: mm(6),
+    marginTop: mm(8),
     marginLeft: "auto",
     width: mm(80),
   },
   totalsRule: {
     borderTopWidth: 1,
     borderTopColor: "#d1d5db",
-    paddingTop: mm(3),
+    paddingTop: mm(4),
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: mm(1.4),
+    marginBottom: mm(2),
   },
   totalsLabel: {
     fontSize: 10,
@@ -213,16 +230,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   closingTextBlock: {
-    marginTop: mm(6),
+    marginTop: mm(8),
     width: mm(120),
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 1.35,
+    lineHeight: 14,
     color: "#374151",
   },
   paymentNoteBox: {
-    marginTop: mm(4),
+    marginTop: mm(8),
     width: mm(120),
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -230,7 +247,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 13,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -713,29 +730,39 @@ const InvoiceDocument = ({
                   <View style={styles.header}>
                     <View style={styles.sellerCol}>
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
-                      <Text style={styles.sellerName}>{headerPrimaryName}</Text>
-                      {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
+                      <View style={styles.sellerNameBlock}>
+                        <Text style={styles.sellerName}>{headerPrimaryName}</Text>
+                      </View>
+                      {headerSecondaryName ? (
+                        <View style={styles.sellerSecondaryBlock}>
+                          <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text>
+                        </View>
+                      ) : null}
                       {businessHeaderLines.map((line, index) => (
-                        <Text key={`seller-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`seller-${index}`} style={styles.bodyLineBlock}>
+                          <Text style={styles.bodyLine}>{line}</Text>
+                        </View>
                       ))}
                       {sellerContactLines.map((line, index) => (
-                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`seller-contact-${index}`} style={styles.bodyLineBlock}>
+                          <Text style={styles.bodyLine}>{line}</Text>
+                        </View>
                       ))}
                     </View>
 
                     <View style={styles.businessMetaCol}>
-                      <Text style={styles.recipientName}>{clientPrimaryName}</Text>
+                      <View style={styles.recipientNameBlock}>
+                        <Text style={styles.recipientName}>{clientPrimaryName}</Text>
+                      </View>
                       {clientSecondaryName ? (
-                        <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
+                        <View style={styles.recipientSecondaryBlock}>
+                          <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
+                        </View>
                       ) : null}
                       {toCompactAddressLines(clientAddress).map((line, index) => (
-                        <Text key={`client-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`client-${index}`} style={styles.bodyLineBlock}>
+                          <Text style={styles.bodyLine}>{line}</Text>
+                        </View>
                       ))}
                     </View>
                   </View>
