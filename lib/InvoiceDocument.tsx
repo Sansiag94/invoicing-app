@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
     paddingRight: mm(6),
   },
   businessMetaCol: {
-    width: "36%",
+    width: "38%",
     alignItems: "flex-start",
     marginTop: mm(28),
   },
@@ -111,12 +111,28 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
+    marginBottom: mm(0.9),
+  },
+  recipientNameBlock: {
     marginBottom: mm(0.6),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
-    marginBottom: mm(1),
+    lineHeight: 12.5,
+    marginBottom: mm(0.9),
+  },
+  recipientSecondaryBlock: {
+    marginBottom: mm(0.5),
+  },
+  recipientLineBlock: {
+    marginBottom: mm(0.7),
+  },
+  recipientLine: {
+    fontSize: 9.4,
+    lineHeight: 12.5,
+    color: "#111827",
   },
   invoiceHero: {
     marginBottom: mm(8),
@@ -728,14 +744,18 @@ const InvoiceDocument = ({
                     </View>
 
                     <View style={styles.businessMetaCol}>
-                      <Text style={styles.recipientName}>{clientPrimaryName}</Text>
+                      <View style={styles.recipientNameBlock}>
+                        <Text style={styles.recipientName}>{clientPrimaryName}</Text>
+                      </View>
                       {clientSecondaryName ? (
-                        <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
+                        <View style={styles.recipientSecondaryBlock}>
+                          <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
+                        </View>
                       ) : null}
                       {toCompactAddressLines(clientAddress).map((line, index) => (
-                        <Text key={`client-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
+                        <View key={`client-${index}`} style={styles.recipientLineBlock}>
+                          <Text style={styles.recipientLine}>{line}</Text>
+                        </View>
                       ))}
                     </View>
                   </View>
