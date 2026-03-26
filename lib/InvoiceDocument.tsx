@@ -93,13 +93,12 @@ const styles = StyleSheet.create({
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13,
-    marginBottom: mm(1),
+    marginBottom: mm(1.25),
   },
   bodyLine: {
     fontSize: 9.4,
-    lineHeight: 12.5,
-    marginBottom: mm(0.8),
+    lineHeight: 1.35,
+    marginBottom: mm(0.75),
   },
   infoLabel: {
     fontSize: 7.2,
@@ -117,8 +116,7 @@ const styles = StyleSheet.create({
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13,
-    marginBottom: mm(1),
+    marginBottom: mm(1.25),
   },
   invoiceHero: {
     marginBottom: mm(8),
@@ -126,14 +124,12 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    lineHeight: 22,
-    marginBottom: mm(1.3),
+    marginBottom: mm(1.8),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13,
     marginBottom: mm(1.5),
   },
   invoiceSubject: {
@@ -145,7 +141,6 @@ const styles = StyleSheet.create({
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
-    lineHeight: 13,
   },
   tableWrap: {
     marginTop: mm(10),
@@ -173,21 +168,21 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    paddingTop: mm(2.5),
-    paddingBottom: mm(3.1),
+    paddingTop: mm(2.4),
+    paddingBottom: mm(3),
     paddingHorizontal: mm(1.2),
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 13,
+    lineHeight: 1.35,
   },
   colPos: { width: "8%" },
-  colDesc: { width: "44%", paddingRight: mm(4) },
-  colQty: { width: "14%", textAlign: "left", paddingLeft: mm(2.5) },
+  colDesc: { width: "46%" },
+  colQty: { width: "12%", textAlign: "right" },
   colUnit: { width: "16%", textAlign: "right" },
   colTotal: { width: "18%", textAlign: "right" },
   totalsBox: {
-    marginTop: mm(8),
+    marginTop: mm(7.5),
     marginLeft: "auto",
     width: mm(80),
   },
@@ -199,14 +194,7 @@ const styles = StyleSheet.create({
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginBottom: mm(2),
-  },
-  totalDueRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    marginTop: mm(1.1),
+    marginBottom: mm(1.9),
   },
   totalsLabel: {
     fontSize: 10,
@@ -225,16 +213,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   closingTextBlock: {
-    marginTop: mm(6),
+    marginTop: mm(7),
     width: mm(120),
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 14,
+    lineHeight: 1.35,
     color: "#374151",
   },
   paymentNoteBox: {
-    marginTop: mm(7),
+    marginTop: mm(6.5),
     width: mm(120),
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -242,7 +230,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 13,
+    lineHeight: 1.35,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -790,7 +778,7 @@ const InvoiceDocument = ({
                           </Text>
                         </View>
                       ) : null}
-                      <View style={styles.totalDueRow}>
+                      <View style={styles.totalsRow}>
                         <Text style={styles.totalDueLabel}>{strings.total}</Text>
                         <Text style={styles.totalDueValue}>
                           {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
