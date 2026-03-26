@@ -64,6 +64,7 @@ export default function AppFrame({ children }: AppFrameProps) {
     }
 
     let mounted = true;
+    let initialSessionResolved = false;
 
     async function redirectToLogin() {
       setBusinessBrand(null);
@@ -76,53 +77,28 @@ export default function AppFrame({ children }: AppFrameProps) {
       }
     }
 
-    async function verifySession() {
-      setAuthStatus("checking");
-
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession();
-
-      if (!mounted) {
-        return;
-      }
-
-      if (sessionError || !session?.access_token) {
-        await redirectToLogin();
-        return;
-      }
-
-      const { data, error } = await supabase.auth.getUser();
-
-      if (!mounted) {
-        return;
-      }
-
-      if (error || !data.user) {
-        await redirectToLogin();
-        return;
-      }
-
-      setAuthStatus("authenticated");
-    }
-
     function handleAuthenticationRequired() {
       void redirectToLogin();
     }
 
-    void verifySession();
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (!mounted) {
         return;
       }
 
+      if (event === "INITIAL_SESSION") {
+        initialSessionResolved = true;
+      }
+
       if (!session?.access_token) {
-        setBusinessBrand(null);
-        setAuthStatus("unauthenticated");
+        if (initialSessionResolved) {
+          void redirectToLogin();
+        } else {
+          setBusinessBrand(null);
+          setAuthStatus("checking");
+        }
         return;
       }
 

@@ -806,7 +806,7 @@ const InvoiceDocument = ({
 
         return (
           <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page}>
-            <View style={pageBodyStyles} wrap={false}>
+            <View style={pageBodyStyles}>
               {isFirstPage ? (
                 <>
                   <View style={styles.header}>
