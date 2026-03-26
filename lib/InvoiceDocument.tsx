@@ -31,6 +31,79 @@ function mm(value: number): number {
   return value * POINTS_PER_MM;
 }
 
+type PreparedLineItemRow = {
+  id: string;
+  indexLabel: string;
+  descriptionText: string;
+  rowHeight: number;
+  quantityText: string;
+  unitPriceText: string;
+  amountText: string;
+};
+
+function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return [];
+  }
+
+  const words = normalized.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (currentLine && nextLine.length > maxCharsPerLine) {
+      lines.push(currentLine);
+      currentLine = word;
+      continue;
+    }
+
+    currentLine = nextLine;
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+function buildPreparedLineItemRows(
+  lineItems: InvoiceWithRelations["lineItems"],
+  startIndex: number,
+  language: ReturnType<typeof normalizeInvoiceLanguage>
+): PreparedLineItemRow[] {
+  return lineItems.map((item, index) => {
+    const descriptionLines = wrapTextLines(item.description, 38);
+    const descriptionText = descriptionLines.join("\n");
+    const rowHeight = Math.max(TABLE_ROW_MIN_HEIGHT, descriptionLines.length * TABLE_TEXT_LINE_HEIGHT + mm(2));
+
+    return {
+      id: item.id,
+      indexLabel: String(startIndex + index),
+      descriptionText,
+      rowHeight,
+      quantityText: formatQuantity(item.quantity),
+      unitPriceText: formatInvoiceMoney(item.unitPrice, language),
+      amountText: formatInvoiceMoney(item.quantity * item.unitPrice, language),
+    };
+  });
+}
+
+function buildMessageLines(value: string): string[] {
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 42)));
+}
+
+function measureMessageHeight(lines: string[]): number {
+  return lines.reduce((total, line) => total + (line.trim().length === 0 ? mm(3.5) : 14), 0);
+}
+
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
@@ -45,6 +118,26 @@ const QR_COLUMN_WIDTH = mm(46);
 const PAYMENT_PART_GAP = mm(6);
 const RECEIPT_WIDTH = mm(62);
 const PAYMENT_PART_WIDTH = mm(148);
+const CONTENT_WIDTH = mm(170);
+const FIRST_PAGE_HEADER_TOP = PAGE_TOP_MARGIN;
+const FIRST_PAGE_RECIPIENT_TOP = PAGE_TOP_MARGIN + mm(22);
+const FIRST_PAGE_HERO_TOP = mm(74);
+const TABLE_TOP_FIRST_PAGE = mm(110);
+const TABLE_TOP_CONTINUATION = PAGE_TOP_MARGIN;
+const COL_POS_WIDTH = mm(12);
+const COL_DESC_WIDTH = mm(86);
+const COL_QTY_WIDTH = mm(18);
+const COL_UNIT_WIDTH = mm(27);
+const COL_TOTAL_WIDTH = mm(27);
+const TABLE_HEADER_HEIGHT = mm(7);
+const TABLE_ROW_MIN_HEIGHT = mm(8.5);
+const TABLE_TEXT_LINE_HEIGHT = 12;
+const SELLER_BLOCK_WIDTH = mm(82);
+const RECIPIENT_BLOCK_WIDTH = mm(58);
+const RECIPIENT_LEFT = PAGE_SIDE_MARGIN + CONTENT_WIDTH - RECIPIENT_BLOCK_WIDTH;
+const TOTALS_WIDTH = mm(78);
+const TOTALS_LEFT = PAGE_SIDE_MARGIN + CONTENT_WIDTH - TOTALS_WIDTH;
+const CLOSING_WIDTH = mm(118);
 
 const styles = StyleSheet.create({
   page: {
@@ -433,6 +526,99 @@ const styles = StyleSheet.create({
     fontSize: 8,
     color: "#b91c1c",
   },
+  fixedSellerBlock: {
+    position: "absolute",
+    left: PAGE_SIDE_MARGIN,
+    width: SELLER_BLOCK_WIDTH,
+  },
+  fixedRecipientBlock: {
+    position: "absolute",
+    left: RECIPIENT_LEFT,
+    width: RECIPIENT_BLOCK_WIDTH,
+  },
+  fixedHeroBlock: {
+    position: "absolute",
+    left: PAGE_SIDE_MARGIN,
+    width: CONTENT_WIDTH,
+  },
+  fixedTableBlock: {
+    position: "absolute",
+    left: PAGE_SIDE_MARGIN,
+    width: CONTENT_WIDTH,
+  },
+  fixedTableHeader: {
+    flexDirection: "row",
+    borderBottomWidth: 1.2,
+    borderBottomColor: "#111827",
+    paddingBottom: mm(1.6),
+  },
+  fixedTableHeaderCell: {
+    justifyContent: "flex-start",
+  },
+  fixedTableHeaderText: {
+    fontSize: 8,
+    fontWeight: "bold",
+    color: "#374151",
+    textTransform: "uppercase",
+  },
+  fixedTableHeaderTextRight: {
+    textAlign: "right",
+  },
+  fixedTableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e5e7eb",
+    paddingTop: mm(2),
+    paddingBottom: mm(2.2),
+  },
+  fixedCellPos: {
+    width: COL_POS_WIDTH,
+    justifyContent: "flex-start",
+  },
+  fixedCellDesc: {
+    width: COL_DESC_WIDTH,
+    paddingRight: mm(4),
+    justifyContent: "flex-start",
+  },
+  fixedCellQty: {
+    width: COL_QTY_WIDTH,
+    alignItems: "flex-end",
+  },
+  fixedCellUnit: {
+    width: COL_UNIT_WIDTH,
+    alignItems: "flex-end",
+  },
+  fixedCellTotal: {
+    width: COL_TOTAL_WIDTH,
+    alignItems: "flex-end",
+  },
+  fixedDescriptionText: {
+    fontSize: 9.3,
+    lineHeight: TABLE_TEXT_LINE_HEIGHT,
+  },
+  fixedNumericText: {
+    fontSize: 9.3,
+    lineHeight: TABLE_TEXT_LINE_HEIGHT,
+    textAlign: "right",
+  },
+  fixedTotalsBlock: {
+    position: "absolute",
+    left: TOTALS_LEFT,
+    width: TOTALS_WIDTH,
+  },
+  fixedClosingBlock: {
+    position: "absolute",
+    left: PAGE_SIDE_MARGIN,
+    width: CLOSING_WIDTH,
+  },
+  fixedPaymentNoteBlock: {
+    position: "absolute",
+    left: PAGE_SIDE_MARGIN,
+    width: CLOSING_WIDTH,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+    padding: mm(3),
+  },
 });
 
 function formatQuantity(value: number): string {
@@ -697,6 +883,15 @@ const InvoiceDocument = ({
         const isQrPage = qrPageIndex !== null && pageIndex === qrPageIndex;
         const shouldRenderClosingSections = pageIndex === closingPageIndex;
         const startIndex = pages.slice(0, pageIndex).reduce((sum, pageItems) => sum + pageItems.length, 1);
+        const preparedRows = buildPreparedLineItemRows(lineItems, startIndex, invoiceLanguage);
+        const tableTop = isFirstPage ? TABLE_TOP_FIRST_PAGE : TABLE_TOP_CONTINUATION;
+        const tableHeight = TABLE_HEADER_HEIGHT + preparedRows.reduce((sum, row) => sum + row.rowHeight, 0);
+        const totalsTop = tableTop + tableHeight + mm(8);
+        const totalsHeight = mm(taxAmount > 0 ? 22 : 16);
+        const closingLines = buildMessageLines(messageText);
+        const closingHeight = measureMessageHeight(closingLines);
+        const closingTop = totalsTop + totalsHeight + mm(9);
+        const paymentNoteTop = closingTop + closingHeight + mm(7);
         const pageBodyStyles: Array<
           typeof styles.pageBody | typeof styles.pageBodyWithQrSpace | typeof styles.pageBodyWithQrSpaceFlushBottom
         > = [styles.pageBody];
@@ -707,152 +902,119 @@ const InvoiceDocument = ({
 
         return (
           <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page}>
-            <View style={pageBodyStyles} wrap={false}>
-              {isFirstPage ? (
-                <>
-                  <View style={styles.header}>
-                    <View style={styles.sellerCol}>
-                      {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
-                      <Text style={styles.sellerName}>{headerPrimaryName}</Text>
-                      {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
-                      {businessHeaderLines.map((line, index) => (
-                        <Text key={`seller-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
-                      ))}
-                      {sellerContactLines.map((line, index) => (
-                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
-                      ))}
-                    </View>
+            <View style={pageBodyStyles} />
 
-                    <View style={styles.businessMetaCol}>
-                      <Text style={styles.recipientName}>{clientPrimaryName}</Text>
-                      {clientSecondaryName ? (
-                        <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
-                      ) : null}
-                      {toCompactAddressLines(clientAddress).map((line, index) => (
-                        <Text key={`client-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
-                      ))}
-                    </View>
+            {isFirstPage ? (
+              <>
+                <View style={[styles.fixedSellerBlock, { top: FIRST_PAGE_HEADER_TOP }]} wrap={false}>
+                  {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
+                  <Text style={styles.sellerName}>{headerPrimaryName}</Text>
+                  {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
+                  {businessHeaderLines.map((line, index) => (
+                    <Text key={`seller-${index}`} style={styles.bodyLine}>{line}</Text>
+                  ))}
+                  {sellerContactLines.map((line, index) => (
+                    <Text key={`seller-contact-${index}`} style={styles.bodyLine}>{line}</Text>
+                  ))}
+                </View>
+
+                <View style={[styles.fixedRecipientBlock, { top: FIRST_PAGE_RECIPIENT_TOP }]} wrap={false}>
+                  <Text style={styles.recipientName}>{clientPrimaryName}</Text>
+                  {clientSecondaryName ? <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text> : null}
+                  {toCompactAddressLines(clientAddress).map((line, index) => (
+                    <Text key={`client-${index}`} style={styles.bodyLine}>{line}</Text>
+                  ))}
+                </View>
+
+                <View style={[styles.fixedHeroBlock, { top: FIRST_PAGE_HERO_TOP }]} wrap={false}>
+                  <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
+                  <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
+                  <Text style={styles.invoiceDueDate}>
+                    {strings.dueDate}: {formatInvoiceDate(invoice.dueDate, invoiceLanguage)}
+                  </Text>
+                  {invoice.subject ? <Text style={styles.invoiceSubject}>{strings.subject}: {invoice.subject}</Text> : null}
+                </View>
+              </>
+            ) : null}
+
+            <View style={[styles.fixedTableBlock, { top: tableTop }]} wrap={false}>
+              <View style={styles.fixedTableHeader}>
+                <View style={[styles.fixedTableHeaderCell, styles.fixedCellPos]}>
+                  <Text style={styles.fixedTableHeaderText}>{strings.position}</Text>
+                </View>
+                <View style={[styles.fixedTableHeaderCell, styles.fixedCellDesc]}>
+                  <Text style={styles.fixedTableHeaderText}>{strings.description}</Text>
+                </View>
+                <View style={[styles.fixedTableHeaderCell, styles.fixedCellQty]}>
+                  <Text style={[styles.fixedTableHeaderText, styles.fixedTableHeaderTextRight]}>{strings.quantity}</Text>
+                </View>
+                <View style={[styles.fixedTableHeaderCell, styles.fixedCellUnit]}>
+                  <Text style={[styles.fixedTableHeaderText, styles.fixedTableHeaderTextRight]}>{strings.unitPrice}</Text>
+                </View>
+                <View style={[styles.fixedTableHeaderCell, styles.fixedCellTotal]}>
+                  <Text style={[styles.fixedTableHeaderText, styles.fixedTableHeaderTextRight]}>{strings.amount}</Text>
+                </View>
+              </View>
+
+              {preparedRows.map((row) => (
+                <View key={row.id} style={[styles.fixedTableRow, { minHeight: row.rowHeight }]} wrap={false}>
+                  <View style={styles.fixedCellPos}>
+                    <Text style={styles.fixedNumericText}>{row.indexLabel}</Text>
                   </View>
-
-                  <View style={styles.invoiceHero}>
-                    <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
-                    <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
-                    <Text style={styles.invoiceDueDate}>
-                      {strings.dueDate}: {formatInvoiceDate(invoice.dueDate, invoiceLanguage)}
-                    </Text>
-                    {invoice.subject ? <Text style={styles.invoiceSubject}>{strings.subject}: {invoice.subject}</Text> : null}
+                  <View style={styles.fixedCellDesc}>
+                    <Text style={styles.fixedDescriptionText}>{row.descriptionText}</Text>
                   </View>
-                </>
-              ) : null}
-
-              {lineItems.length > 0 ? (
-                <InvoiceLineItemsTable
-                  lineItems={lineItems}
-                  startIndex={startIndex}
-                  language={invoiceLanguage}
-                  continuation={!isFirstPage}
-                />
-              ) : null}
-
-              {shouldRenderClosingSections ? (
-                <>
-                  <View style={styles.totalsBox}>
-                    <View style={styles.totalsRule}>
-                      <View style={styles.totalsRow}>
-                        <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
-                        <Text style={styles.totalsValue}>
-                          {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
-                        </Text>
-                      </View>
-                      {taxAmount > 0 ? (
-                        <View style={styles.totalsRow}>
-                          <Text style={styles.totalsLabel}>{strings.vat}</Text>
-                          <Text style={styles.totalsValue}>
-                            {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
-                          </Text>
-                        </View>
-                      ) : null}
-                      <View style={styles.totalsRow}>
-                        <Text style={styles.totalDueLabel}>{strings.total}</Text>
-                        <Text style={styles.totalDueValue}>
-                          {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
-                        </Text>
-                      </View>
-                    </View>
+                  <View style={styles.fixedCellQty}>
+                    <Text style={styles.fixedNumericText}>{row.quantityText}</Text>
                   </View>
-
-                  <View style={styles.closingTextBlock}>
-                    <Text style={styles.closingText}>{messageText}</Text>
+                  <View style={styles.fixedCellUnit}>
+                    <Text style={styles.fixedNumericText}>{row.unitPriceText}</Text>
                   </View>
-
-                  {paymentNote ? (
-                    <View style={styles.paymentNoteBox}>
-                      <Text style={styles.paymentNoteText}>{paymentNote}</Text>
-                    </View>
-                  ) : null}
-
-                  {shouldRenderManualTransferSection ? (
-                    <View style={styles.manualPaymentSection}>
-                      <Text style={styles.manualPaymentTitle}>{strings.paymentOptions}</Text>
-                      <View style={styles.manualPaymentGrid}>
-                        {onlinePaymentLink ? (
-                          <View style={[styles.manualPaymentCard, styles.manualPaymentCardWithGap]}>
-                            <Text style={styles.manualPaymentCardTitle}>{strings.payOnline}</Text>
-                            <Text style={styles.manualPaymentBody}>{strings.payOnlineDescription}</Text>
-                            <Link src={onlinePaymentLink} style={styles.manualPaymentLink}>
-                              {onlinePaymentLink}
-                            </Link>
-                          </View>
-                        ) : null}
-
-                        <View style={styles.manualPaymentCard}>
-                          <Text style={styles.manualPaymentCardTitle}>{strings.internationalBankTransfer}</Text>
-                          <View style={styles.manualPaymentDetails}>
-                            <View style={styles.manualPaymentRow}>
-                              <Text style={styles.manualPaymentLabel}>{strings.accountHolder}</Text>
-                              <Text style={styles.manualPaymentValue}>{paymentRecipientName}</Text>
-                            </View>
-                            {bankName ? (
-                              <View style={styles.manualPaymentRow}>
-                                <Text style={styles.manualPaymentLabel}>{strings.bank}</Text>
-                                <Text style={styles.manualPaymentValue}>{bankName}</Text>
-                              </View>
-                            ) : null}
-                            <View style={styles.manualPaymentRow}>
-                              <Text style={styles.manualPaymentLabel}>{strings.iban}</Text>
-                              <Text style={styles.manualPaymentValue}>{formatIban(invoice.business.iban)}</Text>
-                            </View>
-                            {bic ? (
-                              <View style={styles.manualPaymentRow}>
-                                <Text style={styles.manualPaymentLabel}>{strings.bicSwift}</Text>
-                                <Text style={styles.manualPaymentValue}>{bic}</Text>
-                              </View>
-                            ) : null}
-                            <View style={styles.manualPaymentRow}>
-                              <Text style={styles.manualPaymentLabel}>{strings.amount}</Text>
-                              <Text style={styles.manualPaymentValue}>
-                                {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
-                              </Text>
-                            </View>
-                            <View style={styles.manualPaymentRow}>
-                              <Text style={styles.manualPaymentLabel}>{strings.referenceMessage}</Text>
-                              <Text style={styles.manualPaymentValue}>{paymentReference}</Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    </View>
-                  ) : null}
-
-                </>
-              ) : null}
+                  <View style={styles.fixedCellTotal}>
+                    <Text style={styles.fixedNumericText}>{row.amountText}</Text>
+                  </View>
+                </View>
+              ))}
             </View>
+
+            {shouldRenderClosingSections ? (
+              <>
+                <View style={[styles.fixedTotalsBlock, { top: totalsTop }]} wrap={false}>
+                  <View style={styles.totalsRule}>
+                    <View style={styles.totalsRow}>
+                      <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
+                      <Text style={styles.totalsValue}>
+                        {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
+                      </Text>
+                    </View>
+                    {taxAmount > 0 ? (
+                      <View style={styles.totalsRow}>
+                        <Text style={styles.totalsLabel}>{strings.vat}</Text>
+                        <Text style={styles.totalsValue}>
+                          {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
+                        </Text>
+                      </View>
+                    ) : null}
+                    <View style={styles.totalsRow}>
+                      <Text style={styles.totalDueLabel}>{strings.total}</Text>
+                      <Text style={styles.totalDueValue}>
+                        {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={[styles.fixedClosingBlock, { top: closingTop }]} wrap={false}>
+                  <Text style={styles.closingText}>{closingLines.join("\n")}</Text>
+                </View>
+
+                {paymentNote ? (
+                  <View style={[styles.fixedPaymentNoteBlock, { top: paymentNoteTop }]} wrap={false}>
+                    <Text style={styles.paymentNoteText}>{paymentNote}</Text>
+                  </View>
+                ) : null}
+              </>
+            ) : null}
 
             {isQrPage ? (
               <View style={[styles.qrBillSection, styles.qrBillSectionFlushBottom]} wrap={false}>
