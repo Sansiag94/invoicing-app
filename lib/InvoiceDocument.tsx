@@ -61,8 +61,11 @@ function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
   return lines;
 }
 
-function splitMultilineText(value: string): string[] {
-  return value.replace(/\r\n/g, "\n").split("\n");
+function joinNonEmptyLines(lines: Array<string | null | undefined>): string {
+  return lines
+    .map((line) => (line ?? "").trim())
+    .filter((line) => line.length > 0)
+    .join("\n");
 }
 
 const FIRST_PAGE_ROWS_NO_QR = 14;
@@ -122,16 +125,18 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
     marginBottom: mm(0.6),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
     marginBottom: mm(1),
   },
   bodyLine: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 12.5,
     marginBottom: mm(0.55),
   },
   infoLabel: {
@@ -145,11 +150,13 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
     marginBottom: mm(0.6),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
     marginBottom: mm(1),
   },
   invoiceHero: {
@@ -158,12 +165,14 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    lineHeight: 22,
     marginBottom: mm(1.3),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
     marginBottom: mm(1.1),
   },
   invoiceSubject: {
@@ -175,6 +184,7 @@ const styles = StyleSheet.create({
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
+    lineHeight: 13,
   },
   tableWrap: {
     marginTop: mm(10),
@@ -219,10 +229,9 @@ const styles = StyleSheet.create({
     fontSize: 9.3,
     lineHeight: 12.5,
   },
-  tableDescriptionLine: {
+  tableDescriptionText: {
     fontSize: 9.3,
     lineHeight: 12.5,
-    marginBottom: mm(0.25),
   },
   tableNumericText: {
     fontSize: 9.3,
@@ -273,15 +282,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     color: "#374151",
-  },
-  closingLine: {
-    fontSize: 10,
-    lineHeight: 14,
-    color: "#374151",
-    marginBottom: mm(0.7),
-  },
-  closingSpacer: {
-    height: mm(3.2),
   },
   paymentNoteBox: {
     marginTop: mm(4),
@@ -645,6 +645,7 @@ function InvoiceLineItemsTable(props: {
 
       {props.lineItems.map((item, index) => {
         const descriptionLines = wrapTextLines(item.description, 40);
+        const descriptionText = descriptionLines.join("\n");
 
         return (
           <View key={item.id} style={styles.tableRow} wrap={false}>
@@ -652,11 +653,7 @@ function InvoiceLineItemsTable(props: {
               <Text style={styles.tableCellText}>{props.startIndex + index}</Text>
             </View>
             <View style={[styles.tableCell, styles.colDesc]}>
-              {descriptionLines.map((line, lineIndex) => (
-                <Text key={`${item.id}-line-${lineIndex}`} style={styles.tableDescriptionLine}>
-                  {line}
-                </Text>
-              ))}
+              <Text style={styles.tableDescriptionText}>{descriptionText}</Text>
             </View>
             <View style={[styles.tableCell, styles.colQty]}>
               <Text style={styles.tableNumericText}>{formatQuantity(item.quantity)}</Text>
@@ -779,6 +776,9 @@ const InvoiceDocument = ({
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
   const paymentNote = normalizeLine(invoice.paymentNote);
   const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
+  const businessAddressText = joinNonEmptyLines(businessHeaderLines);
+  const sellerContactText = joinNonEmptyLines(sellerContactLines);
+  const clientAddressText = joinNonEmptyLines(toCompactAddressLines(clientAddress));
 
   return (
     <Document title={pdfTitle}>
@@ -805,16 +805,8 @@ const InvoiceDocument = ({
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
                       <Text style={styles.sellerName}>{headerPrimaryName}</Text>
                       {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
-                      {businessHeaderLines.map((line, index) => (
-                        <Text key={`seller-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
-                      ))}
-                      {sellerContactLines.map((line, index) => (
-                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
-                      ))}
+                      {businessAddressText ? <Text style={styles.bodyLine}>{businessAddressText}</Text> : null}
+                      {sellerContactText ? <Text style={styles.bodyLine}>{sellerContactText}</Text> : null}
                     </View>
 
                     <View style={styles.businessMetaCol}>
@@ -822,11 +814,7 @@ const InvoiceDocument = ({
                       {clientSecondaryName ? (
                         <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
                       ) : null}
-                      {toCompactAddressLines(clientAddress).map((line, index) => (
-                        <Text key={`client-${index}`} style={styles.bodyLine}>
-                          {line}
-                        </Text>
-                      ))}
+                      {clientAddressText ? <Text style={styles.bodyLine}>{clientAddressText}</Text> : null}
                     </View>
                   </View>
 
@@ -878,15 +866,7 @@ const InvoiceDocument = ({
                   </View>
 
                   <View style={styles.closingTextBlock}>
-                    {splitMultilineText(messageText).map((line, index) =>
-                      line.trim().length > 0 ? (
-                        <Text key={`closing-line-${index}`} style={styles.closingLine}>
-                          {line}
-                        </Text>
-                      ) : (
-                        <View key={`closing-spacer-${index}`} style={styles.closingSpacer} />
-                      )
-                    )}
+                    <Text style={styles.closingText}>{messageText}</Text>
                   </View>
 
                   {paymentNote ? (
