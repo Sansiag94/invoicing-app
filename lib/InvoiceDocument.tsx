@@ -31,43 +31,6 @@ function mm(value: number): number {
   return value * POINTS_PER_MM;
 }
 
-function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
-  const normalized = value.replace(/\s+/g, " ").trim();
-
-  if (!normalized) {
-    return [];
-  }
-
-  const words = normalized.split(" ");
-  const lines: string[] = [];
-  let currentLine = "";
-
-  for (const word of words) {
-    const nextLine = currentLine ? `${currentLine} ${word}` : word;
-
-    if (currentLine && nextLine.length > maxCharsPerLine) {
-      lines.push(currentLine);
-      currentLine = word;
-      continue;
-    }
-
-    currentLine = nextLine;
-  }
-
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  return lines;
-}
-
-function joinNonEmptyLines(lines: Array<string | null | undefined>): string {
-  return lines
-    .map((line) => (line ?? "").trim())
-    .filter((line) => line.length > 0)
-    .join("\n");
-}
-
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
@@ -125,18 +88,16 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    lineHeight: 16,
     marginBottom: mm(0.6),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13,
     marginBottom: mm(1),
   },
   bodyLine: {
     fontSize: 9.4,
-    lineHeight: 12.5,
+    lineHeight: 1.35,
     marginBottom: mm(0.55),
   },
   infoLabel: {
@@ -150,13 +111,11 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    lineHeight: 16,
     marginBottom: mm(0.6),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13,
     marginBottom: mm(1),
   },
   invoiceHero: {
@@ -165,14 +124,12 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    lineHeight: 22,
     marginBottom: mm(1.3),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13,
     marginBottom: mm(1.1),
   },
   invoiceSubject: {
@@ -184,7 +141,6 @@ const styles = StyleSheet.create({
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
-    lineHeight: 13,
   },
   tableWrap: {
     marginTop: mm(10),
@@ -201,48 +157,30 @@ const styles = StyleSheet.create({
     paddingBottom: mm(1.8),
     paddingHorizontal: mm(1.2),
   },
-  tableHeaderCell: {
-    justifyContent: "flex-start",
-  },
   tableHeaderText: {
     fontSize: 8,
     fontWeight: "bold",
     color: "#374151",
     textTransform: "uppercase",
   },
-  tableHeaderTextRight: {
-    textAlign: "right",
-  },
   tableRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
-    paddingTop: mm(2.4),
-    paddingBottom: mm(3.5),
+    paddingTop: mm(2.1),
+    paddingBottom: mm(2.6),
     paddingHorizontal: mm(1.2),
-  },
-  tableCell: {
-    justifyContent: "flex-start",
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 12.5,
-  },
-  tableDescriptionText: {
-    fontSize: 9.3,
-    lineHeight: 12.5,
-  },
-  tableNumericText: {
-    fontSize: 9.3,
-    lineHeight: 12.5,
-    textAlign: "right",
+    lineHeight: 1.35,
   },
   colPos: { width: "8%" },
-  colDesc: { width: "48%", paddingRight: mm(4) },
-  colQty: { width: "10%", alignItems: "flex-end" },
-  colUnit: { width: "16%", alignItems: "flex-end" },
-  colTotal: { width: "18%", alignItems: "flex-end" },
+  colDesc: { width: "46%" },
+  colQty: { width: "12%", textAlign: "left" },
+  colUnit: { width: "16%", textAlign: "right" },
+  colTotal: { width: "18%", textAlign: "right" },
   totalsBox: {
     marginTop: mm(6),
     marginLeft: "auto",
@@ -280,7 +218,7 @@ const styles = StyleSheet.create({
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 14,
+    lineHeight: 1.35,
     color: "#374151",
   },
   paymentNoteBox: {
@@ -626,49 +564,24 @@ function InvoiceLineItemsTable(props: {
   return (
     <View style={props.continuation ? styles.tableWrapContinuation : styles.tableWrap}>
       <View style={styles.tableHeader}>
-        <View style={[styles.tableHeaderCell, styles.colPos]}>
-          <Text style={styles.tableHeaderText}>{strings.position}</Text>
-        </View>
-        <View style={[styles.tableHeaderCell, styles.colDesc]}>
-          <Text style={styles.tableHeaderText}>{strings.description}</Text>
-        </View>
-        <View style={[styles.tableHeaderCell, styles.colQty]}>
-          <Text style={[styles.tableHeaderText, styles.tableHeaderTextRight]}>{strings.quantity}</Text>
-        </View>
-        <View style={[styles.tableHeaderCell, styles.colUnit]}>
-          <Text style={[styles.tableHeaderText, styles.tableHeaderTextRight]}>{strings.unitPrice}</Text>
-        </View>
-        <View style={[styles.tableHeaderCell, styles.colTotal]}>
-          <Text style={[styles.tableHeaderText, styles.tableHeaderTextRight]}>{strings.amount}</Text>
-        </View>
+        <Text style={[styles.tableHeaderText, styles.colPos]}>{strings.position}</Text>
+        <Text style={[styles.tableHeaderText, styles.colDesc]}>{strings.description}</Text>
+        <Text style={[styles.tableHeaderText, styles.colQty]}>{strings.quantity}</Text>
+        <Text style={[styles.tableHeaderText, styles.colUnit]}>{strings.unitPrice}</Text>
+        <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
       </View>
 
-      {props.lineItems.map((item, index) => {
-        const descriptionLines = wrapTextLines(item.description, 40);
-        const descriptionText = descriptionLines.join("\n");
-
-        return (
-          <View key={item.id} style={styles.tableRow} wrap={false}>
-            <View style={[styles.tableCell, styles.colPos]}>
-              <Text style={styles.tableCellText}>{props.startIndex + index}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colDesc]}>
-              <Text style={styles.tableDescriptionText}>{descriptionText}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colQty]}>
-              <Text style={styles.tableNumericText}>{formatQuantity(item.quantity)}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colUnit]}>
-              <Text style={styles.tableNumericText}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
-            </View>
-            <View style={[styles.tableCell, styles.colTotal]}>
-              <Text style={styles.tableNumericText}>
-                {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
-              </Text>
-            </View>
-          </View>
-        );
-      })}
+      {props.lineItems.map((item, index) => (
+        <View key={item.id} style={styles.tableRow}>
+          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
+          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
+          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
+          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
+          <Text style={[styles.tableCellText, styles.colTotal]}>
+            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -776,9 +689,6 @@ const InvoiceDocument = ({
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
   const paymentNote = normalizeLine(invoice.paymentNote);
   const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
-  const businessAddressText = joinNonEmptyLines(businessHeaderLines);
-  const sellerContactText = joinNonEmptyLines(sellerContactLines);
-  const clientAddressText = joinNonEmptyLines(toCompactAddressLines(clientAddress));
 
   return (
     <Document title={pdfTitle}>
@@ -805,8 +715,16 @@ const InvoiceDocument = ({
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
                       <Text style={styles.sellerName}>{headerPrimaryName}</Text>
                       {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
-                      {businessAddressText ? <Text style={styles.bodyLine}>{businessAddressText}</Text> : null}
-                      {sellerContactText ? <Text style={styles.bodyLine}>{sellerContactText}</Text> : null}
+                      {businessHeaderLines.map((line, index) => (
+                        <Text key={`seller-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
+                      {sellerContactLines.map((line, index) => (
+                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
                     </View>
 
                     <View style={styles.businessMetaCol}>
@@ -814,7 +732,11 @@ const InvoiceDocument = ({
                       {clientSecondaryName ? (
                         <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
                       ) : null}
-                      {clientAddressText ? <Text style={styles.bodyLine}>{clientAddressText}</Text> : null}
+                      {toCompactAddressLines(clientAddress).map((line, index) => (
+                        <Text key={`client-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
+                      ))}
                     </View>
                   </View>
 
