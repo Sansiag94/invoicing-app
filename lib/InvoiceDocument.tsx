@@ -88,16 +88,18 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
     marginBottom: mm(0.6),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
     marginBottom: mm(1.25),
   },
   bodyLine: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 12.5,
     marginBottom: mm(0.75),
   },
   infoLabel: {
@@ -111,11 +113,13 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
+    lineHeight: 16,
     marginBottom: mm(0.6),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
     marginBottom: mm(1.25),
   },
   invoiceHero: {
@@ -124,12 +128,14 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
+    lineHeight: 22,
     marginBottom: mm(1.8),
     letterSpacing: 0.2,
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
+    lineHeight: 13,
     marginBottom: mm(1.5),
   },
   invoiceSubject: {
@@ -141,6 +147,7 @@ const styles = StyleSheet.create({
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
+    lineHeight: 13,
   },
   tableWrap: {
     marginTop: mm(10),
@@ -169,12 +176,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
     paddingTop: mm(2.4),
-    paddingBottom: mm(3),
+    paddingBottom: mm(3.5),
     paddingHorizontal: mm(1.2),
   },
   tableCellText: {
     fontSize: 9.3,
-    lineHeight: 1.35,
+    lineHeight: 12.5,
   },
   colPos: { width: "8%" },
   colDesc: { width: "46%" },
@@ -194,7 +201,14 @@ const styles = StyleSheet.create({
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
+    alignItems: "flex-end",
     marginBottom: mm(1.9),
+  },
+  totalDueRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+    marginTop: mm(1.1),
   },
   totalsLabel: {
     fontSize: 10,
@@ -218,7 +232,7 @@ const styles = StyleSheet.create({
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 1.35,
+    lineHeight: 14,
     color: "#374151",
   },
   paymentNoteBox: {
@@ -230,7 +244,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 1.35,
+    lineHeight: 13,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -778,7 +792,7 @@ const InvoiceDocument = ({
                           </Text>
                         </View>
                       ) : null}
-                      <View style={styles.totalsRow}>
+                      <View style={styles.totalDueRow}>
                         <Text style={styles.totalDueLabel}>{strings.total}</Text>
                         <Text style={styles.totalDueValue}>
                           {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
