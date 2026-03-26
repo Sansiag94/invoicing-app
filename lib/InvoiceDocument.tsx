@@ -31,6 +31,40 @@ function mm(value: number): number {
   return value * POINTS_PER_MM;
 }
 
+function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
+  const normalized = value.replace(/\s+/g, " ").trim();
+
+  if (!normalized) {
+    return [];
+  }
+
+  const words = normalized.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word;
+
+    if (currentLine && nextLine.length > maxCharsPerLine) {
+      lines.push(currentLine);
+      currentLine = word;
+      continue;
+    }
+
+    currentLine = nextLine;
+  }
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+function splitMultilineText(value: string): string[] {
+  return value.replace(/\r\n/g, "\n").split("\n");
+}
+
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
@@ -164,11 +198,17 @@ const styles = StyleSheet.create({
     paddingBottom: mm(1.8),
     paddingHorizontal: mm(1.2),
   },
+  tableHeaderCell: {
+    justifyContent: "flex-start",
+  },
   tableHeaderText: {
     fontSize: 8,
     fontWeight: "bold",
     color: "#374151",
     textTransform: "uppercase",
+  },
+  tableHeaderTextRight: {
+    textAlign: "right",
   },
   tableRow: {
     flexDirection: "row",
@@ -179,15 +219,28 @@ const styles = StyleSheet.create({
     paddingBottom: mm(3.5),
     paddingHorizontal: mm(1.2),
   },
+  tableCell: {
+    justifyContent: "flex-start",
+  },
   tableCellText: {
     fontSize: 9.3,
     lineHeight: 12.5,
   },
+  tableDescriptionLine: {
+    fontSize: 9.3,
+    lineHeight: 12.5,
+    marginBottom: mm(0.25),
+  },
+  tableNumericText: {
+    fontSize: 9.3,
+    lineHeight: 12.5,
+    textAlign: "right",
+  },
   colPos: { width: "8%" },
-  colDesc: { width: "46%" },
-  colQty: { width: "12%", textAlign: "right" },
-  colUnit: { width: "16%", textAlign: "right" },
-  colTotal: { width: "18%", textAlign: "right" },
+  colDesc: { width: "48%", paddingRight: mm(4) },
+  colQty: { width: "10%", alignItems: "flex-end" },
+  colUnit: { width: "16%", alignItems: "flex-end" },
+  colTotal: { width: "18%", alignItems: "flex-end" },
   totalsBox: {
     marginTop: mm(7.5),
     marginLeft: "auto",
@@ -234,6 +287,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 14,
     color: "#374151",
+  },
+  closingLine: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: "#374151",
+    marginBottom: mm(0.7),
+  },
+  closingSpacer: {
+    height: mm(3.2),
   },
   paymentNoteBox: {
     marginTop: mm(6.5),
@@ -578,24 +640,52 @@ function InvoiceLineItemsTable(props: {
   return (
     <View style={props.continuation ? styles.tableWrapContinuation : styles.tableWrap}>
       <View style={styles.tableHeader}>
-        <Text style={[styles.tableHeaderText, styles.colPos]}>{strings.position}</Text>
-        <Text style={[styles.tableHeaderText, styles.colDesc]}>{strings.description}</Text>
-        <Text style={[styles.tableHeaderText, styles.colQty]}>{strings.quantity}</Text>
-        <Text style={[styles.tableHeaderText, styles.colUnit]}>{strings.unitPrice}</Text>
-        <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
+        <View style={[styles.tableHeaderCell, styles.colPos]}>
+          <Text style={styles.tableHeaderText}>{strings.position}</Text>
+        </View>
+        <View style={[styles.tableHeaderCell, styles.colDesc]}>
+          <Text style={styles.tableHeaderText}>{strings.description}</Text>
+        </View>
+        <View style={[styles.tableHeaderCell, styles.colQty]}>
+          <Text style={[styles.tableHeaderText, styles.tableHeaderTextRight]}>{strings.quantity}</Text>
+        </View>
+        <View style={[styles.tableHeaderCell, styles.colUnit]}>
+          <Text style={[styles.tableHeaderText, styles.tableHeaderTextRight]}>{strings.unitPrice}</Text>
+        </View>
+        <View style={[styles.tableHeaderCell, styles.colTotal]}>
+          <Text style={[styles.tableHeaderText, styles.tableHeaderTextRight]}>{strings.amount}</Text>
+        </View>
       </View>
 
-      {props.lineItems.map((item, index) => (
-        <View key={item.id} style={styles.tableRow}>
-          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
-          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
-          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
-          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
-          <Text style={[styles.tableCellText, styles.colTotal]}>
-            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
-          </Text>
-        </View>
-      ))}
+      {props.lineItems.map((item, index) => {
+        const descriptionLines = wrapTextLines(item.description, 40);
+
+        return (
+          <View key={item.id} style={styles.tableRow} wrap={false}>
+            <View style={[styles.tableCell, styles.colPos]}>
+              <Text style={styles.tableCellText}>{props.startIndex + index}</Text>
+            </View>
+            <View style={[styles.tableCell, styles.colDesc]}>
+              {descriptionLines.map((line, lineIndex) => (
+                <Text key={`${item.id}-line-${lineIndex}`} style={styles.tableDescriptionLine}>
+                  {line}
+                </Text>
+              ))}
+            </View>
+            <View style={[styles.tableCell, styles.colQty]}>
+              <Text style={styles.tableNumericText}>{formatQuantity(item.quantity)}</Text>
+            </View>
+            <View style={[styles.tableCell, styles.colUnit]}>
+              <Text style={styles.tableNumericText}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
+            </View>
+            <View style={[styles.tableCell, styles.colTotal]}>
+              <Text style={styles.tableNumericText}>
+                {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
+              </Text>
+            </View>
+          </View>
+        );
+      })}
     </View>
   );
 }
@@ -802,7 +892,15 @@ const InvoiceDocument = ({
                   </View>
 
                   <View style={styles.closingTextBlock}>
-                    <Text style={styles.closingText}>{messageText}</Text>
+                    {splitMultilineText(messageText).map((line, index) =>
+                      line.trim().length > 0 ? (
+                        <Text key={`closing-line-${index}`} style={styles.closingLine}>
+                          {line}
+                        </Text>
+                      ) : (
+                        <View key={`closing-spacer-${index}`} style={styles.closingSpacer} />
+                      )
+                    )}
                   </View>
 
                   {paymentNote ? (
