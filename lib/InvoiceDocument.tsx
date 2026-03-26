@@ -31,36 +31,6 @@ function mm(value: number): number {
   return value * POINTS_PER_MM;
 }
 
-function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
-  const normalized = value.replace(/\s+/g, " ").trim();
-
-  if (!normalized) {
-    return [];
-  }
-
-  const words = normalized.split(" ");
-  const lines: string[] = [];
-  let currentLine = "";
-
-  for (const word of words) {
-    const nextLine = currentLine ? `${currentLine} ${word}` : word;
-
-    if (currentLine && nextLine.length > maxCharsPerLine) {
-      lines.push(currentLine);
-      currentLine = word;
-      continue;
-    }
-
-    currentLine = nextLine;
-  }
-
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  return lines;
-}
-
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
@@ -105,7 +75,7 @@ const styles = StyleSheet.create({
     paddingRight: mm(6),
   },
   businessMetaCol: {
-    width: "38%",
+    width: "36%",
     alignItems: "flex-start",
     marginTop: mm(28),
   },
@@ -118,33 +88,17 @@ const styles = StyleSheet.create({
   sellerName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    lineHeight: 16,
-    marginBottom: mm(0.9),
-  },
-  sellerNameBlock: {
     marginBottom: mm(0.6),
   },
   sellerSecondary: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 12.5,
-    marginBottom: mm(0.9),
-  },
-  sellerSecondaryBlock: {
-    marginBottom: mm(0.5),
+    marginBottom: mm(1),
   },
   bodyLine: {
     fontSize: 9.4,
-    lineHeight: 12.5,
-    marginBottom: mm(0.7),
-  },
-  sellerLineBlock: {
-    marginBottom: mm(0.7),
-  },
-  sellerLine: {
-    fontSize: 9.4,
-    lineHeight: 12.5,
-    color: "#111827",
+    lineHeight: 1.35,
+    marginBottom: mm(0.55),
   },
   infoLabel: {
     fontSize: 7.2,
@@ -157,28 +111,12 @@ const styles = StyleSheet.create({
   recipientName: {
     fontSize: 13.5,
     fontWeight: "bold",
-    lineHeight: 16,
-    marginBottom: mm(0.9),
-  },
-  recipientNameBlock: {
     marginBottom: mm(0.6),
   },
   recipientSecondary: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 12.5,
-    marginBottom: mm(0.9),
-  },
-  recipientSecondaryBlock: {
-    marginBottom: mm(0.5),
-  },
-  recipientLineBlock: {
-    marginBottom: mm(0.7),
-  },
-  recipientLine: {
-    fontSize: 9.4,
-    lineHeight: 12.5,
-    color: "#111827",
+    marginBottom: mm(1),
   },
   invoiceHero: {
     marginBottom: mm(8),
@@ -186,19 +124,13 @@ const styles = StyleSheet.create({
   invoiceTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    lineHeight: 22,
+    marginBottom: mm(1.3),
     letterSpacing: 0.2,
-  },
-  invoiceTitleBlock: {
-    marginBottom: mm(2),
   },
   invoiceDate: {
     fontSize: 10,
     color: "#374151",
-    lineHeight: 13,
-  },
-  invoiceDateBlock: {
-    marginBottom: mm(1.3),
+    marginBottom: mm(1.1),
   },
   invoiceSubject: {
     fontSize: 10,
@@ -209,10 +141,6 @@ const styles = StyleSheet.create({
   invoiceDueDate: {
     fontSize: 10,
     color: "#6b7280",
-    lineHeight: 13,
-  },
-  invoiceDueDateBlock: {
-    marginBottom: mm(1.1),
   },
   tableWrap: {
     marginTop: mm(10),
@@ -235,21 +163,14 @@ const styles = StyleSheet.create({
     color: "#374151",
     textTransform: "uppercase",
   },
-  tableItemBlock: {
+  tableRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     borderBottomWidth: 1,
     borderBottomColor: "#e5e7eb",
     paddingTop: mm(2.1),
     paddingBottom: mm(2.6),
     paddingHorizontal: mm(1.2),
-  },
-  tableRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  tableContinuationRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginTop: mm(0.55),
   },
   tableCellText: {
     fontSize: 9.3,
@@ -261,19 +182,19 @@ const styles = StyleSheet.create({
   colUnit: { width: "16%", textAlign: "right" },
   colTotal: { width: "18%", textAlign: "right" },
   totalsBox: {
-    marginTop: mm(8),
+    marginTop: mm(6),
     marginLeft: "auto",
     width: mm(80),
   },
   totalsRule: {
     borderTopWidth: 1,
     borderTopColor: "#d1d5db",
-    paddingTop: mm(4),
+    paddingTop: mm(3),
   },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: mm(2),
+    marginBottom: mm(1.4),
   },
   totalsLabel: {
     fontSize: 10,
@@ -292,16 +213,16 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   closingTextBlock: {
-    marginTop: mm(8),
+    marginTop: mm(6),
     width: mm(120),
   },
   closingText: {
     fontSize: 10,
-    lineHeight: 14,
+    lineHeight: 1.35,
     color: "#374151",
   },
   paymentNoteBox: {
-    marginTop: mm(8),
+    marginTop: mm(4),
     width: mm(120),
     borderWidth: 1,
     borderColor: "#d1d5db",
@@ -309,7 +230,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteText: {
     fontSize: 9.4,
-    lineHeight: 13,
+    lineHeight: 1.35,
     color: "#374151",
   },
   manualPaymentSection: {
@@ -650,37 +571,17 @@ function InvoiceLineItemsTable(props: {
         <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
       </View>
 
-      {props.lineItems.map((item, index) => {
-        const descriptionLines = wrapTextLines(item.description, 42);
-        const firstLine = descriptionLines[0] ?? "";
-        const continuationLines = descriptionLines.slice(1);
-
-        return (
-          <View key={item.id} style={styles.tableItemBlock}>
-            <View style={styles.tableRow}>
-              <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
-              <Text style={[styles.tableCellText, styles.colDesc]}>{firstLine}</Text>
-              <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
-              <Text style={[styles.tableCellText, styles.colUnit]}>
-                {formatInvoiceMoney(item.unitPrice, props.language)}
-              </Text>
-              <Text style={[styles.tableCellText, styles.colTotal]}>
-                {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
-              </Text>
-            </View>
-
-            {continuationLines.map((line, continuationIndex) => (
-              <View key={`${item.id}-cont-${continuationIndex}`} style={styles.tableContinuationRow}>
-                <Text style={[styles.tableCellText, styles.colPos]} />
-                <Text style={[styles.tableCellText, styles.colDesc]}>{line}</Text>
-                <Text style={[styles.tableCellText, styles.colQty]} />
-                <Text style={[styles.tableCellText, styles.colUnit]} />
-                <Text style={[styles.tableCellText, styles.colTotal]} />
-              </View>
-            ))}
-          </View>
-        );
-      })}
+      {props.lineItems.map((item, index) => (
+        <View key={item.id} style={styles.tableRow}>
+          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
+          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
+          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
+          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
+          <Text style={[styles.tableCellText, styles.colTotal]}>
+            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
+          </Text>
+        </View>
+      ))}
     </View>
   );
 }
@@ -806,61 +707,45 @@ const InvoiceDocument = ({
 
         return (
           <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page}>
-            <View style={pageBodyStyles}>
+            <View style={pageBodyStyles} wrap={false}>
               {isFirstPage ? (
                 <>
                   <View style={styles.header}>
                     <View style={styles.sellerCol}>
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
-                      <View style={styles.sellerNameBlock}>
-                        <Text style={styles.sellerName}>{headerPrimaryName}</Text>
-                      </View>
-                      {headerSecondaryName ? (
-                        <View style={styles.sellerSecondaryBlock}>
-                          <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text>
-                        </View>
-                      ) : null}
+                      <Text style={styles.sellerName}>{headerPrimaryName}</Text>
+                      {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
                       {businessHeaderLines.map((line, index) => (
-                        <View key={`seller-${index}`} style={styles.sellerLineBlock}>
-                          <Text style={styles.sellerLine}>{line}</Text>
-                        </View>
+                        <Text key={`seller-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
                       ))}
                       {sellerContactLines.map((line, index) => (
-                        <View key={`seller-contact-${index}`} style={styles.sellerLineBlock}>
-                          <Text style={styles.sellerLine}>{line}</Text>
-                        </View>
+                        <Text key={`seller-contact-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
                       ))}
                     </View>
 
                     <View style={styles.businessMetaCol}>
-                      <View style={styles.recipientNameBlock}>
-                        <Text style={styles.recipientName}>{clientPrimaryName}</Text>
-                      </View>
+                      <Text style={styles.recipientName}>{clientPrimaryName}</Text>
                       {clientSecondaryName ? (
-                        <View style={styles.recipientSecondaryBlock}>
-                          <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
-                        </View>
+                        <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text>
                       ) : null}
                       {toCompactAddressLines(clientAddress).map((line, index) => (
-                        <View key={`client-${index}`} style={styles.recipientLineBlock}>
-                          <Text style={styles.recipientLine}>{line}</Text>
-                        </View>
+                        <Text key={`client-${index}`} style={styles.bodyLine}>
+                          {line}
+                        </Text>
                       ))}
                     </View>
                   </View>
 
                   <View style={styles.invoiceHero}>
-                    <View style={styles.invoiceTitleBlock}>
-                      <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
-                    </View>
-                    <View style={styles.invoiceDateBlock}>
-                      <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
-                    </View>
-                    <View style={styles.invoiceDueDateBlock}>
-                      <Text style={styles.invoiceDueDate}>
-                        {strings.dueDate}: {formatInvoiceDate(invoice.dueDate, invoiceLanguage)}
-                      </Text>
-                    </View>
+                    <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
+                    <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
+                    <Text style={styles.invoiceDueDate}>
+                      {strings.dueDate}: {formatInvoiceDate(invoice.dueDate, invoiceLanguage)}
+                    </Text>
                     {invoice.subject ? <Text style={styles.invoiceSubject}>{strings.subject}: {invoice.subject}</Text> : null}
                   </View>
                 </>
