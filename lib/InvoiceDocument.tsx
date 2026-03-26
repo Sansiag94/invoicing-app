@@ -797,10 +797,10 @@ const InvoiceDocument = ({
 
         return (
           <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page}>
-            <View style={pageBodyStyles} wrap={false}>
+            <View style={pageBodyStyles}>
               {isFirstPage ? (
                 <>
-                  <View style={styles.header}>
+                  <View style={styles.header} wrap={false}>
                     <View style={styles.sellerCol}>
                       {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
                       <Text style={styles.sellerName}>{headerPrimaryName}</Text>
@@ -818,7 +818,7 @@ const InvoiceDocument = ({
                     </View>
                   </View>
 
-                  <View style={styles.invoiceHero}>
+                  <View style={styles.invoiceHero} wrap={false}>
                     <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
                     <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
                     <Text style={styles.invoiceDueDate}>
@@ -840,7 +840,7 @@ const InvoiceDocument = ({
 
               {shouldRenderClosingSections ? (
                 <>
-                  <View style={styles.totalsBox}>
+                  <View style={styles.totalsBox} wrap={false}>
                     <View style={styles.totalsRule}>
                       <View style={styles.totalsRow}>
                         <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
@@ -865,18 +865,18 @@ const InvoiceDocument = ({
                     </View>
                   </View>
 
-                  <View style={styles.closingTextBlock}>
+                  <View style={styles.closingTextBlock} wrap={false}>
                     <Text style={styles.closingText}>{messageText}</Text>
                   </View>
 
                   {paymentNote ? (
-                    <View style={styles.paymentNoteBox}>
+                    <View style={styles.paymentNoteBox} wrap={false}>
                       <Text style={styles.paymentNoteText}>{paymentNote}</Text>
                     </View>
                   ) : null}
 
                   {shouldRenderManualTransferSection ? (
-                    <View style={styles.manualPaymentSection}>
+                    <View style={styles.manualPaymentSection} wrap={false}>
                       <Text style={styles.manualPaymentTitle}>{strings.paymentOptions}</Text>
                       <View style={styles.manualPaymentGrid}>
                         {onlinePaymentLink ? (
