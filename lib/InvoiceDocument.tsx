@@ -104,6 +104,14 @@ function measureMessageHeight(lines: string[]): number {
   return lines.reduce((total, line) => total + (line.trim().length === 0 ? mm(3.5) : 14), 0);
 }
 
+function measureBlockHeight(lineCount: number, lineHeight: number, gap: number): number {
+  if (lineCount <= 0) {
+    return 0;
+  }
+
+  return lineCount * lineHeight + Math.max(0, lineCount - 1) * gap;
+}
+
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
 const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
@@ -119,11 +127,6 @@ const PAYMENT_PART_GAP = mm(6);
 const RECEIPT_WIDTH = mm(62);
 const PAYMENT_PART_WIDTH = mm(148);
 const CONTENT_WIDTH = mm(170);
-const FIRST_PAGE_HEADER_TOP = PAGE_TOP_MARGIN;
-const FIRST_PAGE_RECIPIENT_TOP = PAGE_TOP_MARGIN + mm(22);
-const FIRST_PAGE_HERO_TOP = mm(74);
-const TABLE_TOP_FIRST_PAGE = mm(110);
-const TABLE_TOP_CONTINUATION = PAGE_TOP_MARGIN;
 const COL_POS_WIDTH = mm(12);
 const COL_DESC_WIDTH = mm(86);
 const COL_QTY_WIDTH = mm(18);
@@ -884,7 +887,23 @@ const InvoiceDocument = ({
         const shouldRenderClosingSections = pageIndex === closingPageIndex;
         const startIndex = pages.slice(0, pageIndex).reduce((sum, pageItems) => sum + pageItems.length, 1);
         const preparedRows = buildPreparedLineItemRows(lineItems, startIndex, invoiceLanguage);
-        const tableTop = isFirstPage ? TABLE_TOP_FIRST_PAGE : TABLE_TOP_CONTINUATION;
+        const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
+        const recipientLineCount = toCompactAddressLines(clientAddress).length;
+        const sellerHeaderHeight =
+          mm(27.5) +
+          16 +
+          (headerSecondaryName ? 13 + mm(1) : 0) +
+          measureBlockHeight(sellerLineCount, 12, mm(0.55));
+        const recipientHeaderHeight =
+          16 +
+          (clientSecondaryName ? 13 + mm(1) : 0) +
+          measureBlockHeight(recipientLineCount, 12, mm(0.55));
+        const headerBottom = Math.max(
+          PAGE_TOP_MARGIN + sellerHeaderHeight,
+          PAGE_TOP_MARGIN + mm(22) + recipientHeaderHeight
+        );
+        const heroTop = isFirstPage ? headerBottom + mm(8) : PAGE_TOP_MARGIN;
+        const tableTop = heroTop + mm(24);
         const tableHeight = TABLE_HEADER_HEIGHT + preparedRows.reduce((sum, row) => sum + row.rowHeight, 0);
         const totalsTop = tableTop + tableHeight + mm(8);
         const totalsHeight = mm(taxAmount > 0 ? 22 : 16);
@@ -906,7 +925,7 @@ const InvoiceDocument = ({
 
             {isFirstPage ? (
               <>
-                <View style={[styles.fixedSellerBlock, { top: FIRST_PAGE_HEADER_TOP }]} wrap={false}>
+                <View style={[styles.fixedSellerBlock, { top: PAGE_TOP_MARGIN }]} wrap={false}>
                   {invoice.business.logoUrl ? <Image style={styles.logo} src={invoice.business.logoUrl} /> : null}
                   <Text style={styles.sellerName}>{headerPrimaryName}</Text>
                   {headerSecondaryName ? <Text style={styles.sellerSecondary}>{headerSecondaryName}</Text> : null}
@@ -918,7 +937,7 @@ const InvoiceDocument = ({
                   ))}
                 </View>
 
-                <View style={[styles.fixedRecipientBlock, { top: FIRST_PAGE_RECIPIENT_TOP }]} wrap={false}>
+                <View style={[styles.fixedRecipientBlock, { top: PAGE_TOP_MARGIN + mm(22) }]} wrap={false}>
                   <Text style={styles.recipientName}>{clientPrimaryName}</Text>
                   {clientSecondaryName ? <Text style={styles.recipientSecondary}>{clientSecondaryName}</Text> : null}
                   {toCompactAddressLines(clientAddress).map((line, index) => (
@@ -926,7 +945,7 @@ const InvoiceDocument = ({
                   ))}
                 </View>
 
-                <View style={[styles.fixedHeroBlock, { top: FIRST_PAGE_HERO_TOP }]} wrap={false}>
+                <View style={[styles.fixedHeroBlock, { top: heroTop }]} wrap={false}>
                   <Text style={styles.invoiceTitle}>{strings.invoice}: {invoice.invoiceNumber}</Text>
                   <Text style={styles.invoiceDate}>{formatInvoiceDate(invoice.issueDate, invoiceLanguage)}</Text>
                   <Text style={styles.invoiceDueDate}>
