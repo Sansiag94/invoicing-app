@@ -920,7 +920,7 @@ const InvoiceDocument = ({
         }
 
         return (
-          <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page}>
+          <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page} wrap={false}>
             <View style={pageBodyStyles} />
 
             {isFirstPage ? (
@@ -1148,7 +1148,7 @@ const InvoiceDocument = ({
         );
       })}
       {standaloneQrPage ? (
-        <Page size="A4" style={styles.page}>
+        <Page size="A4" style={styles.page} wrap={false}>
           <View style={[styles.pageBody, styles.pageBodyWithQrSpaceFlushBottom]} wrap={false} />
           <View style={[styles.qrBillSection, styles.qrBillSectionFlushBottom]} wrap={false}>
             <View style={styles.cutLineWrap}>
