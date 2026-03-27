@@ -77,7 +77,7 @@ function buildPreparedLineItemRows(
   language: ReturnType<typeof normalizeInvoiceLanguage>
 ): PreparedLineItemRow[] {
   return lineItems.flatMap((item, index) => {
-    const descriptionLines = wrapTextLines(item.description, 28);
+    const descriptionLines = wrapTextLines(item.description, 38);
     const lines = descriptionLines.length > 0 ? descriptionLines : [""];
 
     return lines.map((line, lineIndex) => ({
@@ -99,6 +99,13 @@ function buildMessageLines(value: string): string[] {
     .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 42)));
 }
 
+function buildPaymentNoteLines(value: string): string[] {
+  return value
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 56)));
+}
+
 function measureMessageHeight(lines: string[]): number {
   return lines.reduce((total, line) => total + (line.trim().length === 0 ? mm(3.5) : 14), 0);
 }
@@ -108,7 +115,7 @@ function measureNoteBoxHeight(value: string | null): number {
     return 0;
   }
 
-  return measureMessageHeight(buildMessageLines(value)) + mm(6);
+  return measureMessageHeight(buildPaymentNoteLines(value)) + mm(6);
 }
 
 function measureBlockHeight(lineCount: number, lineHeight: number, gap: number): number {
@@ -147,7 +154,7 @@ const RECIPIENT_BLOCK_WIDTH = mm(58);
 const RECIPIENT_LEFT = PAGE_SIDE_MARGIN + CONTENT_WIDTH - RECIPIENT_BLOCK_WIDTH;
 const TOTALS_WIDTH = mm(78);
 const TOTALS_LEFT = PAGE_SIDE_MARGIN + CONTENT_WIDTH - TOTALS_WIDTH;
-const CLOSING_WIDTH = mm(118);
+const CLOSING_WIDTH = mm(132);
 
 const styles = StyleSheet.create({
   page: {
@@ -1050,7 +1057,7 @@ const InvoiceDocument = ({
 
                   {paymentNote ? (
                     <View style={styles.paymentNoteBox}>
-                      {buildMessageLines(paymentNote).map((line, index) => (
+                      {buildPaymentNoteLines(paymentNote).map((line, index) => (
                         <Text key={`payment-note-line-${pageIndex}-${index}`} style={styles.paymentNoteLine}>
                           {line || " "}
                         </Text>
