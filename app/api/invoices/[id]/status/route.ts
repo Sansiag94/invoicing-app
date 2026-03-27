@@ -4,6 +4,11 @@ import { apiError } from "@/lib/api-response";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { getOpenInvoiceStatus } from "@/lib/invoiceStatus";
 import { listInvoiceEvents, logInvoiceEvent } from "@/lib/invoiceActivity";
+import {
+  formatSequentialInvoiceNumber,
+  isDraftInvoiceNumber,
+  normalizeInvoicePrefix,
+} from "@/lib/invoice";
 
 type UpdateInvoiceStatusBody = {
   status?: unknown;
@@ -57,9 +62,32 @@ export async function PATCH(
 
     if (nextStatus === "paid") {
       const updated = await prisma.$transaction(async (tx) => {
+        let officialInvoiceNumber = invoice.invoiceNumber;
+
+        if (isDraftInvoiceNumber(invoice.invoiceNumber)) {
+          const updatedBusiness = await tx.business.update({
+            where: { id: businessId },
+            data: { invoiceCounter: { increment: 1 } },
+            select: {
+              invoiceCounter: true,
+              invoicePrefix: true,
+              name: true,
+            },
+          });
+
+          officialInvoiceNumber = formatSequentialInvoiceNumber(
+            normalizeInvoicePrefix(updatedBusiness.invoicePrefix, updatedBusiness.name),
+            invoice.issueDate,
+            updatedBusiness.invoiceCounter
+          );
+        }
+
         await tx.invoice.update({
           where: { id: invoice.id },
-          data: { status: "paid" },
+          data: {
+            status: "paid",
+            invoiceNumber: officialInvoiceNumber,
+          },
         });
 
         const hasManualPayment = invoice.payments.some(
