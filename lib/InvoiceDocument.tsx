@@ -157,17 +157,7 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   pageBody: {
-    minHeight: A4_PAGE_HEIGHT,
-    paddingTop: PAGE_TOP_MARGIN,
-    paddingHorizontal: PAGE_SIDE_MARGIN,
-    paddingBottom: PAGE_BOTTOM_MARGIN,
-    flexGrow: 1,
-  },
-  pageBodyWithQrSpace: {
-    paddingBottom: QR_BILL_TOTAL_SPACE + PAGE_BOTTOM_MARGIN,
-  },
-  pageBodyWithQrSpaceFlushBottom: {
-    paddingBottom: QR_BILL_TOTAL_SPACE,
+    height: A4_PAGE_HEIGHT,
   },
   header: {
     flexDirection: "row",
@@ -943,17 +933,9 @@ const InvoiceDocument = ({
         const closingHeight = measureMessageHeight(closingLines);
         const closingTop = totalsTop + totalsHeight + mm(9);
         const paymentNoteTop = closingTop + closingHeight + mm(7);
-        const pageBodyStyles: Array<
-          typeof styles.pageBody | typeof styles.pageBodyWithQrSpace | typeof styles.pageBodyWithQrSpaceFlushBottom
-        > = [styles.pageBody];
-
-        if (isQrPage) {
-          pageBodyStyles.push(styles.pageBodyWithQrSpaceFlushBottom);
-        }
-
         return (
           <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page} wrap={false}>
-            <View style={pageBodyStyles} />
+            <View style={styles.pageBody} />
 
             {isFirstPage ? (
               <>
@@ -1181,7 +1163,7 @@ const InvoiceDocument = ({
       })}
       {standaloneQrPage ? (
         <Page size="A4" style={styles.page} wrap={false}>
-          <View style={[styles.pageBody, styles.pageBodyWithQrSpaceFlushBottom]} wrap={false} />
+          <View style={styles.pageBody} wrap={false} />
           <View style={[styles.qrBillSection, styles.qrBillSectionFlushBottom]} wrap={false}>
             <View style={styles.cutLineWrap}>
               <View style={styles.cutLine} />
