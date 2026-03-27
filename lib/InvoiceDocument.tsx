@@ -157,6 +157,7 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   pageBody: {
+    minHeight: A4_PAGE_HEIGHT,
     paddingTop: PAGE_TOP_MARGIN,
     paddingHorizontal: PAGE_SIDE_MARGIN,
     paddingBottom: PAGE_BOTTOM_MARGIN,
