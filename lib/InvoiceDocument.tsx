@@ -76,23 +76,19 @@ function buildPreparedLineItemRows(
   startIndex: number,
   language: ReturnType<typeof normalizeInvoiceLanguage>
 ): PreparedLineItemRow[] {
-  return lineItems.map((item, index) => {
-    const descriptionLines = wrapTextLines(item.description, 20);
-    const descriptionText = descriptionLines.join("\n");
-    const rowHeight = Math.max(
-      TABLE_ROW_MIN_HEIGHT,
-      descriptionLines.length * TABLE_TEXT_LINE_HEIGHT_POINTS + mm(3)
-    );
+  return lineItems.flatMap((item, index) => {
+    const descriptionLines = wrapTextLines(item.description, 28);
+    const lines = descriptionLines.length > 0 ? descriptionLines : [""];
 
-    return {
-      id: item.id,
-      indexLabel: String(startIndex + index),
-      descriptionText,
-      rowHeight,
-      quantityText: formatQuantity(item.quantity),
-      unitPriceText: formatInvoiceMoney(item.unitPrice, language),
-      amountText: formatInvoiceMoney(item.quantity * item.unitPrice, language),
-    };
+    return lines.map((line, lineIndex) => ({
+      id: `${item.id}-${lineIndex}`,
+      indexLabel: lineIndex === 0 ? String(startIndex + index) : "",
+      descriptionText: line,
+      rowHeight: TABLE_ROW_MIN_HEIGHT,
+      quantityText: lineIndex === 0 ? formatQuantity(item.quantity) : "",
+      unitPriceText: lineIndex === 0 ? formatInvoiceMoney(item.unitPrice, language) : "",
+      amountText: lineIndex === 0 ? formatInvoiceMoney(item.quantity * item.unitPrice, language) : "",
+    }));
   });
 }
 
