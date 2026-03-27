@@ -39,6 +39,7 @@ type PreparedLineItemRow = {
   quantityText: string;
   unitPriceText: string;
   amountText: string;
+  isTerminalRow: boolean;
 };
 
 function wrapTextLines(value: string, maxCharsPerLine: number): string[] {
@@ -88,6 +89,7 @@ function buildPreparedLineItemRows(
       quantityText: lineIndex === 0 ? formatQuantity(item.quantity) : "",
       unitPriceText: lineIndex === 0 ? formatInvoiceMoney(item.unitPrice, language) : "",
       amountText: lineIndex === 0 ? formatInvoiceMoney(item.quantity * item.unitPrice, language) : "",
+      isTerminalRow: lineIndex === lines.length - 1,
     }));
   });
 }
@@ -96,7 +98,7 @@ function buildMessageLines(value: string): string[] {
   return value
     .replace(/\r\n/g, "\n")
     .split("\n")
-    .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 42)));
+    .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 72)));
 }
 
 function buildPaymentNoteLines(value: string): string[] {
@@ -140,8 +142,8 @@ const PAYMENT_PART_GAP = mm(6);
 const RECEIPT_WIDTH = mm(62);
 const PAYMENT_PART_WIDTH = mm(148);
 const CONTENT_WIDTH = mm(170);
-const COL_POS_WIDTH = mm(10);
-const COL_DESC_WIDTH = mm(100);
+const COL_POS_WIDTH = mm(12);
+const COL_DESC_WIDTH = mm(98);
 const COL_QTY_WIDTH = mm(14);
 const COL_UNIT_WIDTH = mm(23);
 const COL_TOTAL_WIDTH = mm(23);
@@ -315,7 +317,7 @@ const styles = StyleSheet.create({
   },
   closingTextBlock: {
     marginTop: mm(6),
-    width: mm(120),
+    width: CONTENT_WIDTH,
   },
   closingText: {
     fontSize: 10,
@@ -324,7 +326,7 @@ const styles = StyleSheet.create({
   },
   paymentNoteBox: {
     marginTop: mm(4),
-    width: mm(120),
+    width: CONTENT_WIDTH,
     borderWidth: 1,
     borderColor: "#d1d5db",
     padding: mm(3),
@@ -582,10 +584,12 @@ const styles = StyleSheet.create({
   fixedCellPos: {
     width: COL_POS_WIDTH,
     justifyContent: "flex-start",
+    paddingRight: mm(2),
   },
   fixedCellDesc: {
     width: COL_DESC_WIDTH,
     paddingRight: mm(4),
+    paddingLeft: mm(1.5),
     justifyContent: "flex-start",
   },
   fixedCellQty: {
@@ -1001,7 +1005,15 @@ const InvoiceDocument = ({
               </View>
 
               {preparedRows.map((row) => (
-                <View key={row.id} style={[styles.fixedTableRow, { minHeight: row.rowHeight }]} wrap={false}>
+                <View
+                  key={row.id}
+                  style={[
+                    styles.fixedTableRow,
+                    { minHeight: row.rowHeight },
+                    row.isTerminalRow ? {} : { borderBottomWidth: 0, paddingBottom: mm(0.8) },
+                  ]}
+                  wrap={false}
+                >
                   <View style={styles.fixedCellPos}>
                     <Text style={styles.fixedNumericText}>{row.indexLabel}</Text>
                   </View>
