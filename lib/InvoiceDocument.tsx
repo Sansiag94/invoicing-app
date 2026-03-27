@@ -584,7 +584,7 @@ const styles = StyleSheet.create({
   fixedCellPos: {
     width: COL_POS_WIDTH,
     justifyContent: "flex-start",
-    paddingRight: mm(2),
+    alignItems: "center",
   },
   fixedCellDesc: {
     width: COL_DESC_WIDTH,
@@ -612,6 +612,11 @@ const styles = StyleSheet.create({
     fontSize: 9.3,
     lineHeight: TABLE_TEXT_LINE_HEIGHT_RATIO,
     textAlign: "right",
+  },
+  fixedPosText: {
+    fontSize: 9.3,
+    lineHeight: TABLE_TEXT_LINE_HEIGHT_RATIO,
+    textAlign: "center",
   },
   fixedTotalsBlock: {
     position: "absolute",
@@ -644,8 +649,7 @@ const styles = StyleSheet.create({
 });
 
 function formatQuantity(value: number): string {
-  if (Number.isInteger(value)) return String(value);
-  return value.toFixed(2).replace(/\.?0+$/, "");
+  return value.toFixed(2);
 }
 
 function formatIban(value: string | null | undefined): string {
@@ -1015,7 +1019,7 @@ const InvoiceDocument = ({
                   wrap={false}
                 >
                   <View style={styles.fixedCellPos}>
-                    <Text style={styles.fixedNumericText}>{row.indexLabel}</Text>
+                    <Text style={styles.fixedPosText}>{row.indexLabel}</Text>
                   </View>
                   <View style={styles.fixedCellDesc}>
                     <Text style={styles.fixedDescriptionText}>{row.descriptionText}</Text>
