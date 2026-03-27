@@ -79,7 +79,10 @@ function buildPreparedLineItemRows(
   return lineItems.map((item, index) => {
     const descriptionLines = wrapTextLines(item.description, 20);
     const descriptionText = descriptionLines.join("\n");
-    const rowHeight = Math.max(TABLE_ROW_MIN_HEIGHT, descriptionLines.length * TABLE_TEXT_LINE_HEIGHT + mm(3));
+    const rowHeight = Math.max(
+      TABLE_ROW_MIN_HEIGHT,
+      descriptionLines.length * TABLE_TEXT_LINE_HEIGHT_POINTS + mm(3)
+    );
 
     return {
       id: item.id,
@@ -141,7 +144,8 @@ const COL_UNIT_WIDTH = mm(27);
 const COL_TOTAL_WIDTH = mm(27);
 const TABLE_HEADER_HEIGHT = mm(7);
 const TABLE_ROW_MIN_HEIGHT = mm(8.5);
-const TABLE_TEXT_LINE_HEIGHT = 12;
+const TABLE_TEXT_LINE_HEIGHT_POINTS = 12;
+const TABLE_TEXT_LINE_HEIGHT_RATIO = 1.25;
 const SELLER_BLOCK_WIDTH = mm(82);
 const RECIPIENT_BLOCK_WIDTH = mm(58);
 const RECIPIENT_LEFT = PAGE_SIDE_MARGIN + CONTENT_WIDTH - RECIPIENT_BLOCK_WIDTH;
@@ -595,11 +599,11 @@ const styles = StyleSheet.create({
   },
   fixedDescriptionText: {
     fontSize: 9.3,
-    lineHeight: TABLE_TEXT_LINE_HEIGHT,
+    lineHeight: TABLE_TEXT_LINE_HEIGHT_RATIO,
   },
   fixedNumericText: {
     fontSize: 9.3,
-    lineHeight: TABLE_TEXT_LINE_HEIGHT,
+    lineHeight: TABLE_TEXT_LINE_HEIGHT_RATIO,
     textAlign: "right",
   },
   fixedTotalsBlock: {
@@ -622,12 +626,12 @@ const styles = StyleSheet.create({
   },
   closingLine: {
     fontSize: 10,
-    lineHeight: 14,
+    lineHeight: 1.35,
     color: "#374151",
   },
   paymentNoteLine: {
     fontSize: 9.4,
-    lineHeight: 13,
+    lineHeight: 1.35,
     color: "#374151",
   },
 });
