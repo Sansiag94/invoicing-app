@@ -77,7 +77,7 @@ function buildPreparedLineItemRows(
   language: ReturnType<typeof normalizeInvoiceLanguage>
 ): PreparedLineItemRow[] {
   return lineItems.flatMap((item, index) => {
-    const descriptionLines = wrapTextLines(item.description, 38);
+    const descriptionLines = wrapTextLines(item.description, 46);
     const lines = descriptionLines.length > 0 ? descriptionLines : [""];
 
     return lines.map((line, lineIndex) => ({
@@ -103,7 +103,7 @@ function buildPaymentNoteLines(value: string): string[] {
   return value
     .replace(/\r\n/g, "\n")
     .split("\n")
-    .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 56)));
+    .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 72)));
 }
 
 function measureMessageHeight(lines: string[]): number {
@@ -140,11 +140,11 @@ const PAYMENT_PART_GAP = mm(6);
 const RECEIPT_WIDTH = mm(62);
 const PAYMENT_PART_WIDTH = mm(148);
 const CONTENT_WIDTH = mm(170);
-const COL_POS_WIDTH = mm(12);
-const COL_DESC_WIDTH = mm(86);
-const COL_QTY_WIDTH = mm(18);
-const COL_UNIT_WIDTH = mm(27);
-const COL_TOTAL_WIDTH = mm(27);
+const COL_POS_WIDTH = mm(10);
+const COL_DESC_WIDTH = mm(100);
+const COL_QTY_WIDTH = mm(14);
+const COL_UNIT_WIDTH = mm(23);
+const COL_TOTAL_WIDTH = mm(23);
 const TABLE_HEADER_HEIGHT = mm(7);
 const TABLE_ROW_MIN_HEIGHT = mm(8.5);
 const TABLE_TEXT_LINE_HEIGHT_POINTS = 12;
@@ -154,7 +154,7 @@ const RECIPIENT_BLOCK_WIDTH = mm(58);
 const RECIPIENT_LEFT = PAGE_SIDE_MARGIN + CONTENT_WIDTH - RECIPIENT_BLOCK_WIDTH;
 const TOTALS_WIDTH = mm(78);
 const TOTALS_LEFT = PAGE_SIDE_MARGIN + CONTENT_WIDTH - TOTALS_WIDTH;
-const CLOSING_WIDTH = mm(132);
+const CLOSING_WIDTH = mm(150);
 
 const styles = StyleSheet.create({
   page: {
