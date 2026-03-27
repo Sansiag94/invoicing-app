@@ -12,9 +12,7 @@ export async function markOverdueInvoicesForBusiness(
     where: {
       businessId,
       ...(invoiceId ? { id: invoiceId } : {}),
-      status: {
-        in: ["draft", "sent"],
-      },
+      status: "sent",
       dueDate: {
         lt: new Date(),
       },
