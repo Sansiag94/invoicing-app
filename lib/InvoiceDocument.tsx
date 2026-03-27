@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
     left: PAGE_SIDE_MARGIN,
     width: CONTENT_WIDTH,
   },
-  fixedTableBlock: {
+  fixedContentFlowBlock: {
     position: "absolute",
     left: PAGE_SIDE_MARGIN,
     width: CONTENT_WIDTH,
@@ -622,6 +622,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#d1d5db",
     padding: mm(3),
+  },
+  closingLine: {
+    fontSize: 10,
+    lineHeight: 14,
+    color: "#374151",
+  },
+  paymentNoteLine: {
+    fontSize: 9.4,
+    lineHeight: 13,
+    color: "#374151",
   },
 });
 
@@ -930,12 +940,6 @@ const InvoiceDocument = ({
         );
         const heroTop = isFirstPage ? headerBottom + mm(8) : PAGE_TOP_MARGIN;
         const tableTop = heroTop + mm(24);
-        const tableHeight = TABLE_HEADER_HEIGHT + preparedRows.reduce((sum, row) => sum + row.rowHeight, 0);
-        const totalsTop = tableTop + tableHeight + mm(8);
-        const totalsHeight = mm(taxAmount > 0 ? 22 : 16);
-        const closingHeight = measureMessageHeight(closingLines);
-        const closingTop = totalsTop + totalsHeight + mm(9);
-        const paymentNoteTop = closingTop + closingHeight + mm(7);
         return (
           <Page key={`invoice-page-${pageIndex}`} size="A4" style={styles.page} wrap={false}>
             <View style={styles.pageBody} />
@@ -973,7 +977,7 @@ const InvoiceDocument = ({
               </>
             ) : null}
 
-            <View style={[styles.fixedTableBlock, { top: tableTop }]} wrap={false}>
+            <View style={[styles.fixedContentFlowBlock, { top: tableTop }]} wrap={false}>
               <View style={styles.fixedTableHeader}>
                 <View style={[styles.fixedTableHeaderCell, styles.fixedCellPos]}>
                   <Text style={styles.fixedTableHeaderText}>{strings.position}</Text>
@@ -1015,46 +1019,54 @@ const InvoiceDocument = ({
                   </View>
                 </View>
               ))}
-            </View>
 
-            {shouldRenderClosingSections ? (
-              <>
-                <View style={[styles.fixedTotalsBlock, { top: totalsTop }]} wrap={false}>
-                  <View style={styles.totalsRule}>
-                    <View style={styles.totalsRow}>
-                      <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
-                      <Text style={styles.totalsValue}>
-                        {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
-                      </Text>
-                    </View>
-                    {taxAmount > 0 ? (
+              {shouldRenderClosingSections ? (
+                <>
+                  <View style={styles.totalsBox}>
+                    <View style={styles.totalsRule}>
                       <View style={styles.totalsRow}>
-                        <Text style={styles.totalsLabel}>{strings.vat}</Text>
+                        <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
                         <Text style={styles.totalsValue}>
-                          {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
+                          {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
                         </Text>
                       </View>
-                    ) : null}
-                    <View style={styles.totalsRow}>
-                      <Text style={styles.totalDueLabel}>{strings.total}</Text>
-                      <Text style={styles.totalDueValue}>
-                        {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
-                      </Text>
+                      {taxAmount > 0 ? (
+                        <View style={styles.totalsRow}>
+                          <Text style={styles.totalsLabel}>{strings.vat}</Text>
+                          <Text style={styles.totalsValue}>
+                            {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <View style={styles.totalsRow}>
+                        <Text style={styles.totalDueLabel}>{strings.total}</Text>
+                        <Text style={styles.totalDueValue}>
+                          {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                </View>
 
-                <View style={[styles.fixedClosingBlock, { top: closingTop }]} wrap={false}>
-                  <Text style={styles.closingText}>{closingLines.join("\n")}</Text>
-                </View>
-
-                {paymentNote ? (
-                  <View style={[styles.fixedPaymentNoteBlock, { top: paymentNoteTop }]} wrap={false}>
-                    <Text style={styles.paymentNoteText}>{paymentNote}</Text>
+                  <View style={styles.closingTextBlock}>
+                    {closingLines.map((line, index) => (
+                      <Text key={`closing-line-${pageIndex}-${index}`} style={styles.closingLine}>
+                        {line || " "}
+                      </Text>
+                    ))}
                   </View>
-                ) : null}
-              </>
-            ) : null}
+
+                  {paymentNote ? (
+                    <View style={styles.paymentNoteBox}>
+                      {buildMessageLines(paymentNote).map((line, index) => (
+                        <Text key={`payment-note-line-${pageIndex}-${index}`} style={styles.paymentNoteLine}>
+                          {line || " "}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
+                </>
+              ) : null}
+            </View>
 
             {isQrPage ? (
               <View style={[styles.qrBillSection, styles.qrBillSectionFlushBottom]} wrap={false}>
