@@ -104,6 +104,14 @@ function measureMessageHeight(lines: string[]): number {
   return lines.reduce((total, line) => total + (line.trim().length === 0 ? mm(3.5) : 14), 0);
 }
 
+function measureNoteBoxHeight(value: string | null): number {
+  if (!value) {
+    return 0;
+  }
+
+  return measureMessageHeight(buildMessageLines(value)) + mm(6);
+}
+
 function measureBlockHeight(lineCount: number, lineHeight: number, gap: number): number {
   if (lineCount <= 0) {
     return 0;
@@ -114,8 +122,7 @@ function measureBlockHeight(lineCount: number, lineHeight: number, gap: number):
 
 const FIRST_PAGE_ROWS_NO_QR = 14;
 const NEXT_PAGE_ROWS_NO_QR = 24;
-const MAX_ROWS_WITH_QR_ON_FIRST_PAGE = 6;
-
+const A4_PAGE_HEIGHT = mm(297);
 const PAGE_TOP_MARGIN = mm(25);
 const PAGE_SIDE_MARGIN = mm(20);
 const PAGE_BOTTOM_MARGIN = mm(25);
@@ -712,7 +719,8 @@ function paginateWithoutQr<T>(items: T[]): T[][] {
 
 function paginateLineItems<T>(
   items: T[],
-  includeQr: boolean
+  includeQr: boolean,
+  allowQrOnFirstPage: boolean
 ) : { pages: T[][]; qrPageIndex: number | null; closingPageIndex: number | null; standaloneQrPage: boolean } {
   if (!includeQr) {
     const pages = paginateWithoutQr(items);
@@ -724,16 +732,17 @@ function paginateLineItems<T>(
     };
   }
 
-  if (items.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE) {
+  const pages = paginateWithoutQr(items);
+
+  if (allowQrOnFirstPage && pages.length === 1) {
     return {
-      pages: [items],
+      pages,
       qrPageIndex: 0,
       closingPageIndex: 0,
       standaloneQrPage: false,
     };
   }
 
-  const pages = paginateWithoutQr(items);
   return {
     pages,
     qrPageIndex: null,
@@ -828,11 +837,6 @@ const InvoiceDocument = ({
       ? collectLines(paymentRecipientName, ...toPaymentAddressLines(businessAddress))
       : collectLines(senderBusinessName, sellerSecondaryName, ...toPaymentAddressLines(businessAddress));
   const debtorLines = collectLines(clientPrimaryName, clientSecondaryName, ...toPaymentAddressLines(clientAddress));
-
-  const { pages, qrPageIndex, closingPageIndex, standaloneQrPage } = paginateLineItems(
-    invoice.lineItems,
-    shouldRenderQRSection
-  );
   const totals = calculateInvoiceTotals(invoice.lineItems);
   const subtotal = totals.subtotal;
   const taxAmount = totals.taxAmount;
@@ -876,7 +880,46 @@ const InvoiceDocument = ({
 
   const messageText =
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
+  const closingLines = buildMessageLines(messageText);
   const paymentNote = normalizeLine(invoice.paymentNote);
+  const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
+  const recipientLineCount = toCompactAddressLines(clientAddress).length;
+  const sellerHeaderHeight =
+    mm(27.5) +
+    16 +
+    (headerSecondaryName ? 13 + mm(1) : 0) +
+    measureBlockHeight(sellerLineCount, 12, mm(0.55));
+  const recipientHeaderHeight =
+    16 +
+    (clientSecondaryName ? 13 + mm(1) : 0) +
+    measureBlockHeight(recipientLineCount, 12, mm(0.55));
+  const firstPageHeaderBottom = Math.max(
+    PAGE_TOP_MARGIN + sellerHeaderHeight,
+    PAGE_TOP_MARGIN + mm(22) + recipientHeaderHeight
+  );
+  const firstPageHeroTop = firstPageHeaderBottom + mm(8);
+  const firstPagePreparedRows = buildPreparedLineItemRows(invoice.lineItems, 1, invoiceLanguage);
+  const firstPageTableTop = firstPageHeroTop + mm(24);
+  const firstPageTableHeight =
+    TABLE_HEADER_HEIGHT + firstPagePreparedRows.reduce((sum, row) => sum + row.rowHeight, 0);
+  const firstPageTotalsTop = firstPageTableTop + firstPageTableHeight + mm(8);
+  const firstPageTotalsHeight = mm(taxAmount > 0 ? 22 : 16);
+  const firstPageClosingHeight = measureMessageHeight(closingLines);
+  const firstPageClosingTop = firstPageTotalsTop + firstPageTotalsHeight + mm(9);
+  const firstPagePaymentNoteTop = firstPageClosingTop + firstPageClosingHeight + mm(7);
+  const firstPageContentBottom = Math.max(
+    firstPageTableTop + firstPageTableHeight,
+    firstPageTotalsTop + firstPageTotalsHeight,
+    firstPageClosingTop + firstPageClosingHeight,
+    paymentNote ? firstPagePaymentNoteTop + measureNoteBoxHeight(paymentNote) : 0
+  );
+  const qrTopOnSharedPage = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN - QR_BILL_TOTAL_SPACE;
+  const allowQrOnFirstPage = shouldRenderQRSection && firstPageContentBottom + mm(6) <= qrTopOnSharedPage;
+  const { pages, qrPageIndex, closingPageIndex, standaloneQrPage } = paginateLineItems(
+    invoice.lineItems,
+    shouldRenderQRSection,
+    allowQrOnFirstPage
+  );
   const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
 
   return (
@@ -887,17 +930,6 @@ const InvoiceDocument = ({
         const shouldRenderClosingSections = pageIndex === closingPageIndex;
         const startIndex = pages.slice(0, pageIndex).reduce((sum, pageItems) => sum + pageItems.length, 1);
         const preparedRows = buildPreparedLineItemRows(lineItems, startIndex, invoiceLanguage);
-        const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
-        const recipientLineCount = toCompactAddressLines(clientAddress).length;
-        const sellerHeaderHeight =
-          mm(27.5) +
-          16 +
-          (headerSecondaryName ? 13 + mm(1) : 0) +
-          measureBlockHeight(sellerLineCount, 12, mm(0.55));
-        const recipientHeaderHeight =
-          16 +
-          (clientSecondaryName ? 13 + mm(1) : 0) +
-          measureBlockHeight(recipientLineCount, 12, mm(0.55));
         const headerBottom = Math.max(
           PAGE_TOP_MARGIN + sellerHeaderHeight,
           PAGE_TOP_MARGIN + mm(22) + recipientHeaderHeight
@@ -907,7 +939,6 @@ const InvoiceDocument = ({
         const tableHeight = TABLE_HEADER_HEIGHT + preparedRows.reduce((sum, row) => sum + row.rowHeight, 0);
         const totalsTop = tableTop + tableHeight + mm(8);
         const totalsHeight = mm(taxAmount > 0 ? 22 : 16);
-        const closingLines = buildMessageLines(messageText);
         const closingHeight = measureMessageHeight(closingLines);
         const closingTop = totalsTop + totalsHeight + mm(9);
         const paymentNoteTop = closingTop + closingHeight + mm(7);
