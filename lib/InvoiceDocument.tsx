@@ -34,7 +34,7 @@ function mm(value: number): number {
 type PreparedLineItemRow = {
   id: string;
   indexLabel: string;
-  descriptionLines: string[];
+  descriptionText: string;
   rowHeight: number;
   quantityText: string;
   unitPriceText: string;
@@ -77,13 +77,14 @@ function buildPreparedLineItemRows(
   language: ReturnType<typeof normalizeInvoiceLanguage>
 ): PreparedLineItemRow[] {
   return lineItems.map((item, index) => {
-    const descriptionLines = wrapTextLines(item.description, 26);
+    const descriptionLines = wrapTextLines(item.description, 20);
+    const descriptionText = descriptionLines.join("\n");
     const rowHeight = Math.max(TABLE_ROW_MIN_HEIGHT, descriptionLines.length * TABLE_TEXT_LINE_HEIGHT + mm(3));
 
     return {
       id: item.id,
       indexLabel: String(startIndex + index),
-      descriptionLines,
+      descriptionText,
       rowHeight,
       quantityText: formatQuantity(item.quantity),
       unitPriceText: formatInvoiceMoney(item.unitPrice, language),
@@ -596,10 +597,6 @@ const styles = StyleSheet.create({
     fontSize: 9.3,
     lineHeight: TABLE_TEXT_LINE_HEIGHT,
   },
-  fixedDescriptionLine: {
-    fontSize: 9.3,
-    lineHeight: TABLE_TEXT_LINE_HEIGHT,
-  },
   fixedNumericText: {
     fontSize: 9.3,
     lineHeight: TABLE_TEXT_LINE_HEIGHT,
@@ -1002,11 +999,7 @@ const InvoiceDocument = ({
                     <Text style={styles.fixedNumericText}>{row.indexLabel}</Text>
                   </View>
                   <View style={styles.fixedCellDesc}>
-                    {row.descriptionLines.map((line, lineIndex) => (
-                      <Text key={`${row.id}-line-${lineIndex}`} style={styles.fixedDescriptionLine}>
-                        {line}
-                      </Text>
-                    ))}
+                    <Text style={styles.fixedDescriptionText}>{row.descriptionText}</Text>
                   </View>
                   <View style={styles.fixedCellQty}>
                     <Text style={styles.fixedNumericText}>{row.quantityText}</Text>
