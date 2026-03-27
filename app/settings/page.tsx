@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
 import { usePwa } from "@/components/PwaProvider";
 import { buildAddressString } from "@/lib/address";
-import { formatSequentialInvoiceNumber, normalizeInvoicePrefix, parsePostalAddress } from "@/lib/invoice";
+import { formatSequentialInvoiceNumber, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
 import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { clearPwaAppCache } from "@/lib/pwaCache";
@@ -32,7 +32,6 @@ export default function SettingsPage() {
   const [name, setName] = useState("");
   const [ownerName, setOwnerName] = useState("");
   const [invoiceSenderType, setInvoiceSenderType] = useState<InvoiceSenderType>("company");
-  const [invoicePrefix, setInvoicePrefix] = useState("INV");
   const [nextOfficialInvoiceSequence, setNextOfficialInvoiceSequence] = useState("1");
   const [street, setStreet] = useState("");
   const [postalCode, setPostalCode] = useState("");
@@ -78,7 +77,7 @@ export default function SettingsPage() {
     return Number.isInteger(parsed) && parsed > 0 ? parsed : 1;
   })();
   const nextOfficialInvoicePreview = formatSequentialInvoiceNumber(
-    normalizeInvoicePrefix(invoicePrefix, name),
+    "CL",
     new Date(),
     normalizedNextOfficialInvoiceSequence
   );
@@ -213,7 +212,6 @@ export default function SettingsPage() {
     setName(updatedBusiness.name || "");
     setOwnerName(updatedBusiness.ownerName || "");
     setInvoiceSenderType(updatedBusiness.invoiceSenderType || "company");
-    setInvoicePrefix(updatedBusiness.invoicePrefix || "INV");
     setNextOfficialInvoiceSequence(String(updatedBusiness.nextOfficialInvoiceSequence || 1));
     setStreet(updatedBusiness.street || "");
     setPostalCode(updatedBusiness.postalCode || "");
@@ -528,7 +526,6 @@ export default function SettingsPage() {
         setName(data?.name || "");
         setOwnerName(data?.ownerName || "");
         setInvoiceSenderType(data?.invoiceSenderType || "company");
-        setInvoicePrefix(data?.invoicePrefix || "INV");
         setNextOfficialInvoiceSequence(String(data?.nextOfficialInvoiceSequence || 1));
         setStreet(data?.street || parsedAddress.street || "");
         setPostalCode(data?.postalCode || parsedAddress.postalCode || "");
@@ -772,7 +769,8 @@ export default function SettingsPage() {
             </p>
             <p className="mt-2 text-lg font-semibold text-slate-900">{nextOfficialInvoicePreview}</p>
             <p className="mt-2 text-sm text-slate-600">
-              Prefix currently resolves to <strong>{normalizeInvoicePrefix(invoicePrefix, name)}</strong>.
+              Official invoice numbers now use the first 2 letters of the client company. If the
+              client has no company, the app uses the first 2 letters of the client&apos;s first name.
               Draft invoices still get a temporary draft number until they are sent.
             </p>
           </div>

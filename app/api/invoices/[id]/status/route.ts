@@ -5,9 +5,9 @@ import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { getOpenInvoiceStatus } from "@/lib/invoiceStatus";
 import { listInvoiceEvents, logInvoiceEvent } from "@/lib/invoiceActivity";
 import {
+  deriveOfficialInvoicePrefix,
   formatSequentialInvoiceNumber,
   isDraftInvoiceNumber,
-  normalizeInvoicePrefix,
 } from "@/lib/invoice";
 
 type UpdateInvoiceStatusBody = {
@@ -45,6 +45,13 @@ export async function PATCH(
     const invoice = await prisma.invoice.findFirst({
       where: { id, businessId },
       include: {
+        client: {
+          select: {
+            companyName: true,
+            contactName: true,
+            email: true,
+          },
+        },
         payments: {
           select: {
             id: true,
@@ -70,13 +77,15 @@ export async function PATCH(
             data: { invoiceCounter: { increment: 1 } },
             select: {
               invoiceCounter: true,
-              invoicePrefix: true,
-              name: true,
             },
           });
 
           officialInvoiceNumber = formatSequentialInvoiceNumber(
-            normalizeInvoicePrefix(updatedBusiness.invoicePrefix, updatedBusiness.name),
+            deriveOfficialInvoicePrefix(
+              invoice.client.companyName,
+              invoice.client.contactName,
+              invoice.client.email
+            ),
             invoice.issueDate,
             updatedBusiness.invoiceCounter
           );

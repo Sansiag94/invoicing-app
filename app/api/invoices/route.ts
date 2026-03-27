@@ -8,9 +8,9 @@ import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
 import {
   calculateInvoiceTotals,
+  deriveOfficialInvoicePrefix,
   formatDraftInvoiceNumber,
   formatSequentialInvoiceNumber,
-  normalizeInvoicePrefix,
   isSupportedInvoiceCurrency,
   isDraftInvoiceNumber,
   normalizeInvoiceCurrency,
@@ -185,8 +185,6 @@ export async function POST(request: Request) {
       select: {
         id: true,
         currency: true,
-        invoicePrefix: true,
-        name: true,
       },
     });
 
@@ -270,7 +268,7 @@ export async function POST(request: Request) {
         select: { invoiceCounter: true },
       });
       const officialInvoiceNumber = formatSequentialInvoiceNumber(
-        normalizeInvoicePrefix(business.invoicePrefix, business.name),
+        deriveOfficialInvoicePrefix(client.companyName, client.contactName, client.email),
         issueDate,
         updatedBusiness.invoiceCounter
       );

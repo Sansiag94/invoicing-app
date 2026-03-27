@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   calculateInvoiceTotals,
   deriveClientInvoicePrefix,
+  deriveOfficialInvoicePrefix,
   formatDraftInvoiceNumber,
   formatSequentialInvoiceNumber,
   isDraftInvoiceNumber,
@@ -22,6 +23,13 @@ describe("invoice helpers", () => {
     expect(formatSequentialInvoiceNumber("CO", new Date("2026-03-15T00:00:00Z"), 27)).toBe(
       "CO2026-027"
     );
+  });
+
+  it("derives official invoice prefixes from the client company or first name", () => {
+    expect(deriveOfficialInvoicePrefix("Maggie Widmer GmbH", "Maggie Widmer")).toBe("MA");
+    expect(deriveOfficialInvoicePrefix("", "Maggie Widmer")).toBe("MA");
+    expect(deriveOfficialInvoicePrefix(null, "Al")).toBe("AL");
+    expect(deriveOfficialInvoicePrefix(null, null, "billing@example.com")).toBe("BI");
   });
 
   it("normalizes invoice prefixes and falls back to business initials", () => {

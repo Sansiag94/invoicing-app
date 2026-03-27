@@ -112,6 +112,30 @@ export function deriveClientInvoicePrefix(value: string | null | undefined): str
   return "IN";
 }
 
+export function deriveOfficialInvoicePrefix(
+  clientCompanyName: string | null | undefined,
+  clientContactName: string | null | undefined,
+  clientEmail?: string | null
+): string {
+  const companyName = normalizeLine(clientCompanyName || "");
+  if (companyName) {
+    return deriveClientInvoicePrefix(companyName);
+  }
+
+  const contactName = normalizeLine(clientContactName || "");
+  if (contactName) {
+    const firstName = contactName.split(/\s+/).find((part) => part.trim().length > 0) || contactName;
+    return deriveClientInvoicePrefix(firstName);
+  }
+
+  const emailLocalPart = normalizeLine((clientEmail || "").split("@")[0] || "");
+  if (emailLocalPart) {
+    return deriveClientInvoicePrefix(emailLocalPart);
+  }
+
+  return "IN";
+}
+
 export function normalizeInvoicePrefix(
   prefix: string | null | undefined,
   businessName?: string | null

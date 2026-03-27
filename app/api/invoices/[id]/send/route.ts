@@ -14,9 +14,9 @@ import crypto from "crypto";
 import { getBusinessSenderPreferences, getInvoiceSenderName } from "@/lib/business";
 import {
   calculateInvoiceTotals,
+  deriveOfficialInvoicePrefix,
   formatSequentialInvoiceNumber,
   isDraftInvoiceNumber,
-  normalizeInvoicePrefix,
 } from "@/lib/invoice";
 import InvoiceDocument from "@/lib/InvoiceDocument";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
@@ -83,7 +83,11 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
       });
 
       const nextInvoiceNumber = formatSequentialInvoiceNumber(
-        normalizeInvoicePrefix(existingInvoice.business.invoicePrefix, existingInvoice.business.name),
+        deriveOfficialInvoicePrefix(
+          existingInvoice.client.companyName,
+          existingInvoice.client.contactName,
+          existingInvoice.client.email
+        ),
         existingInvoice.issueDate,
         updatedBusiness.invoiceCounter
       );
