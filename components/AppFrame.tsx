@@ -9,7 +9,7 @@ import LegalFooter from "@/components/LegalFooter";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch, AUTH_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
-import { ensureSupabaseSessionRestored, supabase } from "@/utils/supabase";
+import { ensureSupabaseSessionRestored, isClientLogoutInProgress, startClientLogout, supabase } from "@/utils/supabase";
 
 type AppFrameProps = {
   children: ReactNode;
@@ -66,9 +66,9 @@ export default function AppFrame({ children }: AppFrameProps) {
     let mounted = true;
     let unsubscribe = () => {};
 
-    async function redirectToLogin() {
+    function redirectToLogin() {
       setBusinessBrand(null);
-      await supabase.auth.signOut({ scope: "local" });
+      startClientLogout();
       void clearPwaAppCache();
 
       if (mounted) {
@@ -78,7 +78,7 @@ export default function AppFrame({ children }: AppFrameProps) {
     }
 
     function handleAuthenticationRequired() {
-      void redirectToLogin();
+      redirectToLogin();
     }
 
     async function initializeAuthState() {
@@ -98,7 +98,7 @@ export default function AppFrame({ children }: AppFrameProps) {
       if (session?.access_token) {
         setAuthStatus("authenticated");
       } else {
-        void redirectToLogin();
+        redirectToLogin();
       }
 
       const {
@@ -109,9 +109,16 @@ export default function AppFrame({ children }: AppFrameProps) {
         }
 
         if (!nextSession?.access_token) {
+          if (isClientLogoutInProgress()) {
+            setBusinessBrand(null);
+            setAuthStatus("unauthenticated");
+            window.location.replace("/login");
+            return;
+          }
+
           setBusinessBrand(null);
           setAuthStatus("checking");
-          void redirectToLogin();
+          redirectToLogin();
           return;
         }
 
@@ -147,7 +154,7 @@ export default function AppFrame({ children }: AppFrameProps) {
         if (!response.ok) {
           if (response.status === 423) {
             setBusinessBrand(null);
-            await supabase.auth.signOut({ scope: "local" });
+            startClientLogout();
             void clearPwaAppCache();
             if (mounted) {
               window.location.replace("/login?workspace=closed");

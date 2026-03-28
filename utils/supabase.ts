@@ -122,6 +122,38 @@ function clearSessionBackup() {
   window.sessionStorage.removeItem(AUTH_SESSION_BACKUP_KEY);
 }
 
+function clearStorageAuthKeys(storage: Storage) {
+  const keysToRemove: string[] = [];
+
+  for (let index = 0; index < storage.length; index += 1) {
+    const key = storage.key(index);
+    if (!key) {
+      continue;
+    }
+
+    if (
+      key === AUTH_SESSION_BACKUP_KEY ||
+      /^sb-[^.]+-auth-token(?:\.\d+)?$/.test(key) ||
+      /^sb-[^.]+-auth-token-(?:code-verifier|user)$/.test(key)
+    ) {
+      keysToRemove.push(key);
+    }
+  }
+
+  for (const key of keysToRemove) {
+    storage.removeItem(key);
+  }
+}
+
+function clearSupabaseBrowserStorage() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  clearStorageAuthKeys(window.localStorage);
+  clearStorageAuthKeys(window.sessionStorage);
+}
+
 function persistSessionBackup(session: Session | null) {
   if (typeof window === "undefined") {
     return;
@@ -149,6 +181,7 @@ function persistSessionBackup(session: Session | null) {
 
 let restoreSessionPromise: Promise<void> | null = null;
 let restoringSession = false;
+let logoutInProgress = false;
 
 export function setRememberSession(remember: boolean) {
   if (typeof window === "undefined") {
@@ -175,6 +208,10 @@ export function clearPersistedSession() {
 
 export function isSupabaseSessionRestoring() {
   return restoringSession;
+}
+
+export function isClientLogoutInProgress() {
+  return logoutInProgress;
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -231,4 +268,22 @@ export async function ensureSupabaseSessionRestored() {
     restoringSession = false;
     restoreSessionPromise = null;
   }
+}
+
+export function startClientLogout() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (logoutInProgress) {
+    return;
+  }
+
+  logoutInProgress = true;
+  clearSessionBackup();
+  clearSupabaseBrowserStorage();
+
+  void supabase.auth.signOut({ scope: "local" }).finally(() => {
+    logoutInProgress = false;
+  });
 }

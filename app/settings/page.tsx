@@ -13,7 +13,7 @@ import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
-import { supabase } from "@/utils/supabase";
+import { startClientLogout } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -424,7 +424,7 @@ export default function SettingsPage() {
         throw new Error(result.error ?? "Could not close workspace");
       }
 
-      await supabase.auth.signOut({ scope: "local" });
+      startClientLogout();
       void clearPwaAppCache();
       router.replace("/login?workspace=closed");
     } catch (error) {

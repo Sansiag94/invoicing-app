@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
-import { supabase } from "@/utils/supabase";
+import { startClientLogout, supabase } from "@/utils/supabase";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -378,16 +378,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     setIsAccountOpen(false);
 
     try {
-      const { error } = await supabase.auth.signOut({ scope: "local" });
-      if (error) {
-        toast({
-          title: "Unable to sign out",
-          description: error.message,
-          variant: "error",
-        });
-        return;
-      }
-
+      startClientLogout();
       void clearPwaAppCache();
       setUserEmail(null);
       window.location.replace("/login");
