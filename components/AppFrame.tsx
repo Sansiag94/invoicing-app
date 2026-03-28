@@ -9,7 +9,7 @@ import LegalFooter from "@/components/LegalFooter";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch, AUTH_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
-import { supabase } from "@/utils/supabase";
+import { ensureSupabaseSessionRestored, supabase } from "@/utils/supabase";
 
 type AppFrameProps = {
   children: ReactNode;
@@ -64,7 +64,7 @@ export default function AppFrame({ children }: AppFrameProps) {
     }
 
     let mounted = true;
-    let initialSessionResolved = false;
+    let unsubscribe = () => {};
 
     async function redirectToLogin() {
       setBusinessBrand(null);
@@ -81,35 +81,55 @@ export default function AppFrame({ children }: AppFrameProps) {
       void redirectToLogin();
     }
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    async function initializeAuthState() {
+      await ensureSupabaseSessionRestored();
       if (!mounted) {
         return;
       }
 
-      if (event === "INITIAL_SESSION") {
-        initialSessionResolved = true;
-      }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (!session?.access_token) {
-        if (initialSessionResolved) {
-          void redirectToLogin();
-        } else {
-          setBusinessBrand(null);
-          setAuthStatus("checking");
-        }
+      if (!mounted) {
         return;
       }
 
-      setAuthStatus("authenticated");
-    });
+      if (session?.access_token) {
+        setAuthStatus("authenticated");
+      } else {
+        void redirectToLogin();
+      }
+
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+        if (!mounted) {
+          return;
+        }
+
+        if (!nextSession?.access_token) {
+          setBusinessBrand(null);
+          setAuthStatus("checking");
+          void redirectToLogin();
+          return;
+        }
+
+        setAuthStatus("authenticated");
+      });
+
+      unsubscribe = () => {
+        subscription.unsubscribe();
+      };
+    }
+
+    void initializeAuthState();
 
     window.addEventListener(AUTH_REQUIRED_EVENT, handleAuthenticationRequired);
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      unsubscribe();
       window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthenticationRequired);
     };
   }, [hideShell]);

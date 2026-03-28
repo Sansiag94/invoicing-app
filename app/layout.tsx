@@ -3,6 +3,7 @@ import "./globals.css";
 import React from "react";
 import { validateRequiredEnv } from "@/lib/env";
 import AppFrame from "@/components/AppFrame";
+import AuthBootstrap from "@/components/AuthBootstrap";
 import PwaProvider from "@/components/PwaProvider";
 import { ToastProvider } from "@/components/ui/toast";
 import { ThemeProvider } from "@/components/ui/theme";
@@ -63,9 +64,10 @@ export default function RootLayout({
       <body className="antialiased">
         <ThemeProvider>
           <PwaProvider>
-          <ToastProvider>
-            <AppFrame>{children}</AppFrame>
-          </ToastProvider>
+            <AuthBootstrap />
+            <ToastProvider>
+              <AppFrame>{children}</AppFrame>
+            </ToastProvider>
           </PwaProvider>
         </ThemeProvider>
       </body>

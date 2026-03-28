@@ -5,6 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { setRememberSession, supabase } from "@/utils/supabase";
 import AuthSplitShell from "@/components/AuthSplitShell";
+import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -117,97 +118,100 @@ export default function SignupPage() {
   };
 
   return (
-    <AuthSplitShell
-      eyebrow="Create account"
-      title={`Start with ${APP_NAME}`}
-      description="Set up your billing workspace and start sending client-ready invoices within minutes."
-      alternateText="Already have an account?"
-      alternateLabel="Log in"
-      alternateHref="/login"
-    >
-      <form
-        className="space-y-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void handleSignup();
-        }}
+    <>
+      <RedirectIfAuthenticated />
+      <AuthSplitShell
+        eyebrow="Create account"
+        title={`Start with ${APP_NAME}`}
+        description="Set up your billing workspace and start sending client-ready invoices within minutes."
+        alternateText="Already have an account?"
+        alternateLabel="Log in"
+        alternateHref="/login"
       >
-        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="repeatPassword">Repeat Password</Label>
-              <Input
-                id="repeatPassword"
-                type="password"
-                value={repeatPassword}
-                onChange={(event) => setRepeatPassword(event.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
-            <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
-              <input
-                id="acceptedLegalTerms"
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-900"
-                checked={acceptedLegalTerms}
-                onChange={(event) => setAcceptedLegalTerms(event.target.checked)}
-              />
-              <div>
-                <Label
-                  htmlFor="acceptedLegalTerms"
-                  className="block cursor-pointer font-medium text-slate-900 dark:text-slate-100"
-                >
-                  I agree to the Terms and Privacy Policy
-                </Label>
-                <p className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
-                  I agree to the{" "}
-                  <Link href="/terms" className="font-medium underline underline-offset-4">
-                    Terms of Service
-                  </Link>{" "}
-                  and acknowledge the{" "}
-                  <Link href="/privacy" className="font-medium underline underline-offset-4">
-                    Privacy Policy
-                  </Link>
-                  .
-                </p>
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void handleSignup();
+          }}
+        >
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoComplete="email"
+                />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="repeatPassword">Repeat Password</Label>
+                <Input
+                  id="repeatPassword"
+                  type="password"
+                  value={repeatPassword}
+                  onChange={(event) => setRepeatPassword(event.target.value)}
+                  autoComplete="new-password"
+                />
+              </div>
+              <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
+                <input
+                  id="acceptedLegalTerms"
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-900 dark:border-slate-600 dark:bg-slate-900"
+                  checked={acceptedLegalTerms}
+                  onChange={(event) => setAcceptedLegalTerms(event.target.checked)}
+                />
+                <div>
+                  <Label
+                    htmlFor="acceptedLegalTerms"
+                    className="block cursor-pointer font-medium text-slate-900 dark:text-slate-100"
+                  >
+                    I agree to the Terms and Privacy Policy
+                  </Label>
+                  <p className="mt-1 block text-xs leading-5 text-slate-500 dark:text-slate-400">
+                    I agree to the{" "}
+                    <Link href="/terms" className="font-medium underline underline-offset-4">
+                      Terms of Service
+                    </Link>{" "}
+                    and acknowledge the{" "}
+                    <Link href="/privacy" className="font-medium underline underline-offset-4">
+                      Privacy Policy
+                    </Link>
+                    .
+                  </p>
+                </div>
+              </div>
+              <Button
+                className="w-full"
+                type="submit"
+                disabled={
+                  isLoading ||
+                  !email.trim() ||
+                  !password.trim() ||
+                  !repeatPassword.trim() ||
+                  !acceptedLegalTerms
+                }
+              >
+                {isLoading ? "Creating account..." : "Create account"}
+              </Button>
             </div>
-            <Button
-              className="w-full"
-              type="submit"
-              disabled={
-                isLoading ||
-                !email.trim() ||
-                !password.trim() ||
-                !repeatPassword.trim() ||
-                !acceptedLegalTerms
-              }
-            >
-              {isLoading ? "Creating account..." : "Create account"}
-            </Button>
           </div>
-        </div>
-      </form>
-    </AuthSplitShell>
+        </form>
+      </AuthSplitShell>
+    </>
   );
 }
