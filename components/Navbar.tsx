@@ -375,9 +375,10 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
 
   async function handleSignOut() {
     setIsSigningOut(true);
+    setIsAccountOpen(false);
 
     try {
-      const { error } = await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut({ scope: "local" });
       if (error) {
         toast({
           title: "Unable to sign out",
@@ -387,12 +388,11 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
         return;
       }
 
-      await clearPwaAppCache();
+      void clearPwaAppCache();
       setUserEmail(null);
-      handleNavigate("/login");
+      window.location.replace("/login");
     } finally {
       setIsSigningOut(false);
-      setIsAccountOpen(false);
     }
   }
 

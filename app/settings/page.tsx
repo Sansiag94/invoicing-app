@@ -425,7 +425,7 @@ export default function SettingsPage() {
       }
 
       await supabase.auth.signOut({ scope: "local" });
-      await clearPwaAppCache();
+      void clearPwaAppCache();
       router.replace("/login?workspace=closed");
     } catch (error) {
       toast({

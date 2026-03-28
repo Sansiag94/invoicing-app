@@ -69,7 +69,7 @@ export default function AppFrame({ children }: AppFrameProps) {
     async function redirectToLogin() {
       setBusinessBrand(null);
       await supabase.auth.signOut({ scope: "local" });
-      await clearPwaAppCache();
+      void clearPwaAppCache();
 
       if (mounted) {
         setAuthStatus("unauthenticated");
@@ -148,7 +148,7 @@ export default function AppFrame({ children }: AppFrameProps) {
           if (response.status === 423) {
             setBusinessBrand(null);
             await supabase.auth.signOut({ scope: "local" });
-            await clearPwaAppCache();
+            void clearPwaAppCache();
             if (mounted) {
               window.location.replace("/login?workspace=closed");
             }
