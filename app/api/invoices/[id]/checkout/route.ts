@@ -256,6 +256,7 @@ export async function POST(
           cancel_url: cancelUrl,
           client_reference_id: invoice.id,
           metadata: {
+            sessionKind: "invoice_payment",
             invoiceId: invoice.id,
             publicToken: invoice.publicToken,
             businessId: invoice.businessId,

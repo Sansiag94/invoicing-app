@@ -9,6 +9,10 @@ import {
   getStripeConnectStatusFromAccount,
   saveBusinessStripeConnectStatus,
 } from "@/lib/stripeConnect";
+import {
+  syncBusinessSubscriptionFromCheckoutSession,
+  syncBusinessSubscriptionFromStripeSubscription,
+} from "@/lib/stripeBilling";
 
 export const runtime = "nodejs";
 
@@ -63,13 +67,19 @@ export async function POST(request: Request) {
   try {
     if (event.type === "checkout.session.completed") {
       const session = event.data.object as Stripe.Checkout.Session;
-      const result = await recordStripePaymentFromSession(session);
+      const sessionKind = session.metadata?.sessionKind;
 
-      if (result.requiresReview) {
-        console.error("[stripe] Webhook received an additional paid session for an invoice", {
-          invoiceId: result.invoiceId,
-          sessionId: session.id,
-        });
+      if (session.mode === "subscription" || sessionKind === "app_subscription") {
+        await syncBusinessSubscriptionFromCheckoutSession(session);
+      } else {
+        const result = await recordStripePaymentFromSession(session);
+
+        if (result.requiresReview) {
+          console.error("[stripe] Webhook received an additional paid session for an invoice", {
+            invoiceId: result.invoiceId,
+            sessionId: session.id,
+          });
+        }
       }
     }
 
@@ -95,6 +105,15 @@ export async function POST(request: Request) {
           await clearBusinessStripeConnectStatus(businessId);
         }
       }
+    }
+
+    if (
+      event.type === "customer.subscription.created" ||
+      event.type === "customer.subscription.updated" ||
+      event.type === "customer.subscription.deleted"
+    ) {
+      const subscription = event.data.object as Stripe.Subscription;
+      await syncBusinessSubscriptionFromStripeSubscription(subscription);
     }
 
     return NextResponse.json({ received: true });

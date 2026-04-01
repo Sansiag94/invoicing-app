@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
 import { APP_NAME } from "@/lib/appBrand";
+import { getLegalProfile } from "@/lib/legal";
 
 const benefitCards = [
   {
@@ -37,7 +38,25 @@ const proofPoints = [
   "Secure business-scoped access with Supabase and Prisma",
 ];
 
+const pricingTiers = [
+  {
+    name: "Free",
+    price: "CHF 0",
+    detail: "3 issued invoices per month",
+    points: ["Draft invoices stay free", "Client management included", "Swiss-ready invoice PDFs"],
+  },
+  {
+    name: "Pro",
+    price: "CHF 19",
+    detail: "per month, unlimited invoices",
+    points: ["Unlimited issued invoices", "Best fit for active freelancers", "Keeps reminders and payment flow in one place"],
+  },
+];
+
 export default function LandingPage() {
+  const legalProfile = getLegalProfile();
+  const onboardingHref = `mailto:${legalProfile.supportEmail}?subject=Sierra%20Invoices%20Onboarding`;
+
   return (
     <>
       <RedirectIfAuthenticated />
@@ -53,11 +72,11 @@ export default function LandingPage() {
                   </p>
                   <div className="space-y-4">
                     <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl md:leading-[0.96]">
-                      Professional invoicing for Swiss businesses
+                      Swiss invoicing for freelancers and small businesses
                     </h1>
                     <p className="max-w-2xl text-lg leading-8 text-slate-600">
-                      Create clean invoices, send payment links, and stay in control of paid,
-                      pending, and overdue revenue from one focused workspace.
+                      Create Swiss-ready invoices, send payment links, and stay in control of paid,
+                      pending, and overdue revenue without accounting-suite overhead.
                     </p>
                   </div>
                 </div>
@@ -139,6 +158,75 @@ export default function LandingPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
+          <Card className="rounded-[28px] border-slate-200">
+            <CardHeader className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Pricing</p>
+              <CardTitle className="text-3xl text-slate-950">Simple plans for getting started, then growing</CardTitle>
+              <p className="max-w-2xl text-sm leading-7 text-slate-600">
+                Start free with 3 issued invoices per calendar month, then switch to Pro when you need unlimited invoicing.
+              </p>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              {pricingTiers.map((tier) => (
+                <div key={tier.name} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-lg font-semibold text-slate-950">{tier.name}</p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900">{tier.price}</p>
+                      <p className="mt-1 text-sm text-slate-500">{tier.detail}</p>
+                    </div>
+                  </div>
+                  <div className="mt-4 space-y-2 text-sm text-slate-600">
+                    {tier.points.map((point) => (
+                      <div key={point} className="flex items-start gap-2">
+                        <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+                        <span>{point}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[28px] border-slate-200 bg-[linear-gradient(180deg,#fff7ed_0%,#ffffff_100%)]">
+            <CardHeader className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">Optional onboarding</p>
+              <CardTitle className="text-3xl text-slate-950">Need help setting up your first workspace?</CardTitle>
+              <p className="text-sm leading-7 text-slate-600">
+                Book the CHF 99 onboarding service if you want help with business details, invoice numbering,
+                Stripe setup, and your first clients or invoices.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-2xl border border-amber-200 bg-white p-5">
+                <p className="text-sm font-medium text-slate-900">What the setup includes</p>
+                <div className="mt-3 space-y-2 text-sm text-slate-600">
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+                    <span>Business profile, branding, and invoice numbering</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+                    <span>Stripe guidance if you want online card payments</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+                    <span>Help importing or creating your first client records</span>
+                  </div>
+                </div>
+              </div>
+              <Button asChild size="lg" className="w-full">
+                <a href={onboardingHref}>
+                  Ask About CHF 99 Onboarding
+                  <ArrowRight className="h-4 w-4" />
+                </a>
+              </Button>
+            </CardContent>
+          </Card>
         </section>
       </div>
     </>

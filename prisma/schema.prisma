@@ -23,6 +23,7 @@ model Business {
   id             String    @id @default(uuid()) @map("uuid")
   userId         String
   name           String
+  planTier       String    @default("free")
   ownerName      String?
   invoiceSenderType String @default("company")
   address        String
@@ -39,6 +40,11 @@ model Business {
   vatNumber      String?
   iban           String?
   logoUrl        String?
+  stripeCustomerId String? @unique
+  stripeSubscriptionId String? @unique
+  stripeSubscriptionStatus String?
+  stripePriceId String?
+  subscriptionCurrentPeriodEnd DateTime?
   usesPlatformStripe Boolean @default(false)
   stripeAccountId String?
   stripeChargesEnabled Boolean @default(false)
@@ -83,6 +89,7 @@ model Invoice {
   subject       String?
   reference     String?
   status        InvoiceStatus
+  issuedAt      DateTime?
   issueDate     DateTime
   dueDate       DateTime
   currency      String
@@ -104,6 +111,7 @@ model Invoice {
   events        InvoiceEvent[] @relation("InvoiceEvents")
 
   @@index([stripeCheckoutSessionId])
+  @@index([businessId, issuedAt])
 }
 
 model LineItem {

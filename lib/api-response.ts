@@ -5,6 +5,7 @@ validateRequiredEnv();
 
 type ApiErrorCode =
   | "bad_request"
+  | "payment_required"
   | "unauthorized"
   | "forbidden"
   | "not_found"
@@ -20,6 +21,8 @@ function statusToCode(status: number): ApiErrorCode {
   switch (status) {
     case 400:
       return "bad_request";
+    case 402:
+      return "payment_required";
     case 401:
       return "unauthorized";
     case 403:

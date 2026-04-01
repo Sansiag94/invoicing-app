@@ -4,9 +4,11 @@ import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, BellRing, CheckCircle2, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
+import { getBillingLimitDetails } from "@/lib/billingClient";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
-import { InvoiceDetails, LineItemData } from "@/lib/types";
+import { BillingLimitDetails, InvoiceDetails, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getDefaultDueDate, toDateInputValue } from "@/lib/invoiceDates";
 import { Badge } from "@/components/ui/badge";
@@ -108,6 +110,8 @@ export default function InvoiceDetailPage() {
   const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
+  const [billingLimitDetails, setBillingLimitDetails] = useState<BillingLimitDetails | null>(null);
+  const [isOpeningBilling, setIsOpeningBilling] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -121,6 +125,77 @@ export default function InvoiceDetailPage() {
   const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
 
   const editedTotals = useMemo(() => calculateTotals(lineItems), [lineItems]);
+  const billingReturnPath = id ? `/invoices/${id}` : "/invoices";
+
+  function handleBillingLimitResponse(payload: { code?: string; details?: unknown }): boolean {
+    const details = getBillingLimitDetails(payload);
+    if (!details) {
+      return false;
+    }
+
+    setBillingLimitDetails(details);
+    return true;
+  }
+
+  async function openBillingCheckout() {
+    setIsOpeningBilling(true);
+
+    try {
+      const response = await authenticatedFetch("/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          returnPath: billingReturnPath,
+        }),
+      });
+      const result = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error ?? "Could not open billing checkout");
+      }
+
+      window.location.assign(result.url);
+    } catch (error) {
+      toast({
+        title: "Unable to open checkout",
+        description: error instanceof Error ? error.message : "Could not open billing checkout",
+        variant: "error",
+      });
+      setIsOpeningBilling(false);
+    }
+  }
+
+  async function openBillingPortal() {
+    setIsOpeningBilling(true);
+
+    try {
+      const response = await authenticatedFetch("/api/billing/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          returnPath: billingReturnPath,
+        }),
+      });
+      const result = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error ?? "Could not open billing portal");
+      }
+
+      window.location.assign(result.url);
+    } catch (error) {
+      toast({
+        title: "Unable to open billing portal",
+        description: error instanceof Error ? error.message : "Could not open billing portal",
+        variant: "error",
+      });
+      setIsOpeningBilling(false);
+    }
+  }
 
   const handleIssueDateChange = (nextIssueDate: string) => {
     setIssueDate(nextIssueDate);
@@ -242,9 +317,13 @@ export default function InvoiceDetailPage() {
       const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, {
         method: "POST",
       });
-      const result = (await response.json()) as { message?: string; error?: string };
+      const result = (await response.json()) as { message?: string; error?: string; code?: string; details?: unknown };
 
       if (!response.ok) {
+        if (handleBillingLimitResponse(result)) {
+          return;
+        }
+
         toast({
           title: "Failed to send invoice",
           description: result?.error ?? "Failed to send invoice",
@@ -372,9 +451,17 @@ export default function InvoiceDetailPage() {
         body: JSON.stringify({ status: nextStatus }),
       });
 
-      const result = (await response.json()) as (InvoiceDetails & { error?: string });
+      const result = (await response.json()) as (InvoiceDetails & {
+        error?: string;
+        code?: string;
+        details?: unknown;
+      });
 
       if (!response.ok) {
+        if (handleBillingLimitResponse(result)) {
+          return;
+        }
+
         toast({
           title: "Failed to update invoice status",
           description: result?.error ?? "Failed to update invoice status",
@@ -1374,6 +1461,19 @@ export default function InvoiceDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UpgradeDialog
+        open={Boolean(billingLimitDetails)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBillingLimitDetails(null);
+          }
+        }}
+        details={billingLimitDetails}
+        onUpgrade={() => void openBillingCheckout()}
+        onManageBilling={billingLimitDetails?.portalAvailable ? () => void openBillingPortal() : undefined}
+        isSubmitting={isOpeningBilling}
+      />
     </div>
   );
 }

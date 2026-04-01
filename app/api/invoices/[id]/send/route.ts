@@ -21,6 +21,7 @@ import {
 import InvoiceDocument from "@/lib/InvoiceDocument";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
+import { assertBusinessCanIssueInvoice, isBillingLimitError } from "@/lib/billing";
 import {
   assertRateLimit,
   buildRateLimitIdentifier,
@@ -71,6 +72,10 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
 
   if (existingInvoice.status === "paid") {
     return apiError("Paid invoices cannot be sent again", 400);
+  }
+
+  if (existingInvoice.status === "draft") {
+    await assertBusinessCanIssueInvoice(existingInvoice.businessId);
   }
 
   let officialInvoiceNumber = invoiceNumber;
@@ -171,7 +176,10 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   if (existingInvoice.status === "draft") {
     await prisma.invoice.update({
       where: { id: existingInvoice.id },
-      data: { status: "sent" },
+      data: {
+        status: "sent",
+        issuedAt: existingInvoice.issuedAt ?? new Date(),
+      },
     });
   }
 
@@ -221,6 +229,13 @@ export async function POST(
 
     return await sendInvoice(id, business.id, request);
   } catch (error) {
+    if (isBillingLimitError(error)) {
+      return apiError(error.message, error.status, {
+        code: "payment_required",
+        details: error.details,
+      });
+    }
+
     if (isRateLimitError(error)) {
       return createRateLimitErrorResponse(error);
     }

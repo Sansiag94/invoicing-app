@@ -4,6 +4,7 @@ import { apiError } from "@/lib/api-response";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { getOpenInvoiceStatus } from "@/lib/invoiceStatus";
 import { listInvoiceEvents, logInvoiceEvent } from "@/lib/invoiceActivity";
+import { assertBusinessCanIssueInvoice, isBillingLimitError } from "@/lib/billing";
 import {
   deriveOfficialInvoicePrefix,
   formatSequentialInvoiceNumber,
@@ -68,8 +69,13 @@ export async function PATCH(
     }
 
     if (nextStatus === "paid") {
+      if (invoice.status === "draft") {
+        await assertBusinessCanIssueInvoice(businessId);
+      }
+
       const updated = await prisma.$transaction(async (tx) => {
         let officialInvoiceNumber = invoice.invoiceNumber;
+        const issuedAt = invoice.status === "draft" ? invoice.issuedAt ?? new Date() : invoice.issuedAt;
 
         if (isDraftInvoiceNumber(invoice.invoiceNumber)) {
           const updatedBusiness = await tx.business.update({
@@ -96,6 +102,7 @@ export async function PATCH(
           data: {
             status: "paid",
             invoiceNumber: officialInvoiceNumber,
+            issuedAt,
           },
         });
 
@@ -197,6 +204,13 @@ export async function PATCH(
     const events = updated ? await listInvoiceEvents(updated.id) : [];
     return NextResponse.json(updated ? { ...updated, events } : updated);
   } catch (error) {
+    if (isBillingLimitError(error)) {
+      return apiError(error.message, error.status, {
+        code: "payment_required",
+        details: error.details,
+      });
+    }
+
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
     }

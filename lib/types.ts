@@ -3,6 +3,17 @@ import type { InvoiceLanguage } from "@/lib/invoiceLanguage";
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue";
 export type InvoiceCurrency = "CHF" | "EUR";
 export type InvoiceSenderType = "company" | "owner";
+export type BusinessPlanTier = "free" | "pro";
+export type BillingSubscriptionStatus =
+  | "inactive"
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "canceled"
+  | "unpaid"
+  | "incomplete"
+  | "incomplete_expired"
+  | "paused";
 export type ExpenseCategory =
   | "software"
   | "office"
@@ -57,6 +68,7 @@ export interface ClientSummary {
 export interface BusinessSettingsData {
   id: string;
   name: string;
+  planTier?: BusinessPlanTier;
   ownerName: string | null;
   invoiceSenderType: InvoiceSenderType;
   invoicePrefix: string;
@@ -76,6 +88,11 @@ export interface BusinessSettingsData {
   bankName?: string | null;
   bic?: string | null;
   logoUrl: string | null;
+  stripeCustomerId?: string | null;
+  stripeSubscriptionId?: string | null;
+  stripeSubscriptionStatus?: BillingSubscriptionStatus | null;
+  stripePriceId?: string | null;
+  subscriptionCurrentPeriodEnd?: string | null;
   usesPlatformStripe?: boolean;
   stripeAccountId?: string | null;
   stripeChargesEnabled?: boolean;
@@ -87,6 +104,7 @@ export interface InvoiceSummary {
   id: string;
   invoiceNumber: string;
   status: InvoiceStatus;
+  issuedAt: string | null;
   issueDate: string;
   dueDate: string;
   createdAt: string;
@@ -233,6 +251,45 @@ export interface AnalyticsOverview {
   monthlySeries: AnalyticsSeriesPoint[];
   topClients: AnalyticsClientBreakdown[];
   expenseBreakdown: AnalyticsExpenseBreakdown[];
+}
+
+export interface BillingStatus {
+  planTier: BusinessPlanTier;
+  stripeSubscriptionStatus: BillingSubscriptionStatus;
+  hasUnlimitedInvoices: boolean;
+  monthlyIssuedInvoices: number;
+  monthlyInvoiceLimit: number | null;
+  remainingInvoices: number | null;
+  canIssueInvoice: boolean;
+  usagePeriodStart: string;
+  usagePeriodEndExclusive: string;
+  currency: "CHF";
+  proPriceMonthlyChf: number;
+  checkoutUrl: string;
+  checkoutAvailable: boolean;
+  portalUrl: string;
+  portalAvailable: boolean;
+  supportEmail: string;
+  onboardingPriceChf: number;
+  onboardingEmail: string;
+}
+
+export interface BillingLimitDetails extends BillingStatus {
+  reason: "invoice_limit_reached";
+}
+
+export interface ClientImportError {
+  rowNumber: number;
+  type: "duplicate" | "invalid";
+  message: string;
+  email: string | null;
+}
+
+export interface ClientImportResult {
+  createdCount: number;
+  skippedDuplicateCount: number;
+  invalidRowCount: number;
+  errors: ClientImportError[];
 }
 
 export interface InvoiceLineItemModel {

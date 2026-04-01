@@ -85,6 +85,7 @@ export async function GET(request: Request) {
       subject: "Layout Regression Sample",
       reference: "RF18539007547034",
       status: "draft",
+      issuedAt: null,
       issueDate: new Date("2026-03-13T00:00:00.000Z"),
       dueDate: new Date("2026-03-27T00:00:00.000Z"),
       currency: business.currency || "CHF",

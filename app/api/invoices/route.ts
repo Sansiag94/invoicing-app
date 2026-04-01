@@ -6,6 +6,7 @@ import { InvoiceStatus } from "@prisma/client";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
+import { assertBusinessCanIssueInvoice, isBillingLimitError } from "@/lib/billing";
 import {
   calculateInvoiceTotals,
   deriveOfficialInvoicePrefix,
@@ -225,12 +226,16 @@ export async function POST(request: Request) {
     );
 
     const normalizedStatus = normalizeStatus(body.status);
+    if (normalizedStatus !== InvoiceStatus.draft) {
+      await assertBusinessCanIssueInvoice(business.id);
+    }
 
     const invoice = await prisma.invoice.create({
       data: {
         businessId: business.id,
         clientId,
         invoiceNumber: formatDraftInvoiceNumber(issueDate, crypto.randomUUID().slice(0, 6)),
+        issuedAt: normalizedStatus === InvoiceStatus.draft ? null : new Date(),
         issueDate,
         dueDate,
         subject,
@@ -291,6 +296,13 @@ export async function POST(request: Request) {
 
     return NextResponse.json(invoice, { status: 201 });
   } catch (error) {
+    if (isBillingLimitError(error)) {
+      return apiError(error.message, error.status, {
+        code: "payment_required",
+        details: error.details,
+      });
+    }
+
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
     }

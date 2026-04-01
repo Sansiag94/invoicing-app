@@ -5,11 +5,12 @@ import { useEffect, useEffectEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
+import BillingStatusCard from "@/components/billing/BillingStatusCard";
 import { usePwa } from "@/components/PwaProvider";
 import { buildAddressString } from "@/lib/address";
 import { formatSequentialInvoiceNumber, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
-import { BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
+import { BillingStatus, BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -56,6 +57,8 @@ export default function SettingsPage() {
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isRefreshingStripe, setIsRefreshingStripe] = useState(false);
   const [isDisconnectingStripe, setIsDisconnectingStripe] = useState(false);
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
+  const [isOpeningBilling, setIsOpeningBilling] = useState(false);
   const [isClosingWorkspace, setIsClosingWorkspace] = useState(false);
   const [showDisconnectStripeDialog, setShowDisconnectStripeDialog] = useState(false);
   const [showCloseWorkspaceDialog, setShowCloseWorkspaceDialog] = useState(false);
@@ -115,6 +118,77 @@ export default function SettingsPage() {
   const refreshStripeStatusEvent = useEffectEvent(() => {
     void refreshStripeStatus({ showSuccessToast: true });
   });
+
+  async function fetchBillingStatus() {
+    const response = await authenticatedFetch("/api/billing/status");
+    const result = (await response.json()) as BillingStatus & { error?: string };
+
+    if (!response.ok) {
+      throw new Error(result.error ?? "Could not load billing status");
+    }
+
+    setBillingStatus(result);
+  }
+
+  async function openBillingCheckout() {
+    setIsOpeningBilling(true);
+
+    try {
+      const response = await authenticatedFetch("/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          returnPath: "/settings",
+        }),
+      });
+      const result = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error ?? "Could not open billing checkout");
+      }
+
+      window.location.assign(result.url);
+    } catch (error) {
+      toast({
+        title: "Unable to open checkout",
+        description: error instanceof Error ? error.message : "Could not open billing checkout",
+        variant: "error",
+      });
+      setIsOpeningBilling(false);
+    }
+  }
+
+  async function openBillingPortal() {
+    setIsOpeningBilling(true);
+
+    try {
+      const response = await authenticatedFetch("/api/billing/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          returnPath: "/settings",
+        }),
+      });
+      const result = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error ?? "Could not open billing portal");
+      }
+
+      window.location.assign(result.url);
+    } catch (error) {
+      toast({
+        title: "Unable to open billing portal",
+        description: error instanceof Error ? error.message : "Could not open billing portal",
+        variant: "error",
+      });
+      setIsOpeningBilling(false);
+    }
+  }
 
   async function saveBusinessSettings(
     options?: {
@@ -517,34 +591,43 @@ export default function SettingsPage() {
     let mounted = true;
 
     (async () => {
-      const res = await authenticatedFetch("/api/business");
-      const data = (await res.json()) as BusinessSettingsData;
-      const parsedAddress = parsePostalAddress(data?.address, data?.country);
+      try {
+        const [businessResponse, billingResponse] = await Promise.all([
+          authenticatedFetch("/api/business"),
+          authenticatedFetch("/api/billing/status"),
+        ]);
+        const data = (await businessResponse.json()) as BusinessSettingsData;
+        const billingData = (await billingResponse.json()) as BillingStatus;
+        const parsedAddress = parsePostalAddress(data?.address, data?.country);
 
-      if (mounted) {
-        setBusinessId(data?.id || "");
-        setName(data?.name || "");
-        setOwnerName(data?.ownerName || "");
-        setInvoiceSenderType(data?.invoiceSenderType || "company");
-        setNextOfficialInvoiceSequence(String(data?.nextOfficialInvoiceSequence || 1));
-        setStreet(data?.street || parsedAddress.street || "");
-        setPostalCode(data?.postalCode || parsedAddress.postalCode || "");
-        setCity(data?.city || parsedAddress.city || "");
-        setPhone(data?.phone || "");
-        setEmail(data?.email || "");
-        setWebsite(data?.website || "");
-        setBankName(data?.bankName || "");
-        setBic(data?.bic || "");
-        setCountry(data?.country || "");
-        setCurrency(data?.currency || "CHF");
-        setVatNumber(data?.vatNumber || "");
-        setIban(data?.iban || "");
-        setLogoUrl(data?.logoUrl || "");
-        setUsesPlatformStripe(Boolean(data?.usesPlatformStripe));
-        setStripeAccountId(data?.stripeAccountId || null);
-        setStripeChargesEnabled(Boolean(data?.stripeChargesEnabled));
-        setStripePayoutsEnabled(Boolean(data?.stripePayoutsEnabled));
-        setStripeDetailsSubmitted(Boolean(data?.stripeDetailsSubmitted));
+        if (mounted) {
+          setBusinessId(data?.id || "");
+          setName(data?.name || "");
+          setOwnerName(data?.ownerName || "");
+          setInvoiceSenderType(data?.invoiceSenderType || "company");
+          setNextOfficialInvoiceSequence(String(data?.nextOfficialInvoiceSequence || 1));
+          setStreet(data?.street || parsedAddress.street || "");
+          setPostalCode(data?.postalCode || parsedAddress.postalCode || "");
+          setCity(data?.city || parsedAddress.city || "");
+          setPhone(data?.phone || "");
+          setEmail(data?.email || "");
+          setWebsite(data?.website || "");
+          setBankName(data?.bankName || "");
+          setBic(data?.bic || "");
+          setCountry(data?.country || "");
+          setCurrency(data?.currency || "CHF");
+          setVatNumber(data?.vatNumber || "");
+          setIban(data?.iban || "");
+          setLogoUrl(data?.logoUrl || "");
+          setUsesPlatformStripe(Boolean(data?.usesPlatformStripe));
+          setStripeAccountId(data?.stripeAccountId || null);
+          setStripeChargesEnabled(Boolean(data?.stripeChargesEnabled));
+          setStripePayoutsEnabled(Boolean(data?.stripePayoutsEnabled));
+          setStripeDetailsSubmitted(Boolean(data?.stripeDetailsSubmitted));
+          setBillingStatus(billingData);
+        }
+      } catch (error) {
+        console.error("Error loading settings page data:", error);
       }
     })();
 
@@ -572,6 +655,31 @@ export default function SettingsPage() {
     refreshStripeStatusEvent();
     window.history.replaceState({}, "", "/settings");
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const billingQueryStatus = new URLSearchParams(window.location.search).get("billing");
+    if (!billingQueryStatus) {
+      return;
+    }
+
+    void fetchBillingStatus().catch((error) => {
+      console.error("Unable to refresh billing status:", error);
+    });
+
+    toast({
+      title: billingQueryStatus === "success" ? "Subscription updated" : "Checkout cancelled",
+      description:
+        billingQueryStatus === "success"
+          ? "Your workspace billing status has been refreshed."
+          : "No changes were made to your subscription.",
+      variant: billingQueryStatus === "success" ? "success" : "info",
+    });
+    window.history.replaceState({}, "", "/settings");
+  }, [toast]);
 
   return (
     <div className="space-y-6">
@@ -905,6 +1013,15 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <BillingStatusCard
+        title="Plan & Billing"
+        description="Free includes 3 issued invoices per calendar month. Upgrade to Pro for CHF 19/month to issue unlimited invoices."
+        billingStatus={billingStatus}
+        onUpgrade={() => void openBillingCheckout()}
+        onManageBilling={() => void openBillingPortal()}
+        isSubmitting={isOpeningBilling}
+      />
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card>

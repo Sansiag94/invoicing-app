@@ -5,9 +5,12 @@ import { FocusEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState }
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import BillingStatusCard from "@/components/billing/BillingStatusCard";
+import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
+import { getBillingLimitDetails, isBillingStatus } from "@/lib/billingClient";
 import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
-import { BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
+import { BillingLimitDetails, BillingStatus, BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getInvoiceSenderName } from "@/lib/business";
 import { getDefaultDueDate, getTodayDateInputValue } from "@/lib/invoiceDates";
@@ -116,6 +119,9 @@ function InvoicePageContent() {
   const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
+  const [billingLimitDetails, setBillingLimitDetails] = useState<BillingLimitDetails | null>(null);
+  const [isOpeningBilling, setIsOpeningBilling] = useState(false);
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
   const [bulkActionLabel, setBulkActionLabel] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -197,6 +203,94 @@ function InvoicePageContent() {
     setInvoices(Array.isArray(data) ? data : []);
   }
 
+  async function fetchBillingStatus() {
+    const response = await authenticatedFetch("/api/billing/status");
+    const result = (await response.json()) as BillingStatus & { error?: string };
+
+    if (!response.ok) {
+      throw new Error(result.error ?? "Failed to load billing status");
+    }
+
+    if (isBillingStatus(result)) {
+      setBillingStatus(result);
+    }
+  }
+
+  async function refreshInvoiceWorkspaceData() {
+    await Promise.all([fetchInvoices(), fetchBillingStatus()]);
+  }
+
+  function handleBillingLimitResponse(payload: { code?: string; details?: unknown }): boolean {
+    const details = getBillingLimitDetails(payload);
+    if (!details) {
+      return false;
+    }
+
+    setBillingLimitDetails(details);
+    setBillingStatus(details);
+    return true;
+  }
+
+  async function openBillingCheckout() {
+    setIsOpeningBilling(true);
+
+    try {
+      const response = await authenticatedFetch("/api/billing/checkout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          returnPath: "/invoices",
+        }),
+      });
+      const result = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error ?? "Could not open billing checkout");
+      }
+
+      window.location.assign(result.url);
+    } catch (error) {
+      toast({
+        title: "Unable to open checkout",
+        description: error instanceof Error ? error.message : "Could not open billing checkout",
+        variant: "error",
+      });
+      setIsOpeningBilling(false);
+    }
+  }
+
+  async function openBillingPortal() {
+    setIsOpeningBilling(true);
+
+    try {
+      const response = await authenticatedFetch("/api/billing/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          returnPath: "/invoices",
+        }),
+      });
+      const result = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !result.url) {
+        throw new Error(result.error ?? "Could not open billing portal");
+      }
+
+      window.location.assign(result.url);
+    } catch (error) {
+      toast({
+        title: "Unable to open billing portal",
+        description: error instanceof Error ? error.message : "Could not open billing portal",
+        variant: "error",
+      });
+      setIsOpeningBilling(false);
+    }
+  }
+
   useEffect(() => {
     setSelectedInvoiceIds((current) => current.filter((id) => invoices.some((invoice) => invoice.id === id)));
   }, [invoices]);
@@ -206,21 +300,24 @@ function InvoicePageContent() {
 
     (async () => {
       try {
-        const [clientsResponse, invoicesResponse, businessResponse] = await Promise.all([
+        const [clientsResponse, invoicesResponse, businessResponse, billingResponse] = await Promise.all([
           authenticatedFetch("/api/clients"),
           authenticatedFetch("/api/invoices"),
           authenticatedFetch("/api/business"),
+          authenticatedFetch("/api/billing/status"),
         ]);
 
         const loadedClients = (await clientsResponse.json()) as ClientSummary[];
         const loadedInvoices = (await invoicesResponse.json()) as InvoiceRow[];
         const loadedBusiness = (await businessResponse.json()) as BusinessSettingsData;
+        const loadedBilling = (await billingResponse.json()) as BillingStatus;
 
         if (mounted) {
           setClients(Array.isArray(loadedClients) ? loadedClients : []);
           setInvoices(Array.isArray(loadedInvoices) ? loadedInvoices : []);
           setInvoiceSenderName(getInvoiceSenderName(loadedBusiness || { name: "User_name" }));
           setBusinessCurrency(loadedBusiness?.currency === "EUR" ? "EUR" : "CHF");
+          setBillingStatus(isBillingStatus(loadedBilling) ? loadedBilling : null);
         }
       } catch (error) {
         console.error("Error loading invoice page data:", error);
@@ -240,6 +337,31 @@ function InvoicePageContent() {
     setClientId(requestedClientId);
     setIsCreateFormOpen(true);
   }, [requestedClientId]);
+
+  useEffect(() => {
+    const billingQueryStatus = searchParams.get("billing");
+    if (!billingQueryStatus) {
+      return;
+    }
+
+    void fetchBillingStatus().catch((error) => {
+      console.error("Unable to refresh billing status:", error);
+    });
+
+    toast({
+      title: billingQueryStatus === "success" ? "Subscription updated" : "Checkout cancelled",
+      description:
+        billingQueryStatus === "success"
+          ? "Your invoice limit has been refreshed."
+          : "No changes were made to your subscription.",
+      variant: billingQueryStatus === "success" ? "success" : "info",
+    });
+
+    const nextParams = new URLSearchParams(searchParams.toString());
+    nextParams.delete("billing");
+    const nextQuery = nextParams.toString();
+    router.replace(nextQuery ? `/invoices?${nextQuery}` : "/invoices");
+  }, [router, searchParams, toast]);
 
   useEffect(() => {
     if (notesManuallyEdited && notes.trim().length > 0) return;
@@ -455,9 +577,13 @@ function InvoicePageContent() {
       const response = await authenticatedFetch(`/api/invoices/${invoiceId}/send`, {
         method: "POST",
       });
-      const result = (await response.json()) as { error?: string; message?: string };
+      const result = (await response.json()) as { error?: string; message?: string; code?: string; details?: unknown };
 
       if (!response.ok) {
+        if (handleBillingLimitResponse(result)) {
+          return;
+        }
+
         toast({
           title: "Failed to send invoice",
           description: result.error ?? "Failed to send invoice",
@@ -467,7 +593,7 @@ function InvoicePageContent() {
       }
 
       setSuccessMessage("Invoice sent successfully.");
-      await fetchInvoices();
+      await refreshInvoiceWorkspaceData();
     } catch (error) {
       console.error("Error sending invoice:", error);
       toast({
@@ -593,9 +719,13 @@ function InvoicePageContent() {
         },
         body: JSON.stringify({ status: nextStatus }),
       });
-      const result = (await response.json()) as { error?: string };
+      const result = (await response.json()) as { error?: string; code?: string; details?: unknown };
 
       if (!response.ok) {
+        if (handleBillingLimitResponse(result)) {
+          return;
+        }
+
         toast({
           title: "Failed to update invoice status",
           description: result.error ?? "Failed to update invoice status",
@@ -607,7 +737,7 @@ function InvoicePageContent() {
       setSuccessMessage(
         nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid."
       );
-      await fetchInvoices();
+      await refreshInvoiceWorkspaceData();
     } catch (error) {
       console.error("Error updating invoice status:", error);
       toast({
@@ -723,19 +853,42 @@ function InvoicePageContent() {
     try {
       for (const invoice of selectedInvoices) {
         if (action === "send" && invoice.status !== "paid") {
-          await authenticatedFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" });
+          const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" });
+          const result = (await response.json()) as { error?: string; code?: string; details?: unknown };
+
+          if (!response.ok) {
+            if (handleBillingLimitResponse(result)) {
+              return;
+            }
+
+            throw new Error(result.error ?? "Failed to send invoice");
+          }
         }
 
         if (action === "paid") {
-          await authenticatedFetch(`/api/invoices/${invoice.id}/status`, {
+          const response = await authenticatedFetch(`/api/invoices/${invoice.id}/status`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ status: "paid" }),
           });
+          const result = (await response.json()) as { error?: string; code?: string; details?: unknown };
+
+          if (!response.ok) {
+            if (handleBillingLimitResponse(result)) {
+              return;
+            }
+
+            throw new Error(result.error ?? "Failed to update invoice status");
+          }
         }
 
         if (action === "delete") {
-          await authenticatedFetch(`/api/invoices/${invoice.id}`, { method: "DELETE" });
+          const response = await authenticatedFetch(`/api/invoices/${invoice.id}`, { method: "DELETE" });
+          const result = (await response.json()) as { error?: string };
+
+          if (!response.ok) {
+            throw new Error(result.error ?? "Failed to delete invoice");
+          }
         }
       }
 
@@ -747,7 +900,11 @@ function InvoicePageContent() {
             : "Selected invoices deleted."
       );
       setSelectedInvoiceIds([]);
-      await fetchInvoices();
+      if (action === "send" || action === "paid") {
+        await refreshInvoiceWorkspaceData();
+      } else {
+        await fetchInvoices();
+      }
     } catch (error) {
       console.error(`Error running bulk ${action}:`, error);
       toast({
@@ -933,6 +1090,15 @@ function InvoicePageContent() {
         <h1 className="text-3xl font-bold">Invoices</h1>
         <p className="text-sm text-slate-500">Create invoices and manage their lifecycle.</p>
       </div>
+
+      <BillingStatusCard
+        title="Plan usage"
+        description="Free includes 3 issued invoices per calendar month. Drafts stay free until you turn them into official invoices."
+        billingStatus={billingStatus}
+        onUpgrade={() => void openBillingCheckout()}
+        onManageBilling={() => void openBillingPortal()}
+        isSubmitting={isOpeningBilling}
+      />
 
       {successMessage ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
@@ -1581,6 +1747,19 @@ function InvoicePageContent() {
         confirmLabel={confirmDialog?.confirmLabel}
         confirmVariant={confirmDialog?.confirmVariant}
         onConfirm={() => confirmDialog?.onConfirm()}
+      />
+
+      <UpgradeDialog
+        open={Boolean(billingLimitDetails)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBillingLimitDetails(null);
+          }
+        }}
+        details={billingLimitDetails}
+        onUpgrade={() => void openBillingCheckout()}
+        onManageBilling={billingLimitDetails?.portalAvailable ? () => void openBillingPortal() : undefined}
+        isSubmitting={isOpeningBilling}
       />
     </div>
   );

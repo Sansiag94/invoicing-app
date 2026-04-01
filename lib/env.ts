@@ -60,6 +60,10 @@ export function getStripeSecretKey(): string {
   return value;
 }
 
+export function getStripeProMonthlyPriceId(): string | null {
+  return readEnv("STRIPE_PRO_MONTHLY_PRICE_ID") ?? null;
+}
+
 export function getResendApiKey(): string {
   const value = readRequiredEnv("RESEND_API_KEY");
   if (!value) {

@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { FormEvent, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronUp, UserPlus } from "lucide-react";
+import { ChevronDown, ChevronUp, Download, Upload, UserPlus } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { isSupportedCountry } from "@/lib/countries";
 import { DEFAULT_INVOICE_LANGUAGE, INVOICE_LANGUAGE_OPTIONS, getInvoiceLanguageLabel } from "@/lib/invoiceLanguage";
-import { ClientSummary } from "@/lib/types";
+import { ClientImportResult, ClientSummary } from "@/lib/types";
 import { isValidEmail } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -39,6 +39,9 @@ function ClientsPageContent() {
   const [vatNumber, setVatNumber] = useState("");
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ClientImportResult | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const createClientRef = useRef<HTMLDivElement | null>(null);
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
@@ -166,6 +169,59 @@ function ClientsPageContent() {
       });
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  async function handleImportSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!importFile) {
+      toast({
+        title: "Choose a CSV file",
+        description: "Select the client import template or your completed CSV before importing.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setIsImporting(true);
+
+    try {
+      const body = new FormData();
+      body.append("file", importFile);
+
+      const response = await authenticatedFetch("/api/clients/import", {
+        method: "POST",
+        body,
+      });
+      const result = (await response.json()) as ClientImportResult & { error?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Client import failed",
+          description: result.error ?? "Client import failed",
+          variant: "error",
+        });
+        return;
+      }
+
+      setImportResult(result);
+      setImportFile(null);
+      setSuccessMessage(
+        result.createdCount > 0
+          ? `Imported ${result.createdCount} client${result.createdCount === 1 ? "" : "s"}.`
+          : "Import completed with no new clients added."
+      );
+      await fetchClients();
+    } catch (error) {
+      console.error("Client import failed:", error);
+      toast({
+        title: "Client import failed",
+        description: "Client import failed",
+        variant: "error",
+      });
+    } finally {
+      setIsImporting(false);
     }
   }
 
@@ -324,6 +380,87 @@ function ClientsPageContent() {
             </form>
           </CardContent>
         ) : null}
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Import Clients</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-sm font-medium text-slate-900">CSV import for onboarding and migration</p>
+            <p className="mt-2 text-sm text-slate-600">
+              Import client records using the strict template. Existing emails are skipped so you can
+              review duplicates safely afterwards.
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button asChild variant="outline" size="sm">
+                <a href="/templates/client-import-template.csv" download>
+                  <Download className="h-4 w-4" />
+                  Download Template
+                </a>
+              </Button>
+            </div>
+          </div>
+
+          <form onSubmit={handleImportSubmit} className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+            <div className="space-y-2">
+              <Label htmlFor="clientImportFile">Client CSV</Label>
+              <Input
+                id="clientImportFile"
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(event) => {
+                  setImportResult(null);
+                  setImportFile(event.target.files?.[0] ?? null);
+                }}
+              />
+              <p className="text-xs text-slate-500">
+                Expected headers: `companyName,contactName,email,phone,street,postalCode,city,country,language,vatNumber`
+              </p>
+            </div>
+            <Button type="submit" disabled={isImporting} className="w-full md:w-auto">
+              <Upload className="h-4 w-4" />
+              {isImporting ? "Importing..." : "Import Clients"}
+            </Button>
+          </form>
+
+          {importResult ? (
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+              <div className="grid gap-3 md:grid-cols-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.createdCount}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Duplicates skipped</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.skippedDuplicateCount}</p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invalid rows</p>
+                  <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.invalidRowCount}</p>
+                </div>
+              </div>
+
+              {importResult.errors.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-slate-900">Rows to review</p>
+                  <div className="space-y-2">
+                    {importResult.errors.map((error) => (
+                      <div key={`${error.rowNumber}-${error.type}-${error.message}`} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                        <p className="font-medium text-slate-900">
+                          Row {error.rowNumber} - {error.type === "duplicate" ? "Duplicate" : "Invalid"}
+                        </p>
+                        <p className="mt-1">{error.message}</p>
+                        {error.email ? <p className="mt-1 text-xs text-slate-500">{error.email}</p> : null}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+        </CardContent>
       </Card>
 
       <Card>

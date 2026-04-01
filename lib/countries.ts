@@ -205,6 +205,11 @@ export function isSupportedCountry(value: string | null | undefined): boolean {
   return COUNTRY_OPTIONS.some((country) => country.toLowerCase() === normalized);
 }
 
+export function resolveSupportedCountry(value: string | null | undefined): string | null {
+  const normalized = normalizeCountry(value).toLowerCase();
+  return COUNTRY_OPTIONS.find((country) => country.toLowerCase() === normalized) ?? null;
+}
+
 export function isSwissCountry(value: string | null | undefined): boolean {
   const normalized = normalizeCountry(value).toLowerCase();
   return normalized === "switzerland" || normalized === "swiss" || normalized === "ch";
