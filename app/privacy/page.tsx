@@ -114,6 +114,10 @@ export default async function PrivacyPage({
             identifiers, payment status, amount, currency, and payment references.
           </li>
           <li>
+            Support and onboarding data, such as emails, spreadsheets, notes, or setup details you
+            share when asking for help or booking optional onboarding.
+          </li>
+          <li>
             Technical and device data generated when the service or public invoice pages are used,
             including log, browser, network, and session information made available by your device,
             hosting infrastructure, or integrated providers.
@@ -130,6 +134,7 @@ export default async function PrivacyPage({
           <li>To host business records, client records, expense records, and uploaded files.</li>
           <li>To send transactional emails such as welcome emails, invoice emails, and reminders.</li>
           <li>To enable online invoice payment and reconcile payment events.</li>
+          <li>To answer support requests and provide optional onboarding assistance.</li>
           <li>To provide support, maintain uptime, troubleshoot incidents, and prevent abuse.</li>
           <li>
             To comply with bookkeeping, tax, anti-fraud, legal, regulatory, and audit obligations.
@@ -150,6 +155,10 @@ export default async function PrivacyPage({
           <li>
             <strong>Email delivery providers</strong> help us send welcome emails, invoices, and
             reminders.
+          </li>
+          <li>
+            <strong>Support communications</strong> may include the messages and files you share
+            with us when requesting onboarding or account help.
           </li>
           <li>
             <strong>Payment providers</strong> such as Stripe or Stripe Connect process online

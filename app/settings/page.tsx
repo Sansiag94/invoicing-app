@@ -1023,6 +1023,39 @@ export default function SettingsPage() {
         isSubmitting={isOpeningBilling}
       />
 
+      <Card className="border-amber-200 bg-amber-50/50">
+        <CardHeader>
+          <CardTitle>Help & onboarding</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-slate-600">
+            If you get stuck, open the help guide or review the optional CHF{" "}
+            {billingStatus?.onboardingPriceChf ?? 99} onboarding service for hands-on setup help.
+          </p>
+          <div className="rounded-xl border border-amber-200 bg-white p-4">
+            <p className="text-sm font-medium text-slate-900">What the onboarding service includes</p>
+            <ul className="mt-3 space-y-2 text-sm text-slate-600">
+              <li>Business profile, branding, and invoice numbering setup</li>
+              <li>Stripe guidance if you want online card payments</li>
+              <li>Help importing or creating your first client records</li>
+            </ul>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button asChild>
+              <Link href="/help?from=settings">Open help guide</Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/help?from=settings#onboarding">View onboarding details</Link>
+            </Button>
+          </div>
+          {billingStatus?.supportEmail ? (
+            <p className="text-sm text-slate-500">
+              Support email: <span className="font-medium text-slate-700">{billingStatus.supportEmail}</span>
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader>

@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
 import { APP_NAME } from "@/lib/appBrand";
-import { getLegalProfile } from "@/lib/legal";
 
 const benefitCards = [
   {
@@ -54,9 +53,6 @@ const pricingTiers = [
 ];
 
 export default function LandingPage() {
-  const legalProfile = getLegalProfile();
-  const onboardingHref = `mailto:${legalProfile.supportEmail}?subject=Sierra%20Invoices%20Onboarding`;
-
   return (
     <>
       <RedirectIfAuthenticated />
@@ -220,10 +216,10 @@ export default function LandingPage() {
                 </div>
               </div>
               <Button asChild size="lg" className="w-full">
-                <a href={onboardingHref}>
+                <Link href="/help#onboarding">
                   Ask About CHF 99 Onboarding
                   <ArrowRight className="h-4 w-4" />
-                </a>
+                </Link>
               </Button>
             </CardContent>
           </Card>

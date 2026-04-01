@@ -16,7 +16,9 @@ type BillingStatusCardProps = {
 
 function formatUsageLabel(status: BillingStatus): string {
   if (status.monthlyInvoiceLimit === null) {
-    return "Unlimited invoices on Pro";
+    return status.isComplimentaryPro
+      ? "Unlimited invoices on complimentary Pro"
+      : "Unlimited invoices on Pro";
   }
 
   return `${status.monthlyIssuedInvoices} of ${status.monthlyInvoiceLimit} issued invoices used this month`;
@@ -43,8 +45,17 @@ export default function BillingStatusCard({
     );
   }
 
-  const planLabel = billingStatus.hasUnlimitedInvoices ? "Pro" : billingStatus.planTier === "pro" ? "Pro" : "Free";
-  const canManageBilling = billingStatus.portalAvailable && typeof onManageBilling === "function";
+  const planLabel = billingStatus.isComplimentaryPro
+    ? "Complimentary Pro"
+    : billingStatus.hasUnlimitedInvoices
+      ? "Pro"
+      : billingStatus.planTier === "pro"
+        ? "Pro"
+        : "Free";
+  const canManageBilling =
+    !billingStatus.isComplimentaryPro &&
+    billingStatus.portalAvailable &&
+    typeof onManageBilling === "function";
   const canUpgrade = !billingStatus.hasUnlimitedInvoices && typeof onUpgrade === "function";
 
   return (
@@ -67,7 +78,9 @@ export default function BillingStatusCard({
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Usage this month</p>
             <p className="mt-2 text-lg font-semibold text-slate-900">{formatUsageLabel(billingStatus)}</p>
             <p className="mt-2 text-sm text-slate-600">
-              {billingStatus.monthlyInvoiceLimit === null
+              {billingStatus.isComplimentaryPro
+                ? "This workspace has complimentary Pro access. No Stripe subscription is required."
+                : billingStatus.monthlyInvoiceLimit === null
                 ? `Current subscription status: ${billingStatus.stripeSubscriptionStatus.replaceAll("_", " ")}.`
                 : `Upgrade to Pro for CHF ${billingStatus.proPriceMonthlyChf}/month when you need more than ${billingStatus.monthlyInvoiceLimit} issued invoices.`}
             </p>
@@ -95,6 +108,11 @@ export default function BillingStatusCard({
                     Contact support
                   </a>
                 </Button>
+              ) : null}
+              {billingStatus.isComplimentaryPro ? (
+                <p className="text-xs text-slate-500">
+                  Complimentary Pro access is active on this workspace.
+                </p>
               ) : null}
             </div>
           </div>

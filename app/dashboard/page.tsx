@@ -200,6 +200,9 @@ export default function DashboardPage() {
               <Button asChild size="sm" variant="outline">
                 <Link href="/expenses">Track expenses</Link>
               </Button>
+              <Button asChild size="sm" variant="outline">
+                <Link href="/help?from=app#onboarding">Help & onboarding</Link>
+              </Button>
             </div>
           </CardContent>
         </Card>

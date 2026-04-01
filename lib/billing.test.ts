@@ -1,10 +1,12 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BillingLimitError,
   assertBusinessCanIssueInvoice,
+  getBillingEntitlementSource,
   getBillingMonthRange,
   getBusinessBillingStatus,
   hasUnlimitedInvoices,
+  isComplimentaryProEmail,
   normalizeBillingSubscriptionStatus,
   normalizeBusinessPlanTier,
 } from "@/lib/billing";
@@ -14,6 +16,7 @@ function createBillingDb(overrides?: {
   stripeSubscriptionStatus?: string | null;
   stripeCustomerId?: string | null;
   issuedInvoiceCount?: number;
+  userEmail?: string | null;
 }) {
   return {
     business: {
@@ -24,6 +27,9 @@ function createBillingDb(overrides?: {
         stripeSubscriptionStatus: overrides?.stripeSubscriptionStatus ?? null,
         stripePriceId: null,
         subscriptionCurrentPeriodEnd: null,
+        user: {
+          email: overrides?.userEmail ?? null,
+        },
       }),
     },
     invoice: {
@@ -33,6 +39,10 @@ function createBillingDb(overrides?: {
 }
 
 describe("billing helpers", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   it("normalizes plan tiers and subscription statuses safely", () => {
     expect(normalizeBusinessPlanTier("pro")).toBe("pro");
     expect(normalizeBusinessPlanTier("anything-else")).toBe("free");
@@ -45,6 +55,20 @@ describe("billing helpers", () => {
     expect(hasUnlimitedInvoices({ planTier: "pro", stripeSubscriptionStatus: "past_due" })).toBe(true);
     expect(hasUnlimitedInvoices({ planTier: "pro", stripeSubscriptionStatus: "canceled" })).toBe(false);
     expect(hasUnlimitedInvoices({ planTier: "free", stripeSubscriptionStatus: "active" })).toBe(false);
+  });
+
+  it("supports complimentary pro email allowlists", () => {
+    vi.stubEnv("COMPLIMENTARY_PRO_EMAILS", "owner@example.com, friend@example.com");
+
+    expect(isComplimentaryProEmail("owner@example.com")).toBe(true);
+    expect(isComplimentaryProEmail("Owner@Example.com")).toBe(true);
+    expect(
+      getBillingEntitlementSource({
+        planTier: "free",
+        stripeSubscriptionStatus: "inactive",
+        userEmail: "friend@example.com",
+      })
+    ).toBe("complimentary");
   });
 
   it("builds calendar-month ranges in Europe/Zurich", () => {
@@ -100,5 +124,27 @@ describe("billing helpers", () => {
     expect(status.monthlyInvoiceLimit).toBeNull();
     expect(status.remainingInvoices).toBeNull();
     expect(status.portalAvailable).toBe(true);
+  });
+
+  it("lets complimentary pro workspaces bypass the invoice limit without Stripe billing", async () => {
+    vi.stubEnv("COMPLIMENTARY_PRO_EMAILS", "sansiag94@gmail.com");
+
+    const db = createBillingDb({
+      issuedInvoiceCount: 25,
+      userEmail: "sansiag94@gmail.com",
+    });
+
+    const status = await assertBusinessCanIssueInvoice(
+      "business-1",
+      db,
+      new Date("2026-04-15T12:00:00.000Z")
+    );
+
+    expect(status.planTier).toBe("pro");
+    expect(status.entitlementSource).toBe("complimentary");
+    expect(status.isComplimentaryPro).toBe(true);
+    expect(status.hasUnlimitedInvoices).toBe(true);
+    expect(status.monthlyInvoiceLimit).toBeNull();
+    expect(status.portalAvailable).toBe(false);
   });
 });

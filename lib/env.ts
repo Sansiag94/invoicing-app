@@ -22,6 +22,22 @@ function readEnv(key: string): string | undefined {
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
+function readEnvList(key: string): string[] {
+  const value = process.env[key];
+  if (!value) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .split(/[,\n;]+/)
+        .map((item) => item.trim().toLowerCase())
+        .filter(Boolean)
+    )
+  );
+}
+
 function readRequiredEnv(key: RequiredEnvKey): string | undefined {
   for (const candidate of ENV_ALIASES[key]) {
     const value = readEnv(candidate);
@@ -62,6 +78,10 @@ export function getStripeSecretKey(): string {
 
 export function getStripeProMonthlyPriceId(): string | null {
   return readEnv("STRIPE_PRO_MONTHLY_PRICE_ID") ?? null;
+}
+
+export function getComplimentaryProEmails(): string[] {
+  return readEnvList("COMPLIMENTARY_PRO_EMAILS");
 }
 
 export function getResendApiKey(): string {

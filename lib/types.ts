@@ -4,6 +4,7 @@ export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue";
 export type InvoiceCurrency = "CHF" | "EUR";
 export type InvoiceSenderType = "company" | "owner";
 export type BusinessPlanTier = "free" | "pro";
+export type BillingEntitlementSource = "free" | "stripe" | "complimentary";
 export type BillingSubscriptionStatus =
   | "inactive"
   | "trialing"
@@ -256,6 +257,8 @@ export interface AnalyticsOverview {
 export interface BillingStatus {
   planTier: BusinessPlanTier;
   stripeSubscriptionStatus: BillingSubscriptionStatus;
+  entitlementSource: BillingEntitlementSource;
+  isComplimentaryPro: boolean;
   hasUnlimitedInvoices: boolean;
   monthlyIssuedInvoices: number;
   monthlyInvoiceLimit: number | null;

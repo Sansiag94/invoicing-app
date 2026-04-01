@@ -1,6 +1,8 @@
 import prisma from "@/lib/prisma";
+import { getComplimentaryProEmails } from "@/lib/env";
 import { getLegalProfile } from "@/lib/legal";
 import type {
+  BillingEntitlementSource,
   BillingLimitDetails,
   BillingStatus,
   BillingSubscriptionStatus,
@@ -21,6 +23,9 @@ type BillingBusinessRecord = {
   stripeSubscriptionStatus: string | null;
   stripePriceId: string | null;
   subscriptionCurrentPeriodEnd: Date | null;
+  user: {
+    email: string | null;
+  };
 };
 
 type BillingDb = {
@@ -34,6 +39,11 @@ type BillingDb = {
         stripeSubscriptionStatus: true;
         stripePriceId: true;
         subscriptionCurrentPeriodEnd: true;
+        user: {
+          select: {
+            email: true;
+          };
+        };
       };
     }) => Promise<BillingBusinessRecord | null>;
   };
@@ -162,6 +172,41 @@ export function hasUnlimitedInvoices(input: {
   );
 }
 
+function normalizeEmailAddress(value: string | null | undefined): string | null {
+  const normalized = value?.trim().toLowerCase() ?? "";
+  return normalized.length > 0 ? normalized : null;
+}
+
+export function isComplimentaryProEmail(email: string | null | undefined): boolean {
+  const normalizedEmail = normalizeEmailAddress(email);
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  return getComplimentaryProEmails().includes(normalizedEmail);
+}
+
+export function getBillingEntitlementSource(input: {
+  planTier: string | null | undefined;
+  stripeSubscriptionStatus: string | null | undefined;
+  userEmail?: string | null | undefined;
+}): BillingEntitlementSource {
+  if (isComplimentaryProEmail(input.userEmail)) {
+    return "complimentary";
+  }
+
+  if (
+    hasUnlimitedInvoices({
+      planTier: input.planTier,
+      stripeSubscriptionStatus: input.stripeSubscriptionStatus,
+    })
+  ) {
+    return "stripe";
+  }
+
+  return "free";
+}
+
 export function getBillingMonthRange(date = new Date()): {
   start: Date;
   endExclusive: Date;
@@ -212,6 +257,11 @@ export async function getBusinessBillingStatus(
       stripeSubscriptionStatus: true,
       stripePriceId: true,
       subscriptionCurrentPeriodEnd: true,
+      user: {
+        select: {
+          email: true,
+        },
+      },
     },
   });
 
@@ -230,14 +280,18 @@ export async function getBusinessBillingStatus(
     },
   });
 
-  const planTier = normalizeBusinessPlanTier(business.planTier);
+  const storedPlanTier = normalizeBusinessPlanTier(business.planTier);
   const stripeSubscriptionStatus = normalizeBillingSubscriptionStatus(
     business.stripeSubscriptionStatus
   );
-  const unlimited = hasUnlimitedInvoices({
-    planTier,
+  const entitlementSource = getBillingEntitlementSource({
+    planTier: storedPlanTier,
     stripeSubscriptionStatus,
+    userEmail: business.user.email,
   });
+  const isComplimentaryPro = entitlementSource === "complimentary";
+  const planTier = isComplimentaryPro ? "pro" : storedPlanTier;
+  const unlimited = entitlementSource === "complimentary" || entitlementSource === "stripe";
   const legalProfile = getLegalProfile();
   const monthlyInvoiceLimit = unlimited ? null : FREE_MONTHLY_ISSUE_LIMIT;
   const remainingInvoices =
@@ -246,6 +300,8 @@ export async function getBusinessBillingStatus(
   return {
     planTier,
     stripeSubscriptionStatus,
+    entitlementSource,
+    isComplimentaryPro,
     hasUnlimitedInvoices: unlimited,
     monthlyIssuedInvoices,
     monthlyInvoiceLimit,
@@ -258,7 +314,7 @@ export async function getBusinessBillingStatus(
     checkoutUrl: BILLING_CHECKOUT_PATH,
     checkoutAvailable: true,
     portalUrl: BILLING_PORTAL_PATH,
-    portalAvailable: Boolean(business.stripeCustomerId),
+    portalAvailable: entitlementSource === "stripe" && Boolean(business.stripeCustomerId),
     supportEmail: legalProfile.supportEmail,
     onboardingPriceChf: ONBOARDING_PRICE_CHF,
     onboardingEmail: legalProfile.supportEmail,

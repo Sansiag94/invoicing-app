@@ -33,12 +33,12 @@ export default function LegalDocument({
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <h2 className="text-lg font-semibold text-slate-950 dark:text-slate-100">
-              {openedFromSettings ? "Back to settings" : "Return to the app"}
+              {openedFromSettings ? "Back to settings" : "Return to the homepage"}
             </h2>
             <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
               {openedFromSettings
                 ? "Return to your workspace settings."
-                : "Continue to your account or create a new workspace."}
+                : "Go back to the public homepage."}
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -47,14 +47,9 @@ export default function LegalDocument({
                 <Link href="/settings">Back</Link>
               </Button>
             ) : (
-              <>
-                <Button asChild variant="outline">
-                  <Link href="/login">Log in</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/signup">Create account</Link>
-                </Button>
-              </>
+              <Button asChild>
+                <Link href="/">Back to home</Link>
+              </Button>
             )}
           </div>
         </div>

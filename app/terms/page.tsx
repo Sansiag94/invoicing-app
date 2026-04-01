@@ -57,6 +57,11 @@ export default async function TermsPage({
             "Stripe, Stripe Connect, hosting, auth, storage, and email providers may apply their own rules, fees, onboarding, and compliance requirements.",
         },
         {
+          title: "Plans and onboarding are separate offers",
+          description:
+            "The app may offer a free plan, a paid Pro subscription, and a separate optional onboarding service for setup help.",
+        },
+        {
           title: "Closure is not the same as instant deletion",
           description:
             "Because business records may need to be retained, workspace closure may involve retention or archival steps instead of immediate erasure.",
@@ -147,7 +152,27 @@ export default async function TermsPage({
         </p>
       </Section>
 
-      <Section title="7. Availability and Changes">
+      <Section title="7. Plans, Billing, and Optional Onboarding">
+        <p>
+          {legalProfile.serviceName} may offer a free plan, a paid Pro subscription, and separate
+          optional support services. Unless a different price is clearly shown at the time of
+          purchase, the current plan description is free access for up to 3 issued invoices per
+          calendar month and Pro access at CHF 19 per month for unlimited issued invoices.
+        </p>
+        <p>
+          Paid app subscriptions are billed through Stripe and may renew on a recurring basis until
+          canceled through the available billing tools or support. Taxes, third-party processing
+          fees, and future pricing changes may apply if shown before purchase or renewal.
+        </p>
+        <p>
+          Optional onboarding is a separate one-time service currently presented at CHF 99. It is
+          meant to help with workspace setup, business details, invoice numbering, Stripe guidance,
+          and first client or invoice setup. It is not required to use the software and may be
+          scheduled subject to availability.
+        </p>
+      </Section>
+
+      <Section title="8. Availability and Changes">
         <p>
           We may modify, improve, suspend, or discontinue features from time to time. We aim to
           operate the service responsibly, but we do not guarantee uninterrupted or error-free
@@ -160,7 +185,7 @@ export default async function TermsPage({
         </p>
       </Section>
 
-      <Section title="8. Workspace Closure and Record Retention">
+      <Section title="9. Workspace Closure and Record Retention">
         <p>
           Because invoices, payments, expenses, bookkeeping records, and related business documents
           may need to be retained under applicable law, workspace closure or deletion may be
@@ -173,14 +198,14 @@ export default async function TermsPage({
         </p>
       </Section>
 
-      <Section title="9. Suspension and Termination">
+      <Section title="10. Suspension and Termination">
         <p>
           We may suspend or terminate access if needed to protect the platform, comply with law,
           respond to abuse, address security issues, or enforce these terms.
         </p>
       </Section>
 
-      <Section title="10. Disclaimers">
+      <Section title="11. Disclaimers">
         <p>
           To the extent permitted by law, the service is provided on an as-is and as-available
           basis. We do not make guarantees about merchantability, fitness for a particular purpose,
@@ -188,7 +213,7 @@ export default async function TermsPage({
         </p>
       </Section>
 
-      <Section title="11. Limitation of Liability">
+      <Section title="12. Limitation of Liability">
         <p>
           To the extent permitted by law, {legalProfile.legalEntityName} will not be liable for
           indirect, incidental, special, consequential, exemplary, or punitive damages, or for loss
@@ -200,7 +225,7 @@ export default async function TermsPage({
         </p>
       </Section>
 
-      <Section title="12. Governing Law and Venue">
+      <Section title="13. Governing Law and Venue">
         <p>
           These terms are governed by the laws of <strong>{legalProfile.governingLaw}</strong>,
           without regard to conflict-of-law rules. Unless mandatory law requires otherwise, the
@@ -209,9 +234,10 @@ export default async function TermsPage({
         </p>
       </Section>
 
-      <Section title="13. Contact">
+      <Section title="14. Contact">
         <p>
-          Questions about these terms can be sent to <strong>{legalProfile.contactEmail}</strong>.
+          Questions about these terms, billing, or onboarding can be sent to{" "}
+          <strong>{legalProfile.supportEmail}</strong>.
         </p>
       </Section>
     </LegalDocument>

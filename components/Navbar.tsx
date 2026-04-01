@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Download, LogOut, Menu, Search, Settings } from "lucide-react";
+import { Bell, Download, LifeBuoy, LogOut, Menu, Search, Settings } from "lucide-react";
 import { usePwa } from "@/components/PwaProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -561,6 +561,13 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
             </Button>
           ) : null}
 
+          <Button asChild type="button" variant="outline" size="sm" className="hidden lg:inline-flex">
+            <Link href="/help?from=app">
+              <LifeBuoy className="h-4 w-4" />
+              Help
+            </Link>
+          </Button>
+
           <div ref={searchContainerRef} className="relative hidden w-full max-w-sm lg:block">
             <form onSubmit={handleSearchSubmit}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
@@ -752,6 +759,14 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                 >
                   <Settings className="h-4 w-4" />
                   Settings
+                </button>
+                <button
+                  type="button"
+                  className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  onClick={() => handleNavigate("/help?from=app")}
+                >
+                  <LifeBuoy className="h-4 w-4" />
+                  Help & onboarding
                 </button>
                 <button
                   type="button"
