@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import {
-  ArrowRight,
   CheckCircle2,
   CircleHelp,
   CreditCard,
@@ -10,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 import { APP_NAME } from "@/lib/appBrand";
+import CopyEmailButton from "@/components/help/CopyEmailButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import LegalLinks from "@/components/LegalLinks";
@@ -59,8 +59,6 @@ export default async function HelpPage({
   const source: HelpSource =
     params.from === "settings" ? "settings" : params.from === "app" ? "app" : "public";
   const returnContent = getReturnContent(source);
-  const onboardingEmailHref = `mailto:${legalProfile.supportEmail}?subject=Sierra%20Invoices%20Onboarding%20Request`;
-
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 py-8 md:py-10">
       <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm md:px-8">
@@ -78,12 +76,11 @@ export default async function HelpPage({
             <Button asChild variant="outline">
               <Link href={returnContent.href}>{returnContent.label}</Link>
             </Button>
-            <Button asChild>
-              <a href={onboardingEmailHref}>
-                Email support
-                <ArrowRight className="h-4 w-4" />
-              </a>
-            </Button>
+            <CopyEmailButton
+              email={legalProfile.supportEmail}
+              label="Copy support email"
+              variant="default"
+            />
           </div>
         </div>
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -209,12 +206,23 @@ export default async function HelpPage({
               </ul>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild className="w-full sm:w-auto">
-                <a href={onboardingEmailHref}>
-                  Ask about CHF 99 onboarding
-                  <ArrowRight className="h-4 w-4" />
-                </a>
-              </Button>
+              <CopyEmailButton
+                email={legalProfile.supportEmail}
+                subject="Sierra Invoices Onboarding Request"
+                bodyLines={[
+                  "Hello,",
+                  "",
+                  "I would like help with the CHF 99 Sierra Invoices onboarding service.",
+                  "",
+                  "Business name:",
+                  "Best contact email:",
+                  "Do I need Stripe card payments? Yes / No",
+                  "Do I need help importing clients? Yes / No",
+                  "Current invoice numbering to continue from:",
+                ]}
+                label="Copy onboarding request"
+                className="w-full sm:w-auto"
+              />
               <Button asChild variant="outline" className="w-full sm:w-auto">
                 <Link href={source === "public" ? "/signup" : "/settings"}>Continue setup yourself</Link>
               </Button>
