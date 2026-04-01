@@ -9,7 +9,6 @@ import {
   Users,
 } from "lucide-react";
 import { APP_NAME } from "@/lib/appBrand";
-import CopyEmailButton from "@/components/help/CopyEmailButton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import LegalLinks from "@/components/LegalLinks";
@@ -59,6 +58,7 @@ export default async function HelpPage({
   const source: HelpSource =
     params.from === "settings" ? "settings" : params.from === "app" ? "app" : "public";
   const returnContent = getReturnContent(source);
+  const onboardingMailtoHref = `mailto:${legalProfile.supportEmail}?subject=Sierra%20Invoices%20Onboarding%20Request`;
   return (
     <div className="mx-auto w-full max-w-5xl space-y-8 py-8 md:py-10">
       <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm md:px-8">
@@ -76,19 +76,20 @@ export default async function HelpPage({
             <Button asChild variant="outline">
               <Link href={returnContent.href}>{returnContent.label}</Link>
             </Button>
-            <CopyEmailButton
-              email={legalProfile.supportEmail}
-              label="Copy support email"
-              variant="default"
-            />
           </div>
         </div>
         <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
           <p className="text-sm font-medium text-slate-900">{returnContent.title}</p>
           <p className="mt-1 text-sm text-slate-600">{returnContent.description}</p>
           <p className="mt-3 text-sm text-slate-500">
-            If the email button does not open your mail app, send your request directly to{" "}
-            <span className="font-medium text-slate-700">{legalProfile.supportEmail}</span>.
+            Contact support at{" "}
+            <a
+              href={`mailto:${legalProfile.supportEmail}`}
+              className="font-medium text-slate-700 underline underline-offset-4"
+            >
+              {legalProfile.supportEmail}
+            </a>
+            . If your email app does not open, you can copy and paste the address manually.
           </p>
         </div>
       </section>
@@ -205,24 +206,18 @@ export default async function HelpPage({
                 <li>Any existing invoice numbering you need to continue from</li>
               </ul>
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <CopyEmailButton
-                email={legalProfile.supportEmail}
-                subject="Sierra Invoices Onboarding Request"
-                bodyLines={[
-                  "Hello,",
-                  "",
-                  "I would like help with the CHF 99 Sierra Invoices onboarding service.",
-                  "",
-                  "Business name:",
-                  "Best contact email:",
-                  "Do I need Stripe card payments? Yes / No",
-                  "Do I need help importing clients? Yes / No",
-                  "Current invoice numbering to continue from:",
-                ]}
-                label="Copy onboarding request"
-                className="w-full sm:w-auto"
-              />
+            <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm leading-7 text-slate-600">
+                Contact support at{" "}
+                <a
+                  href={onboardingMailtoHref}
+                  className="font-medium text-slate-700 underline underline-offset-4"
+                >
+                  {legalProfile.supportEmail}
+                </a>{" "}
+                and mention that you want the CHF 99 onboarding service. If the email app does not
+                open, copy and paste the address into your normal email app.
+              </p>
               <Button asChild variant="outline" className="w-full sm:w-auto">
                 <Link href={source === "public" ? "/signup" : "/settings"}>Continue setup yourself</Link>
               </Button>
@@ -256,7 +251,13 @@ export default async function HelpPage({
           </CardHeader>
           <CardContent className="text-sm leading-7 text-slate-600">
             Support and onboarding requests go to{" "}
-            <span className="font-medium text-slate-700">{legalProfile.supportEmail}</span>.
+            <a
+              href={`mailto:${legalProfile.supportEmail}`}
+              className="font-medium text-slate-700 underline underline-offset-4"
+            >
+              {legalProfile.supportEmail}
+            </a>
+            .
           </CardContent>
         </Card>
       </section>

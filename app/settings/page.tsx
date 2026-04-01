@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
 import BillingStatusCard from "@/components/billing/BillingStatusCard";
-import CopyEmailButton from "@/components/help/CopyEmailButton";
 import { usePwa } from "@/components/PwaProvider";
 import { buildAddressString } from "@/lib/address";
 import { formatSequentialInvoiceNumber, parsePostalAddress } from "@/lib/invoice";
@@ -1045,29 +1044,17 @@ export default function SettingsPage() {
             <Button asChild>
               <Link href="/help?from=settings">Open help guide</Link>
             </Button>
-            {billingStatus?.supportEmail ? (
-              <CopyEmailButton
-                email={billingStatus.supportEmail}
-                subject="Sierra Invoices Onboarding Request"
-                bodyLines={[
-                  "Hello,",
-                  "",
-                  "I would like help with the CHF 99 Sierra Invoices onboarding service.",
-                  "",
-                  "Business name:",
-                  "Best contact email:",
-                  "Do I need Stripe card payments? Yes / No",
-                  "Do I need help importing clients? Yes / No",
-                  "Current invoice numbering to continue from:",
-                ]}
-                label="Copy onboarding request"
-                variant="outline"
-              />
-            ) : null}
           </div>
           {billingStatus?.supportEmail ? (
             <p className="text-sm text-slate-500">
-              Support email: <span className="font-medium text-slate-700">{billingStatus.supportEmail}</span>
+              Contact support at{" "}
+              <a
+                href={`mailto:${billingStatus.supportEmail}?subject=Sierra%20Invoices%20Onboarding%20Request`}
+                className="font-medium text-slate-700 underline underline-offset-4"
+              >
+                {billingStatus.supportEmail}
+              </a>
+              . If your email app does not open, copy and paste the address into your email app.
             </p>
           ) : null}
         </CardContent>
