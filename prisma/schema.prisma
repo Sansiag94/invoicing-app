@@ -79,6 +79,8 @@ model Client {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   invoices    Invoice[] @relation("ClientInvoices")
+
+  @@index([businessId, email])
 }
 
 model Invoice {
@@ -112,6 +114,9 @@ model Invoice {
 
   @@index([stripeCheckoutSessionId])
   @@index([businessId, issuedAt])
+  @@index([businessId, createdAt])
+  @@index([businessId, status, dueDate])
+  @@index([businessId, status, issueDate])
 }
 
 model LineItem {
@@ -137,6 +142,8 @@ model Payment {
   reference String?
   createdAt DateTime        @default(now())
   invoice   Invoice         @relation("InvoicePayments", fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, createdAt])
 }
 
 model InvoiceReminder {

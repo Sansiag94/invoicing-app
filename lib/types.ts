@@ -181,6 +181,14 @@ export interface DashboardOverview {
   recentInvoices: DashboardRecentInvoice[];
 }
 
+export interface WorkspaceNotification {
+  id: string;
+  title: string;
+  subtitle: string;
+  href: string;
+  priority: number;
+}
+
 export interface ExpenseRecord {
   id: string;
   vendor: string | null;

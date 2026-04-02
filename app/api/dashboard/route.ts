@@ -3,7 +3,15 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
-import { compareInvoicesByRecency } from "@/lib/invoice";
+
+type RecentInvoiceRow = {
+  id: string;
+  invoiceNumber: string;
+  totalAmount: number;
+  status: "draft" | "sent" | "paid" | "overdue";
+  currency: "CHF" | "EUR";
+  clientName: string;
+};
 
 function getMonthRange(today: Date): { startOfMonth: Date; startOfNextMonth: Date } {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -44,7 +52,6 @@ export async function GET(request: Request) {
       overdueInvoices,
       clientCount,
       invoiceCount,
-      recentInvoicesRaw,
     ] = await prisma.$transaction([
       prisma.invoice.aggregate({
         where: {
@@ -146,41 +153,54 @@ export async function GET(request: Request) {
           businessId: business.id,
         },
       }),
-      prisma.invoice.findMany({
-        where: {
-          businessId: business.id,
-        },
-        select: {
-          id: true,
-          invoiceNumber: true,
-          totalAmount: true,
-          status: true,
-          currency: true,
-          issuedAt: true,
-          createdAt: true,
-          client: {
-            select: {
-              companyName: true,
-              contactName: true,
-              email: true,
-            },
-          },
-        },
-      }),
     ]);
 
-    const recentInvoices = recentInvoicesRaw
-      .sort(compareInvoicesByRecency)
-      .slice(0, 5)
-      .map((invoice) => ({
-        id: invoice.id,
-        invoiceNumber: invoice.invoiceNumber,
-        totalAmount: invoice.totalAmount,
-        status: invoice.status,
-        currency: invoice.currency,
-        clientName:
-          invoice.client.companyName || invoice.client.contactName || invoice.client.email,
-      }));
+    const recentInvoices = await prisma.$queryRaw<RecentInvoiceRow[]>`
+      SELECT
+        ranked."id",
+        ranked."invoiceNumber",
+        ranked."totalAmount",
+        ranked."status",
+        ranked."currency",
+        ranked."clientName"
+      FROM (
+        SELECT
+          i."id",
+          i."invoiceNumber",
+          i."totalAmount",
+          i."status",
+          i."currency",
+          i."issuedAt",
+          i."createdAt",
+          COALESCE(c."companyName", c."contactName", c."email") AS "clientName",
+          CASE
+            WHEN i."invoiceNumber" ~ '^[A-Z0-9]+[0-9]{4}-[0-9]+$' AND i."invoiceNumber" NOT LIKE 'DRAFT-%'
+              THEN 0
+            ELSE 1
+          END AS "sortGroup",
+          CASE
+            WHEN i."invoiceNumber" ~ '^[A-Z0-9]+([0-9]{4})-([0-9]+)$' AND i."invoiceNumber" NOT LIKE 'DRAFT-%'
+              THEN ((regexp_match(i."invoiceNumber", '^[A-Z0-9]+([0-9]{4})-([0-9]+)$'))[1])::integer
+            ELSE NULL
+          END AS "sortYear",
+          CASE
+            WHEN i."invoiceNumber" ~ '^[A-Z0-9]+([0-9]{4})-([0-9]+)$' AND i."invoiceNumber" NOT LIKE 'DRAFT-%'
+              THEN ((regexp_match(i."invoiceNumber", '^[A-Z0-9]+([0-9]{4})-([0-9]+)$'))[2])::integer
+            ELSE NULL
+          END AS "sortSequence"
+        FROM "Invoice" i
+        INNER JOIN "Client" c
+          ON c."id" = i."clientId"
+        WHERE i."businessId" = ${business.id}
+      ) AS ranked
+      ORDER BY
+        ranked."sortGroup" ASC,
+        ranked."sortYear" DESC NULLS LAST,
+        ranked."sortSequence" DESC NULLS LAST,
+        COALESCE(ranked."issuedAt", ranked."createdAt") DESC,
+        ranked."createdAt" DESC
+      LIMIT 5
+    `;
 
     return NextResponse.json({
       currency: business.currency,

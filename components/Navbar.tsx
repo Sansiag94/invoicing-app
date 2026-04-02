@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Bell, Download, LifeBuoy, LogOut, Menu, Search, Settings } from "lucide-react";
+import { WorkspaceNotification } from "@/lib/types";
 import { usePwa } from "@/components/PwaProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,15 +53,6 @@ type InvoiceSearchResult = {
   };
 };
 
-type NotificationItem = {
-  id: string;
-  title: string;
-  subtitle: string;
-  href: string;
-  priority: number;
-  dueDateTs: number;
-};
-
 type QuickAction = {
   id: string;
   label: string;
@@ -78,11 +70,6 @@ function getClientDisplayName(client: {
   email: string;
 }): string {
   return client.companyName || client.contactName || client.email;
-}
-
-function getTimestamp(value: string): number {
-  const timestamp = new Date(value).getTime();
-  return Number.isNaN(timestamp) ? Number.POSITIVE_INFINITY : timestamp;
 }
 
 function formatShortDate(value: string): string {
@@ -121,7 +108,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     invoices: InvoiceSearchResult[];
   } | null>(null);
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [notifications, setNotifications] = useState<WorkspaceNotification[]>([]);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isNotificationsLoading, setIsNotificationsLoading] = useState(false);
   const [notificationsError, setNotificationsError] = useState<string | null>(null);
@@ -237,7 +224,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
-  function markNotificationsSeen(items: NotificationItem[]) {
+  function markNotificationsSeen(items: WorkspaceNotification[]) {
     if (items.length === 0 || typeof window === "undefined") {
       return;
     }
@@ -254,79 +241,12 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     setNotificationsError(null);
 
     try {
-      const response = await authenticatedFetch("/api/invoices");
+      const response = await authenticatedFetch("/api/notifications");
       if (!response.ok) {
         throw new Error("Notifications request failed");
       }
-      const payload = (await response.json()) as InvoiceSearchResult[];
-      const invoices = Array.isArray(payload) ? payload : [];
-
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayTs = today.getTime();
-      const dueSoonTs = todayTs + 7 * 24 * 60 * 60 * 1000;
-
-      const nextNotifications = invoices
-        .flatMap((invoice) => {
-          if (invoice.status === "paid") return [];
-
-          const dueDateTs = getTimestamp(invoice.dueDate);
-          const clientName = invoice.client ? getClientDisplayName(invoice.client) : "Client";
-          const href = `/invoices/${invoice.id}`;
-
-          if (invoice.status === "overdue" || dueDateTs < todayTs) {
-            return [
-              {
-                id: `${invoice.id}-overdue`,
-                title: `${invoice.invoiceNumber} is overdue`,
-                subtitle: `${clientName} - due ${formatShortDate(invoice.dueDate)}`,
-                href,
-                priority: 0,
-                dueDateTs,
-              },
-            ];
-          }
-
-          if (dueDateTs <= dueSoonTs) {
-            return [
-              {
-                id: `${invoice.id}-due-soon`,
-                title: `${invoice.invoiceNumber} is due soon`,
-                subtitle: `${clientName} - due ${formatShortDate(invoice.dueDate)}`,
-                href,
-                priority: 1,
-                dueDateTs,
-              },
-            ];
-          }
-
-          if (invoice.status === "draft") {
-            return [
-              {
-                id: `${invoice.id}-draft`,
-                title: `Draft invoice ${invoice.invoiceNumber}`,
-                subtitle: `${clientName} - send before ${formatShortDate(invoice.dueDate)}`,
-                href,
-                priority: 2,
-                dueDateTs,
-              },
-            ];
-          }
-
-          return [];
-        })
-        .sort((left, right) => {
-          if (left.priority !== right.priority) {
-            return left.priority - right.priority;
-          }
-
-          if (left.dueDateTs !== right.dueDateTs) {
-            return left.dueDateTs - right.dueDateTs;
-          }
-
-          return left.title.localeCompare(right.title);
-        })
-        .slice(0, 8);
+      const payload = (await response.json()) as WorkspaceNotification[] | { error?: string };
+      const nextNotifications = Array.isArray(payload) ? payload : [];
 
       setNotifications(nextNotifications);
       return nextNotifications;

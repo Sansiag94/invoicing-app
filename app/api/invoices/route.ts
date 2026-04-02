@@ -83,7 +83,24 @@ export async function GET(request: Request) {
     const invoices = await prisma.invoice.findMany({
       where: { businessId: business.id },
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        invoiceNumber: true,
+        status: true,
+        issuedAt: true,
+        issueDate: true,
+        dueDate: true,
+        currency: true,
+        subject: true,
+        reference: true,
+        subtotal: true,
+        taxAmount: true,
+        totalAmount: true,
+        notes: true,
+        paymentNote: true,
+        publicToken: true,
+        createdAt: true,
+        updatedAt: true,
         client: {
           select: {
             companyName: true,
@@ -91,29 +108,10 @@ export async function GET(request: Request) {
             email: true,
           },
         },
-        lineItems: {
-          select: {
-            quantity: true,
-            unitPrice: true,
-            taxRate: true,
-          },
-        },
       },
     });
 
-    const invoicesWithComputedTotals = invoices.map((invoice) => {
-      const { lineItems, ...invoiceData } = invoice;
-      const totals = calculateInvoiceTotals(lineItems);
-
-      return {
-        ...invoiceData,
-        subtotal: totals.subtotal,
-        taxAmount: totals.taxAmount,
-        totalAmount: totals.totalAmount,
-      };
-    });
-
-    return NextResponse.json(invoicesWithComputedTotals);
+    return NextResponse.json(invoices);
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
