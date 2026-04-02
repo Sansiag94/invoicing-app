@@ -165,7 +165,7 @@ export async function GET(request: Request) {
         ranked."clientName"
       FROM (
         SELECT
-          i."id",
+          i."uuid" AS "id",
           i."invoiceNumber",
           i."totalAmount",
           i."status",
@@ -190,7 +190,7 @@ export async function GET(request: Request) {
           END AS "sortSequence"
         FROM "Invoice" i
         INNER JOIN "Client" c
-          ON c."id" = i."clientId"
+          ON c."uuid" = i."clientId"
         WHERE i."businessId" = ${business.id}
       ) AS ranked
       ORDER BY
