@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FocusEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
-import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { BellRing, CheckCircle2, ChevronDown, ChevronUp, CircleOff, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import BillingPlanChip from "@/components/billing/BillingPlanChip";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
@@ -143,6 +143,7 @@ function InvoicePageContent() {
     if (statusFilter === "overdue") return "Overdue";
     if (statusFilter === "draft") return "Draft";
     if (statusFilter === "sent") return "Sent";
+    if (statusFilter === "cancelled") return "Cancelled";
     if (statusFilter === "open") return "Open";
     if (statusFilter === "unpaid") return "Unpaid";
     if (statusFilter === "needs-action") return "Needs Action";
@@ -160,8 +161,11 @@ function InvoicePageContent() {
       if (statusFilter === "overdue") return status === "overdue";
       if (statusFilter === "draft") return status === "draft";
       if (statusFilter === "sent") return status === "sent";
+      if (statusFilter === "cancelled") return status === "cancelled";
       if (statusFilter === "open") return status === "draft" || status === "sent";
-      if (statusFilter === "unpaid") return status !== "paid";
+      if (statusFilter === "unpaid") {
+        return status === "draft" || status === "sent" || status === "overdue";
+      }
       if (statusFilter === "needs-action") return status === "draft" || status === "overdue";
       if (statusFilter === "awaiting-payment") return status === "sent" || status === "overdue";
       return true;
@@ -707,7 +711,7 @@ function InvoicePageContent() {
 
   const handleManualStatusChange = async (
     invoiceId: string,
-    nextStatus: "paid" | "unpaid"
+    nextStatus: "paid" | "unpaid" | "cancelled"
   ) => {
     setIsUpdatingStatusId(invoiceId);
 
@@ -735,7 +739,11 @@ function InvoicePageContent() {
       }
 
       setSuccessMessage(
-        nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid."
+        nextStatus === "paid"
+          ? "Invoice marked as paid."
+          : nextStatus === "cancelled"
+            ? "Invoice cancelled. No payment is due."
+            : "Invoice reopened as unpaid."
       );
       await refreshInvoiceWorkspaceData();
     } catch (error) {
@@ -852,7 +860,7 @@ function InvoicePageContent() {
 
     try {
       for (const invoice of selectedInvoices) {
-        if (action === "send" && invoice.status !== "paid") {
+        if (action === "send" && invoice.status !== "paid" && invoice.status !== "cancelled") {
           const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" });
           const result = (await response.json()) as { error?: string; code?: string; details?: unknown };
 
@@ -865,7 +873,7 @@ function InvoicePageContent() {
           }
         }
 
-        if (action === "paid") {
+        if (action === "paid" && invoice.status !== "cancelled") {
           const response = await authenticatedFetch(`/api/invoices/${invoice.id}/status`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
@@ -1027,6 +1035,20 @@ function InvoicePageContent() {
               <RotateCcw className="h-4 w-4" />
               {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Unpaid"}
             </button>
+          ) : invoice.status === "cancelled" ? (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+              disabled={isUpdatingStatusId === invoice.id}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
+                void handleManualStatusChange(invoice.id, "unpaid");
+              }}
+            >
+              <RotateCcw className="h-4 w-4" />
+              {isUpdatingStatusId === invoice.id ? "Updating..." : "Reopen Invoice"}
+            </button>
           ) : (
             <button
               type="button"
@@ -1042,6 +1064,39 @@ function InvoicePageContent() {
               {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
             </button>
           )}
+          {invoice.status === "sent" || invoice.status === "overdue" ? (
+            <button
+              type="button"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "w-full justify-start text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+              )}
+              disabled={isUpdatingStatusId === invoice.id}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
+                setConfirmDialog({
+                  title: "Cancel Invoice",
+                  description: (
+                    <>
+                      Cancel invoice <strong>{invoice.invoiceNumber}</strong>? It will stay on
+                      record, reminders and payment collection will stop, and the amount due will
+                      be treated as {invoice.currency} 0.00 until you reopen it.
+                    </>
+                  ),
+                  confirmLabel: "Cancel Invoice",
+                  confirmVariant: "destructive",
+                  onConfirm: () => {
+                    setConfirmDialog(null);
+                    void handleManualStatusChange(invoice.id, "cancelled");
+                  },
+                });
+              }}
+            >
+              <CircleOff className="h-4 w-4" />
+              Cancel Invoice
+            </button>
+          ) : null}
           <button
             type="button"
             className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
@@ -1702,7 +1757,7 @@ function InvoicePageContent() {
                     ) : (
                       <div className="col-span-2">{renderActionMenu(invoice, "w-full", "w-full")}</div>
                     )}
-                    {invoice.status !== "paid" ? (
+                    {invoice.status === "draft" || invoice.status === "sent" || invoice.status === "overdue" ? (
                       <div className="col-span-2">{renderActionMenu(invoice, "w-full", "w-full")}</div>
                     ) : null}
                   </div>

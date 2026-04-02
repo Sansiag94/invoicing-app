@@ -31,7 +31,8 @@ export async function GET(request: Request) {
       normalizedQuery === "draft" ||
       normalizedQuery === "sent" ||
       normalizedQuery === "paid" ||
-      normalizedQuery === "overdue";
+      normalizedQuery === "overdue" ||
+      normalizedQuery === "cancelled";
 
     const [clients, invoices] = await prisma.$transaction([
       prisma.client.findMany({
@@ -63,7 +64,9 @@ export async function GET(request: Request) {
             { client: { is: { companyName: { contains: q, mode: "insensitive" } } } },
             { client: { is: { contactName: { contains: q, mode: "insensitive" } } } },
             { client: { is: { email: { contains: q, mode: "insensitive" } } } },
-            ...(matchesStatus ? [{ status: normalizedQuery as "draft" | "sent" | "paid" | "overdue" }] : []),
+            ...(matchesStatus
+              ? [{ status: normalizedQuery as "draft" | "sent" | "paid" | "overdue" | "cancelled" }]
+              : []),
           ],
         },
         orderBy: [{ dueDate: "asc" }, { createdAt: "desc" }],

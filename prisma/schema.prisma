@@ -211,6 +211,7 @@ enum InvoiceStatus {
   sent
   paid
   overdue
+  cancelled
 }
 
 enum PaymentProvider {

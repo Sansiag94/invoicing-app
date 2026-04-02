@@ -128,6 +128,10 @@ export async function POST(
       return apiError("Invoice is already paid", 400);
     }
 
+    if (invoice.status === "cancelled") {
+      return apiError("Cancelled invoices can no longer be paid online", 400);
+    }
+
     const stripeStatus = await loadResolvedBusinessStripeStatus(invoice.businessId);
     if (!isStripeCardPaymentAvailable(stripeStatus)) {
       return apiError("Online card payments are not enabled for this business", 400);
@@ -186,7 +190,7 @@ export async function POST(
       where: {
         id: invoice.id,
         status: {
-          not: "paid",
+          notIn: ["paid", "cancelled"],
         },
         OR: [
           { stripeCheckoutSessionId: null },
@@ -216,6 +220,10 @@ export async function POST(
 
       if (lockedInvoice.status === "paid") {
         return apiError("Invoice is already paid", 400);
+      }
+
+      if (lockedInvoice.status === "cancelled") {
+        return apiError("Cancelled invoices can no longer be paid online", 400);
       }
 
       if (

@@ -159,7 +159,8 @@ export async function GET(
       taxAmount: computedTotals.taxAmount,
       totalAmount: computedTotals.totalAmount,
       currency: normalizeInvoiceCurrency(invoice.currency, "CHF"),
-      cardPaymentAvailable: isStripeCardPaymentAvailable(stripeStatus),
+      cardPaymentAvailable:
+        invoice.status !== "cancelled" && isStripeCardPaymentAvailable(stripeStatus),
       qrBill,
     });
   } catch (error) {

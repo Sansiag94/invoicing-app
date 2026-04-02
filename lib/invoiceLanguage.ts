@@ -2,7 +2,7 @@ export type InvoiceLanguage = "en" | "de" | "es" | "fr" | "it";
 
 export type QrBillLanguage = "DE" | "EN" | "FR" | "IT" | "RM";
 
-type InvoiceStatusValue = "draft" | "sent" | "paid" | "overdue";
+type InvoiceStatusValue = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 
 type InvoiceStrings = {
   invoice: string;
@@ -16,6 +16,7 @@ type InvoiceStrings = {
   subtotal: string;
   vat: string;
   total: string;
+  amountDue: string;
   paymentOptions: string;
   payOnline: string;
   viewInvoiceOnline: string;
@@ -43,6 +44,7 @@ type InvoiceStrings = {
   paymentReceivedUpdating: string;
   paymentCompletedThankYou: string;
   paymentCancelled: string;
+  invoiceCancelledNoPaymentDue: string;
   onlineCardPaymentUnavailable: string;
   status: Record<InvoiceStatusValue, string>;
 };
@@ -88,6 +90,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     subtotal: "Subtotal",
     vat: "VAT",
     total: "Total",
+    amountDue: "Amount due",
     paymentOptions: "Payment options",
     payOnline: "Pay online",
     viewInvoiceOnline: "View invoice online",
@@ -115,6 +118,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     paymentReceivedUpdating: "Payment received. Updating invoice status...",
     paymentCompletedThankYou: "Payment completed. Thank you.",
     paymentCancelled: "Payment was cancelled.",
+    invoiceCancelledNoPaymentDue: "This invoice was cancelled. No payment is due.",
     onlineCardPaymentUnavailable:
       "Online card payment is not enabled for this business. Please use the payment details shown on the invoice.",
     status: {
@@ -122,6 +126,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       sent: "Sent",
       paid: "Paid",
       overdue: "Overdue",
+      cancelled: "Cancelled",
     },
   },
   de: {
@@ -136,6 +141,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     subtotal: "Zwischensumme",
     vat: "MWST",
     total: "Total",
+    amountDue: "Offener Betrag",
     paymentOptions: "Zahlungsoptionen",
     payOnline: "Online bezahlen",
     viewInvoiceOnline: "Rechnung online ansehen",
@@ -163,6 +169,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     paymentReceivedUpdating: "Zahlung erhalten. Rechnungsstatus wird aktualisiert...",
     paymentCompletedThankYou: "Zahlung abgeschlossen. Vielen Dank.",
     paymentCancelled: "Die Zahlung wurde abgebrochen.",
+    invoiceCancelledNoPaymentDue: "Diese Rechnung wurde storniert. Es ist keine Zahlung mehr offen.",
     onlineCardPaymentUnavailable:
       "Online-Kartenzahlung ist für dieses Unternehmen nicht aktiviert. Bitte verwenden Sie die Zahlungsangaben auf der Rechnung.",
     status: {
@@ -170,6 +177,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       sent: "Gesendet",
       paid: "Bezahlt",
       overdue: "Überfällig",
+      cancelled: "Storniert",
     },
   },
   es: {
@@ -184,6 +192,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     subtotal: "Subtotal",
     vat: "IVA",
     total: "Total",
+    amountDue: "Importe pendiente",
     paymentOptions: "Opciones de pago",
     payOnline: "Pagar en linea",
     viewInvoiceOnline: "Ver factura en linea",
@@ -211,6 +220,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     paymentReceivedUpdating: "Pago recibido. Actualizando el estado de la factura...",
     paymentCompletedThankYou: "Pago completado. Gracias.",
     paymentCancelled: "El pago fue cancelado.",
+    invoiceCancelledNoPaymentDue: "Esta factura fue cancelada. No hay ningun pago pendiente.",
     onlineCardPaymentUnavailable:
       "El pago con tarjeta en linea no esta habilitado para esta empresa. Utilice los datos de pago que aparecen en la factura.",
     status: {
@@ -218,6 +228,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       sent: "Enviada",
       paid: "Pagada",
       overdue: "Vencida",
+      cancelled: "Cancelada",
     },
   },
   fr: {
@@ -232,6 +243,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     subtotal: "Sous-total",
     vat: "TVA",
     total: "Total",
+    amountDue: "Montant du",
     paymentOptions: "Options de paiement",
     payOnline: "Payer en ligne",
     viewInvoiceOnline: "Voir la facture en ligne",
@@ -259,6 +271,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     paymentReceivedUpdating: "Paiement recu. Mise a jour du statut de la facture...",
     paymentCompletedThankYou: "Paiement effectue. Merci.",
     paymentCancelled: "Le paiement a ete annule.",
+    invoiceCancelledNoPaymentDue: "Cette facture a ete annulee. Aucun paiement n'est du.",
     onlineCardPaymentUnavailable:
       "Le paiement par carte en ligne n'est pas active pour cette entreprise. Veuillez utiliser les informations de paiement indiquees sur la facture.",
     status: {
@@ -266,6 +279,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       sent: "Envoyee",
       paid: "Payee",
       overdue: "En retard",
+      cancelled: "Annulee",
     },
   },
   it: {
@@ -280,6 +294,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     subtotal: "Subtotale",
     vat: "IVA",
     total: "Totale",
+    amountDue: "Importo dovuto",
     paymentOptions: "Opzioni di pagamento",
     payOnline: "Paga online",
     viewInvoiceOnline: "Visualizza la fattura online",
@@ -307,6 +322,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     paymentReceivedUpdating: "Pagamento ricevuto. Aggiornamento dello stato della fattura...",
     paymentCompletedThankYou: "Pagamento completato. Grazie.",
     paymentCancelled: "Il pagamento e stato annullato.",
+    invoiceCancelledNoPaymentDue: "Questa fattura e stata annullata. Nessun pagamento e dovuto.",
     onlineCardPaymentUnavailable:
       "Il pagamento con carta online non e abilitato per questa azienda. Usa i dati di pagamento indicati sulla fattura.",
     status: {
@@ -314,6 +330,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       sent: "Inviata",
       paid: "Pagata",
       overdue: "Scaduta",
+      cancelled: "Annullata",
     },
   },
 };

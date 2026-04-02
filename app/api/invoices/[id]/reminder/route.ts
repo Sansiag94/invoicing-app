@@ -11,6 +11,7 @@ import {
 } from "@/lib/email";
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
 import { calculateInvoiceTotals } from "@/lib/invoice";
+import { isCollectibleInvoiceStatus } from "@/lib/invoiceStatus";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
 import {
   assertRateLimit,
@@ -62,6 +63,10 @@ export async function POST(
 
     if (invoice.status === "paid") {
       return apiError("Paid invoices do not need reminders", 400);
+    }
+
+    if (!isCollectibleInvoiceStatus(invoice.status)) {
+      return apiError("Only sent or overdue invoices can receive reminders", 400);
     }
 
     const clientEmail = invoice.client.email?.trim();

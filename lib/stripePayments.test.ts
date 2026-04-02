@@ -75,6 +75,7 @@ describe("recordStripePaymentFromSession", () => {
       markedPaid: false,
       paymentRecorded: false,
       requiresReview: false,
+      reviewReason: null,
     });
     expect(prismaMock.$transaction).not.toHaveBeenCalled();
     expect(logInvoiceEventMock).not.toHaveBeenCalled();
@@ -97,6 +98,7 @@ describe("recordStripePaymentFromSession", () => {
       markedPaid: true,
       paymentRecorded: true,
       requiresReview: false,
+      reviewReason: null,
     });
     expect(tx.invoice.update).toHaveBeenCalledWith({
       where: { id: "invoice-123" },
@@ -131,6 +133,7 @@ describe("recordStripePaymentFromSession", () => {
       markedPaid: false,
       paymentRecorded: false,
       requiresReview: false,
+      reviewReason: null,
     });
     expect(tx.payment.create).not.toHaveBeenCalled();
     expect(logInvoiceEventMock).not.toHaveBeenCalled();
@@ -154,6 +157,7 @@ describe("recordStripePaymentFromSession", () => {
       markedPaid: false,
       paymentRecorded: false,
       requiresReview: true,
+      reviewReason: "additional_payment",
     });
     expect(tx.payment.create).not.toHaveBeenCalled();
     expect(logInvoiceEventMock).toHaveBeenCalledWith({
@@ -161,6 +165,32 @@ describe("recordStripePaymentFromSession", () => {
       type: "payment_review",
       actor: "Stripe",
       details: "Additional Stripe payment detected (CHF). Review and refund if needed.",
+    });
+  });
+
+  it("flags a payment received for a cancelled invoice for manual review", async () => {
+    const tx = createTransactionMock();
+    tx.invoice.findUnique.mockResolvedValue({ status: "cancelled" });
+    tx.invoice.updateMany.mockResolvedValue({ count: 1 });
+    prismaMock.$transaction.mockImplementation(async (callback: (mock: TransactionMock) => unknown) =>
+      callback(tx)
+    );
+
+    const result = await recordStripePaymentFromSession(createSession());
+
+    expect(result).toEqual({
+      invoiceId: "invoice-123",
+      markedPaid: false,
+      paymentRecorded: false,
+      requiresReview: true,
+      reviewReason: "cancelled_invoice",
+    });
+    expect(tx.payment.create).not.toHaveBeenCalled();
+    expect(logInvoiceEventMock).toHaveBeenCalledWith({
+      invoiceId: "invoice-123",
+      type: "payment_review",
+      actor: "Stripe",
+      details: "Stripe payment received for a cancelled invoice (CHF). Review and refund if needed.",
     });
   });
 });

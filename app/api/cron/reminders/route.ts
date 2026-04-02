@@ -72,7 +72,7 @@ async function findReminderCandidates(
     FROM "Invoice" i
     INNER JOIN "Business" b ON b."uuid" = i."businessId"
     INNER JOIN "Client" c ON c."uuid" = i."clientId"
-      WHERE i."status" != ${InvoiceStatus.paid}::"InvoiceStatus"
+      WHERE i."status" IN (${InvoiceStatus.sent}::"InvoiceStatus", ${InvoiceStatus.overdue}::"InvoiceStatus")
       AND i."dueDate" >= ${from}
       AND i."dueDate" < ${to}
       AND NOT EXISTS (
@@ -99,7 +99,7 @@ async function claimReminder(
       CURRENT_TIMESTAMP
     FROM "Invoice" i
     WHERE i."uuid" = ${invoiceId}
-      AND i."status" != ${InvoiceStatus.paid}::"InvoiceStatus"
+      AND i."status" IN (${InvoiceStatus.sent}::"InvoiceStatus", ${InvoiceStatus.overdue}::"InvoiceStatus")
       AND i."dueDate" >= ${from}
       AND i."dueDate" < ${to}
     ON CONFLICT ("invoiceId", "type") DO NOTHING

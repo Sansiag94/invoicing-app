@@ -7,6 +7,7 @@ type StripePaymentRecordResult = {
   markedPaid: boolean;
   paymentRecorded: boolean;
   requiresReview: boolean;
+  reviewReason: "additional_payment" | "cancelled_invoice" | null;
 };
 
 export async function recordStripePaymentFromSession(
@@ -20,6 +21,7 @@ export async function recordStripePaymentFromSession(
       markedPaid: false,
       paymentRecorded: false,
       requiresReview: false,
+      reviewReason: null,
     };
   }
 
@@ -38,6 +40,25 @@ export async function recordStripePaymentFromSession(
         markedPaid: false,
         paymentRecorded: false,
         requiresReview: false,
+        reviewReason: null,
+      };
+    }
+
+    if (invoice.status === "cancelled") {
+      await tx.invoice.updateMany({
+        where: { id: invoiceId },
+        data: {
+          stripeCheckoutSessionId: null,
+          stripeCheckoutSessionExpiresAt: null,
+        },
+      });
+
+      return {
+        invoiceFound: true,
+        markedPaid: false,
+        paymentRecorded: false,
+        requiresReview: true,
+        reviewReason: "cancelled_invoice" as const,
       };
     }
 
@@ -79,6 +100,7 @@ export async function recordStripePaymentFromSession(
         markedPaid: false,
         paymentRecorded: false,
         requiresReview: false,
+        reviewReason: null,
       };
     }
 
@@ -97,6 +119,7 @@ export async function recordStripePaymentFromSession(
         markedPaid: false,
         paymentRecorded: false,
         requiresReview: true,
+        reviewReason: "additional_payment" as const,
       };
     }
 
@@ -118,6 +141,7 @@ export async function recordStripePaymentFromSession(
       markedPaid: invoice.status !== "paid",
       paymentRecorded: true,
       requiresReview: false,
+      reviewReason: null,
     };
   });
 
@@ -127,12 +151,14 @@ export async function recordStripePaymentFromSession(
       markedPaid: false,
       paymentRecorded: false,
       requiresReview: false,
+      reviewReason: null,
     };
   }
 
   if (result.requiresReview) {
-    console.error("[stripe] Additional Stripe payment detected for invoice", {
+    console.error("[stripe] Stripe payment requires review for invoice", {
       invoiceId,
+      reason: result.reviewReason,
       reference,
       sessionId: session.id,
     });
@@ -140,13 +166,17 @@ export async function recordStripePaymentFromSession(
       invoiceId,
       type: "payment_review",
       actor: "Stripe",
-      details: `Additional Stripe payment detected (${session.currency?.toUpperCase() ?? "USD"}). Review and refund if needed.`,
+      details:
+        result.reviewReason === "cancelled_invoice"
+          ? `Stripe payment received for a cancelled invoice (${session.currency?.toUpperCase() ?? "USD"}). Review and refund if needed.`
+          : `Additional Stripe payment detected (${session.currency?.toUpperCase() ?? "USD"}). Review and refund if needed.`,
     });
     return {
       invoiceId,
       markedPaid: false,
       paymentRecorded: false,
       requiresReview: true,
+      reviewReason: result.reviewReason,
     };
   }
 
@@ -164,5 +194,6 @@ export async function recordStripePaymentFromSession(
     markedPaid: result.markedPaid,
     paymentRecorded: result.paymentRecorded,
     requiresReview: false,
+    reviewReason: null,
   };
 }

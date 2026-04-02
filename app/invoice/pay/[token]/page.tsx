@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CreditCard, Download } from "lucide-react";
 import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
+import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
 import {
   buildInvoiceAdditionalInformation,
   buildDefaultInvoiceMessage,
@@ -85,6 +86,8 @@ export default function PublicInvoicePage() {
   const paymentSuccess = searchParams.get("success") === "true";
   const paymentCancelled = searchParams.get("cancel") === "true";
   const stripeSessionId = searchParams.get("session_id");
+  const showPaymentSuccessNotice =
+    paymentSuccess && (isConfirmingPayment || invoice?.status !== "cancelled");
 
   useEffect(() => {
     if (!token || !paymentSuccess || !stripeSessionId || !invoice || invoice.status === "paid") {
@@ -104,8 +107,12 @@ export default function PublicInvoicePage() {
           body: JSON.stringify({ sessionId: stripeSessionId }),
         });
 
+        const result = (await response.json()) as {
+          error?: string;
+          status?: PublicInvoiceDetails["status"];
+        };
+
         if (!response.ok) {
-          const result = (await response.json()) as { error?: string };
           throw new Error(result.error ?? "Could not confirm payment");
         }
 
@@ -113,7 +120,9 @@ export default function PublicInvoicePage() {
           return;
         }
 
-        setInvoice((current) => (current ? { ...current, status: "paid" } : current));
+        setInvoice((current) =>
+          current ? { ...current, status: result.status ?? current.status } : current
+        );
       } catch (error) {
         console.error("Error confirming payment:", error);
       } finally {
@@ -144,7 +153,9 @@ export default function PublicInvoicePage() {
   const subtotal = totals.subtotal;
   const taxAmount = totals.taxAmount;
   const totalAmountDue = totals.totalAmount;
-  const shouldRenderQRSection = Boolean(invoice?.qrBill);
+  const invoiceAmountDue = invoice ? getInvoiceAmountDue(invoice.status, totalAmountDue) : 0;
+  const canCollectPayment = invoice?.status !== "paid" && invoice?.status !== "cancelled";
+  const shouldRenderQRSection = canCollectPayment && Boolean(invoice?.qrBill);
   const cardPaymentAvailable = Boolean(invoice?.cardPaymentAvailable);
   const shouldShareQrOnFirstPage = shouldRenderQRSection && lineItems.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE;
   const shouldRenderStandaloneQrPage = shouldRenderQRSection && !shouldShareQrOnFirstPage;
@@ -190,7 +201,7 @@ export default function PublicInvoicePage() {
   }, [token]);
   const paymentReference = invoice?.reference?.trim() || invoice?.invoiceNumber || "";
   const shouldRenderManualTransferSection =
-    Boolean(invoice) &&
+    canCollectPayment &&
     !shouldRenderQRSection &&
     Boolean(
       onlinePaymentLink ||
@@ -209,7 +220,7 @@ export default function PublicInvoicePage() {
   }, [clientName, invoice?.client.companyName, invoice?.client.contactName, invoiceLanguage, senderName]);
 
   const handleCheckout = async () => {
-    if (!invoice || !token) return;
+    if (!invoice || !token || !canCollectPayment) return;
 
     try {
       setIsCheckoutLoading(true);
@@ -530,13 +541,15 @@ export default function PublicInvoicePage() {
           {cardPaymentAvailable ? (
             <Button
               onClick={handleCheckout}
-              disabled={isCheckoutLoading || invoice.status === "paid"}
+              disabled={isCheckoutLoading || !canCollectPayment}
               className="w-full sm:w-auto"
             >
               <CreditCard className="h-4 w-4" />
               {isCheckoutLoading
                 ? strings.redirectingToStripe
-                : invoice.status === "paid"
+                : invoice.status === "cancelled"
+                  ? translateInvoiceStatus("cancelled", invoiceLanguage)
+                  : invoice.status === "paid"
                   ? strings.invoiceAlreadyPaid
                   : strings.payWithCard}
             </Button>
@@ -544,7 +557,7 @@ export default function PublicInvoicePage() {
         </div>
       </div>
 
-      {paymentSuccess ? (
+      {showPaymentSuccessNotice ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 print:hidden">
           {isConfirmingPayment ? strings.paymentReceivedUpdating : strings.paymentCompletedThankYou}
         </div>
@@ -554,12 +567,17 @@ export default function PublicInvoicePage() {
           {strings.paymentCancelled}
         </div>
       ) : null}
+      {invoice.status === "cancelled" ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 print:hidden">
+          {strings.invoiceCancelledNoPaymentDue}
+        </div>
+      ) : null}
       {checkoutError ? (
         <div className="rounded-md border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800 print:hidden">
           {checkoutError}
         </div>
       ) : null}
-      {!cardPaymentAvailable ? (
+      {!cardPaymentAvailable && canCollectPayment ? (
         <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 print:hidden">
           {strings.onlineCardPaymentUnavailable}
         </div>
@@ -664,6 +682,14 @@ export default function PublicInvoicePage() {
                 {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
               </span>
             </div>
+            {invoiceAmountDue !== totalAmountDue ? (
+              <div className="mt-2 flex items-center justify-between text-sm text-slate-700">
+                <span>{strings.amountDue}</span>
+                <span>
+                  {invoice.currency} {formatInvoiceMoney(invoiceAmountDue, invoiceLanguage)}
+                </span>
+              </div>
+            ) : null}
           </div>
         </section>
 

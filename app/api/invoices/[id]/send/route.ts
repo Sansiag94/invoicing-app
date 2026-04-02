@@ -74,6 +74,10 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     return apiError("Paid invoices cannot be sent again", 400);
   }
 
+  if (existingInvoice.status === "cancelled") {
+    return apiError("Cancelled invoices cannot be sent. Reopen the invoice first.", 400);
+  }
+
   if (existingInvoice.status === "draft") {
     await assertBusinessCanIssueInvoice(existingInvoice.businessId);
   }

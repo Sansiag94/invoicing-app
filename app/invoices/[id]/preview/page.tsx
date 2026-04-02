@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BellRing, CheckCircle2, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, CheckCircle2, CircleOff, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { getBillingLimitDetails } from "@/lib/billingClient";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -54,6 +54,7 @@ export default function InvoicePreviewPage() {
   const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
+  const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const activePdfUrlRef = useRef<string | null>(null);
   const hasOpenedMobilePreviewRef = useRef(false);
@@ -306,7 +307,7 @@ export default function InvoicePreviewPage() {
     void sendInvoiceNow();
   };
 
-  const handleManualStatusChange = async (nextStatus: "paid" | "unpaid") => {
+  const handleManualStatusChange = async (nextStatus: "paid" | "unpaid" | "cancelled") => {
     if (!id || isUpdatingStatus) {
       return;
     }
@@ -340,7 +341,13 @@ export default function InvoicePreviewPage() {
       }
 
       setInvoice(result);
-      setSuccessMessage(nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid.");
+      setSuccessMessage(
+        nextStatus === "paid"
+          ? "Invoice marked as paid."
+          : nextStatus === "cancelled"
+            ? "Invoice cancelled. No payment is due."
+            : "Invoice reopened as unpaid."
+      );
     } catch (error) {
       console.error("Error updating invoice status:", error);
       toast({
@@ -489,7 +496,7 @@ export default function InvoicePreviewPage() {
         </div>
 
         <div className="grid w-full grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
-          {invoice?.status !== "paid" ? (
+          {invoice?.status !== "paid" && invoice?.status !== "cancelled" ? (
             invoice?.status === "draft" ? (
               <Button
                 variant="default"
@@ -522,6 +529,16 @@ export default function InvoicePreviewPage() {
               <RotateCcw className="h-4 w-4" />
               {isUpdatingStatus ? "Updating..." : "Mark Unpaid"}
             </Button>
+          ) : invoice?.status === "cancelled" ? (
+            <Button
+              variant="outline"
+              onClick={() => void handleManualStatusChange("unpaid")}
+              disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
+              className="w-full sm:w-auto"
+            >
+              <RotateCcw className="h-4 w-4" />
+              {isUpdatingStatus ? "Updating..." : "Reopen Invoice"}
+            </Button>
           ) : (
             <Button
               variant="outline"
@@ -533,6 +550,17 @@ export default function InvoicePreviewPage() {
               {isUpdatingStatus ? "Updating..." : "Mark Paid"}
             </Button>
           )}
+          {invoice?.status === "sent" || invoice?.status === "overdue" ? (
+            <Button
+              variant="outline"
+              onClick={() => setShowCancelConfirmDialog(true)}
+              disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
+              className="w-full sm:w-auto"
+            >
+              <CircleOff className="h-4 w-4" />
+              Cancel Invoice
+            </Button>
+          ) : null}
           <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading} className="w-full sm:w-auto">
             <Download className="h-4 w-4" />
             Download PDF
@@ -575,6 +603,12 @@ export default function InvoicePreviewPage() {
       {successMessage ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
+        </div>
+      ) : null}
+      {invoice?.status === "cancelled" ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
+          This invoice is cancelled. The PDF stays available for your records, but no payment is
+          due and online collection is turned off until you reopen it.
         </div>
       ) : null}
 
@@ -659,6 +693,29 @@ export default function InvoicePreviewPage() {
         onConfirm={() => {
           setShowReminderConfirmDialog(false);
           void sendReminderNow();
+        }}
+      />
+
+      <ConfirmDialog
+        open={showCancelConfirmDialog}
+        onOpenChange={setShowCancelConfirmDialog}
+        title="Cancel Invoice"
+        description={
+          <>
+            Cancel this invoice? It will stay on record, reminders and payment collection will
+            stop, and the amount due will be treated as{" "}
+            <strong>
+              {invoice?.currency ?? "CHF"} 0.00
+            </strong>
+            .
+          </>
+        }
+        confirmLabel="Cancel Invoice"
+        confirmVariant="destructive"
+        isConfirming={isUpdatingStatus}
+        onConfirm={() => {
+          setShowCancelConfirmDialog(false);
+          void handleManualStatusChange("cancelled");
         }}
       />
 

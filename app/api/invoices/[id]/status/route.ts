@@ -15,8 +15,10 @@ type UpdateInvoiceStatusBody = {
   status?: unknown;
 };
 
-function asStatus(value: unknown): "paid" | "unpaid" | null {
-  return value === "paid" || value === "unpaid" ? value : null;
+type InvoiceStatusAction = "paid" | "unpaid" | "cancelled";
+
+function asStatus(value: unknown): InvoiceStatusAction | null {
+  return value === "paid" || value === "unpaid" || value === "cancelled" ? value : null;
 }
 
 export async function PATCH(
@@ -69,13 +71,18 @@ export async function PATCH(
     }
 
     if (nextStatus === "paid") {
+      if (invoice.status === "cancelled") {
+        return apiError("Cancelled invoices must be reopened before they can be marked paid.", 409);
+      }
+
       if (invoice.status === "draft") {
         await assertBusinessCanIssueInvoice(businessId);
       }
 
       const updated = await prisma.$transaction(async (tx) => {
         let officialInvoiceNumber = invoice.invoiceNumber;
-        const issuedAt = invoice.status === "draft" ? invoice.issuedAt ?? new Date() : invoice.issuedAt;
+        const issuedAt =
+          invoice.status === "draft" ? invoice.issuedAt ?? new Date() : invoice.issuedAt;
 
         if (isDraftInvoiceNumber(invoice.invoiceNumber)) {
           const updatedBusiness = await tx.business.update({
@@ -103,6 +110,8 @@ export async function PATCH(
             status: "paid",
             invoiceNumber: officialInvoiceNumber,
             issuedAt,
+            stripeCheckoutSessionId: null,
+            stripeCheckoutSessionExpiresAt: null,
           },
         });
 
@@ -152,6 +161,57 @@ export async function PATCH(
       return NextResponse.json(updated ? { ...updated, events } : updated);
     }
 
+    if (nextStatus === "cancelled") {
+      if (invoice.status === "draft") {
+        return apiError("Draft invoices can be deleted or edited instead of cancelled.", 400);
+      }
+
+      if (invoice.status === "paid") {
+        return apiError("Paid invoices cannot be cancelled manually.", 409);
+      }
+
+      if (invoice.status === "cancelled") {
+        return apiError("Invoice is already cancelled", 400);
+      }
+
+      const updated = await prisma.$transaction(async (tx) => {
+        await tx.invoice.update({
+          where: { id: invoice.id },
+          data: {
+            status: "cancelled",
+            stripeCheckoutSessionId: null,
+            stripeCheckoutSessionExpiresAt: null,
+          },
+        });
+
+        return tx.invoice.findFirst({
+          where: { id: invoice.id, businessId },
+          include: {
+            client: true,
+            lineItems: {
+              orderBy: { position: "asc" },
+            },
+            business: true,
+            payments: {
+              orderBy: { createdAt: "desc" },
+            },
+          },
+        });
+      });
+
+      if (updated) {
+        await logInvoiceEvent({
+          invoiceId: invoice.id,
+          type: "cancelled",
+          actor: user.email ?? "User",
+          details: "Invoice cancelled. No payment is due.",
+        });
+      }
+
+      const events = updated ? await listInvoiceEvents(updated.id) : [];
+      return NextResponse.json(updated ? { ...updated, events } : updated);
+    }
+
     const hasExternalSettledPayment = invoice.payments.some(
       (payment) =>
         payment.reference !== "manual-status" &&
@@ -159,10 +219,14 @@ export async function PATCH(
     );
 
     if (hasExternalSettledPayment) {
-      return apiError("This invoice has a confirmed payment and cannot be marked unpaid manually.", 409);
+      return apiError(
+        "This invoice has a confirmed payment and cannot be marked unpaid manually.",
+        409
+      );
     }
 
     const reopenedStatus = getOpenInvoiceStatus(invoice.dueDate);
+    const reopenedFromCancelled = invoice.status === "cancelled";
 
     const updated = await prisma.$transaction(async (tx) => {
       await tx.payment.deleteMany({
@@ -175,7 +239,11 @@ export async function PATCH(
 
       await tx.invoice.update({
         where: { id: invoice.id },
-        data: { status: reopenedStatus },
+        data: {
+          status: reopenedStatus,
+          stripeCheckoutSessionId: null,
+          stripeCheckoutSessionExpiresAt: null,
+        },
       });
 
       return tx.invoice.findFirst({
@@ -198,9 +266,12 @@ export async function PATCH(
         invoiceId: invoice.id,
         type: "reopened",
         actor: user.email ?? "User",
-        details: `Invoice reopened as ${reopenedStatus}`,
+        details: reopenedFromCancelled
+          ? `Invoice reopened from cancelled to ${reopenedStatus}`
+          : `Invoice reopened as ${reopenedStatus}`,
       });
     }
+
     const events = updated ? await listInvoiceEvents(updated.id) : [];
     return NextResponse.json(updated ? { ...updated, events } : updated);
   } catch (error) {

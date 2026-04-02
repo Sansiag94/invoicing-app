@@ -20,8 +20,9 @@ describe("invoice language helpers", () => {
 
   it("returns readable labels and translated status values", () => {
     expect(getInvoiceLanguageLabel("fr")).toBe("French");
-    expect(translateInvoiceStatus("overdue", "de")).toBe("Überfällig");
+    expect(translateInvoiceStatus("overdue", "de")).toBe("\u00DCberf\u00E4llig");
     expect(translateInvoiceStatus("paid", "es")).toBe("Pagada");
+    expect(translateInvoiceStatus("cancelled", "en")).toBe("Cancelled");
   });
 
   it("formats dates with the selected locale", () => {
@@ -30,9 +31,11 @@ describe("invoice language helpers", () => {
   });
 
   it("builds translated default messages and qr-bill languages", () => {
-    expect(buildDefaultInvoiceMessage("it", "Mario Rossi", "Luca Bianchi")).toContain("Buongiorno Mario");
+    expect(buildDefaultInvoiceMessage("it", "Mario Rossi", "Luca Bianchi")).toContain(
+      "Buongiorno Mario"
+    );
     expect(buildDefaultInvoicePaymentNote("de", "+41 76 231 02 35")).toBe(
-      "Zahlung via TWINT möglich unter +41 76 231 02 35."
+      "Zahlung via TWINT m\u00F6glich unter +41 76 231 02 35."
     );
     expect(buildDefaultInvoicePaymentNote("fr", "+41 76 231 02 35")).toBe(
       "Paiement par TWINT possible au +41 76 231 02 35."

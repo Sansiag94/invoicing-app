@@ -8,6 +8,7 @@ export type InvoiceEventType =
   | "reminder_sent"
   | "viewed"
   | "paid"
+  | "cancelled"
   | "reopened"
   | "duplicated";
 

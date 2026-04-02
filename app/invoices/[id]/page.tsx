@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, BellRing, CheckCircle2, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, CheckCircle2, CircleOff, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails } from "@/lib/billingClient";
@@ -11,6 +11,7 @@ import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { BillingLimitDetails, InvoiceDetails, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getDefaultDueDate, toDateInputValue } from "@/lib/invoiceDates";
+import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -79,6 +80,8 @@ function formatEventLabel(type: string): string {
       return "Viewed online";
     case "paid":
       return "Paid";
+    case "cancelled":
+      return "Cancelled";
     case "payment_review":
       return "Payment review";
     case "reopened":
@@ -110,6 +113,7 @@ export default function InvoiceDetailPage() {
   const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
+  const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
   const [billingLimitDetails, setBillingLimitDetails] = useState<BillingLimitDetails | null>(null);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -436,7 +440,7 @@ export default function InvoiceDetailPage() {
     setShowReminderConfirmDialog(true);
   };
 
-  const handleManualStatusChange = async (nextStatus: "paid" | "unpaid") => {
+  const handleManualStatusChange = async (nextStatus: "paid" | "unpaid" | "cancelled") => {
     if (!invoice || isUpdatingStatus || isEditing) {
       return;
     }
@@ -472,7 +476,13 @@ export default function InvoiceDetailPage() {
 
       setInvoice(result);
       loadInvoiceIntoForm(result);
-      setSuccessMessage(nextStatus === "paid" ? "Invoice marked as paid." : "Invoice reopened as unpaid.");
+      setSuccessMessage(
+        nextStatus === "paid"
+          ? "Invoice marked as paid."
+          : nextStatus === "cancelled"
+            ? "Invoice cancelled. No payment is due."
+            : "Invoice reopened as unpaid."
+      );
     } catch (error) {
       console.error("Error updating invoice status:", error);
       toast({
@@ -744,18 +754,24 @@ export default function InvoiceDetailPage() {
       active: invoice.status === "overdue" || invoice.status === "paid",
     },
     {
-      label: "Paid",
+      label: invoice.status === "cancelled" ? "Cancelled" : "Paid",
       description:
-        invoice.status === "paid"
+        invoice.status === "cancelled"
+          ? "No payment due"
+          : invoice.status === "paid"
           ? "Payment completed"
           : invoice.status === "overdue"
             ? "Still awaiting payment"
             : "Awaiting payment",
-      active: invoice.status === "paid",
+      active: invoice.status === "paid" || invoice.status === "cancelled",
       danger: invoice.status === "overdue",
     },
   ];
   const latestViewedEvent = invoice.events.find((event) => event.type === "viewed") ?? null;
+  const invoiceAmountDue = getInvoiceAmountDue(
+    invoice.status,
+    isEditing ? editedTotals.totalAmount : invoice.totalAmount
+  );
 
   return (
     <div className="space-y-6">
@@ -775,7 +791,7 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
         <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap">
-          {!isEditing && invoice.status !== "paid" ? (
+          {!isEditing && invoice.status !== "paid" && invoice.status !== "cancelled" ? (
             invoice.status === "draft" ? (
               <Button
                 variant="default"
@@ -809,6 +825,16 @@ export default function InvoiceDetailPage() {
                 <RotateCcw className="h-4 w-4" />
                 {isUpdatingStatus ? "Updating..." : "Mark Unpaid"}
               </Button>
+            ) : invoice.status === "cancelled" ? (
+              <Button
+                variant="outline"
+                onClick={() => void handleManualStatusChange("unpaid")}
+                disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
+                className="w-full sm:w-auto"
+              >
+                <RotateCcw className="h-4 w-4" />
+                {isUpdatingStatus ? "Updating..." : "Reopen Invoice"}
+              </Button>
             ) : (
               <Button
                 variant="outline"
@@ -820,6 +846,17 @@ export default function InvoiceDetailPage() {
                 {isUpdatingStatus ? "Updating..." : "Mark Paid"}
               </Button>
             )
+          ) : null}
+          {!isEditing && (invoice.status === "sent" || invoice.status === "overdue") ? (
+            <Button
+              variant="outline"
+              onClick={() => setShowCancelConfirmDialog(true)}
+              disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
+              className="w-full sm:w-auto"
+            >
+              <CircleOff className="h-4 w-4" />
+              Cancel Invoice
+            </Button>
           ) : null}
           {!isEditing ? (
             <Button asChild variant="outline" className="w-full sm:w-auto">
@@ -877,6 +914,12 @@ export default function InvoiceDetailPage() {
       {successMessage ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
+        </div>
+      ) : null}
+      {invoice.status === "cancelled" ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
+          This invoice is cancelled. It stays on record, but reminders, card checkout, and
+          amount due are now treated as {invoice.currency} 0.00 until you reopen it.
         </div>
       ) : null}
 
@@ -994,6 +1037,12 @@ export default function InvoiceDetailPage() {
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Currency</p>
             <p className="font-medium text-slate-900">{invoice.currency}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Amount Due</p>
+            <p className="font-medium text-slate-900">
+              {invoice.currency} {formatMoney(invoiceAmountDue)}
+            </p>
           </div>
           <div className="md:col-span-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
@@ -1458,6 +1507,29 @@ export default function InvoiceDetailPage() {
         onConfirm={() => {
           setShowReminderConfirmDialog(false);
           void sendReminderNow();
+        }}
+      />
+
+      <ConfirmDialog
+        open={showCancelConfirmDialog}
+        onOpenChange={setShowCancelConfirmDialog}
+        title="Cancel Invoice"
+        description={
+          <>
+            Cancel invoice <strong>{invoice.invoiceNumber}</strong>? It will stay on record,
+            reminders and payment collection will stop, and the amount due will be treated as{" "}
+            <strong>
+              {invoice.currency} 0.00
+            </strong>
+            .
+          </>
+        }
+        confirmLabel="Cancel Invoice"
+        confirmVariant="destructive"
+        isConfirming={isUpdatingStatus}
+        onConfirm={() => {
+          setShowCancelConfirmDialog(false);
+          void handleManualStatusChange("cancelled");
         }}
       />
 

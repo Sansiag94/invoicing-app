@@ -8,7 +8,7 @@ type RecentInvoiceRow = {
   id: string;
   invoiceNumber: string;
   totalAmount: number;
-  status: "draft" | "sent" | "paid" | "overdue";
+  status: "draft" | "sent" | "paid" | "overdue" | "cancelled";
   currency: "CHF" | "EUR";
   clientName: string;
 };
@@ -115,7 +115,7 @@ export async function GET(request: Request) {
         where: {
           businessId: business.id,
           status: {
-            not: "paid",
+            in: ["draft", "sent", "overdue"],
           },
         },
       }),

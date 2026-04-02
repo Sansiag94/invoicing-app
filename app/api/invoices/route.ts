@@ -224,6 +224,10 @@ export async function POST(request: Request) {
     );
 
     const normalizedStatus = normalizeStatus(body.status);
+    if (normalizedStatus === InvoiceStatus.cancelled) {
+      return apiError("Invoices cannot be created as cancelled", 400);
+    }
+
     if (normalizedStatus !== InvoiceStatus.draft) {
       await assertBusinessCanIssueInvoice(business.id);
     }

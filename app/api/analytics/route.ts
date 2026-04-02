@@ -113,6 +113,9 @@ export async function GET(request: Request) {
               gte: currentMonthStart,
               lt: nextMonthStart,
             },
+            status: {
+              not: "cancelled",
+            },
           },
           select: {
             status: true,
@@ -145,7 +148,7 @@ export async function GET(request: Request) {
           where: {
             businessId: business.id,
             status: {
-              not: "paid",
+              in: ["draft", "sent", "overdue"],
             },
           },
         }),
