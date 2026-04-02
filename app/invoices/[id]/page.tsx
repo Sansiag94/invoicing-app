@@ -76,7 +76,7 @@ function formatEventLabel(type: string): string {
     case "reminder_sent":
       return "Reminder sent";
     case "viewed":
-      return "Viewed";
+      return "Viewed online";
     case "paid":
       return "Paid";
     case "payment_review":
@@ -755,6 +755,7 @@ export default function InvoiceDetailPage() {
       danger: invoice.status === "overdue",
     },
   ];
+  const latestViewedEvent = invoice.events.find((event) => event.type === "viewed") ?? null;
 
   return (
     <div className="space-y-6">
@@ -993,6 +994,28 @@ export default function InvoiceDetailPage() {
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Currency</p>
             <p className="font-medium text-slate-900">{invoice.currency}</p>
+          </div>
+          <div className="md:col-span-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-full bg-slate-200 p-2 text-slate-700">
+                  <Eye className="h-4 w-4" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs uppercase tracking-wide text-slate-500">Online view</p>
+                  <p className="font-medium text-slate-900">
+                    {latestViewedEvent
+                      ? `Viewed online on ${formatDateTime(latestViewedEvent.createdAt)}`
+                      : invoice.status === "draft"
+                        ? "No online view yet. This starts tracking after the invoice is shared."
+                        : "No online view recorded yet."}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    Recorded when the client opens the online invoice page. Email opens and PDF opens are not tracked.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Subject</p>

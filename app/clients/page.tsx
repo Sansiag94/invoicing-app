@@ -23,6 +23,18 @@ function getClientDisplayName(client: ClientSummary): string {
   return client.companyName || client.contactName || client.email;
 }
 
+function formatImportErrorMessage(message: string): string {
+  if (message.includes("quoted field was not closed")) {
+    return "CSV parsing failed because a quoted field was not closed. If the file came from Excel, export it again as CSV and check for unmatched quote marks.";
+  }
+
+  if (message.includes("CSV headers must exactly match")) {
+    return "The CSV columns do not match the template. Download the template first and paste your client list into those exact headers.";
+  }
+
+  return message;
+}
+
 function ClientsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -200,7 +212,7 @@ function ClientsPageContent() {
       if (!response.ok) {
         toast({
           title: "Client import failed",
-          description: result.error ?? "Client import failed",
+          description: formatImportErrorMessage(result.error ?? "Client import failed"),
           variant: "error",
         });
         return;
@@ -264,20 +276,9 @@ function ClientsPageContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Clients</h1>
-          <p className="text-sm text-slate-500">Manage your customers and billing contacts.</p>
-        </div>
-        <Button
-          type="button"
-          variant={isImportPanelOpen ? "secondary" : "outline"}
-          onClick={() => setIsImportPanelOpen((current) => !current)}
-          className="w-full sm:w-auto"
-        >
-          {isImportPanelOpen ? <ChevronUp className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
-          {isImportPanelOpen ? "Hide import" : "Import clients"}
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold">Clients</h1>
+        <p className="text-sm text-slate-500">Manage your customers and billing contacts.</p>
       </div>
 
       {successMessage ? (
@@ -393,99 +394,6 @@ function ClientsPageContent() {
           </CardContent>
         ) : null}
       </Card>
-
-      {isImportPanelOpen ? (
-        <Card>
-          <CardHeader className="space-y-3">
-            <CardTitle>Import Clients</CardTitle>
-            <p className="text-sm leading-6 text-slate-600">
-              Useful when you are moving from a spreadsheet or another invoicing tool. Most
-              businesses can ignore this and add clients manually one by one.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-sm font-medium text-slate-900">Strict CSV template</p>
-              <p className="mt-2 text-sm text-slate-600">
-                Download the template first, then paste your client list into the exact columns.
-                Existing emails are skipped automatically so duplicates stay safe to review later.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button asChild variant="outline" size="sm">
-                  <a href="/templates/client-import-template.csv" download>
-                    <Download className="h-4 w-4" />
-                    Download Template
-                  </a>
-                </Button>
-              </div>
-            </div>
-
-            <form
-              onSubmit={handleImportSubmit}
-              className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
-            >
-              <div className="space-y-2">
-                <Label htmlFor="clientImportFile">Client CSV</Label>
-                <Input
-                  id="clientImportFile"
-                  type="file"
-                  accept=".csv,text/csv"
-                  onChange={(event) => {
-                    setImportResult(null);
-                    setImportFile(event.target.files?.[0] ?? null);
-                  }}
-                />
-                <p className="text-xs text-slate-500">
-                  Expected headers: `companyName,contactName,email,phone,street,postalCode,city,country,language,vatNumber`
-                </p>
-              </div>
-              <Button type="submit" disabled={isImporting} className="w-full md:w-auto">
-                <Upload className="h-4 w-4" />
-                {isImporting ? "Importing..." : "Import Clients"}
-              </Button>
-            </form>
-
-            {importResult ? (
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.createdCount}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Duplicates skipped</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.skippedDuplicateCount}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invalid rows</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.invalidRowCount}</p>
-                  </div>
-                </div>
-
-                {importResult.errors.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-900">Rows to review</p>
-                    <div className="space-y-2">
-                      {importResult.errors.map((error) => (
-                        <div
-                          key={`${error.rowNumber}-${error.type}-${error.message}`}
-                          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
-                        >
-                          <p className="font-medium text-slate-900">
-                            Row {error.rowNumber} - {error.type === "duplicate" ? "Duplicate" : "Invalid"}
-                          </p>
-                          <p className="mt-1">{error.message}</p>
-                          {error.email ? <p className="mt-1 text-xs text-slate-500">{error.email}</p> : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
 
       <Card>
         <CardHeader>
@@ -604,6 +512,112 @@ function ClientsPageContent() {
             </>
           )}
         </CardContent>
+      </Card>
+
+      <Card className="border-slate-200 bg-slate-50/70">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-1">
+              <CardTitle>Optional client import</CardTitle>
+              <p className="text-sm leading-6 text-slate-600">
+                Use this only if you already keep clients in a spreadsheet. Most businesses can skip it
+                and add clients manually one by one.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant={isImportPanelOpen ? "secondary" : "outline"}
+              onClick={() => setIsImportPanelOpen((current) => !current)}
+              className="w-full sm:w-auto"
+            >
+              {isImportPanelOpen ? <ChevronUp className="h-4 w-4" /> : <Upload className="h-4 w-4" />}
+              {isImportPanelOpen ? "Hide import tools" : "Show import tools"}
+            </Button>
+          </div>
+        </CardHeader>
+        {isImportPanelOpen ? (
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-sm font-medium text-slate-900">CSV only for now</p>
+              <p className="mt-2 text-sm text-slate-600">
+                If your source file is Excel, export it as CSV first. Then download the template and
+                place your client data into the same columns before importing.
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button asChild variant="outline" size="sm">
+                  <a href="/templates/client-import-template.csv" download>
+                    <Download className="h-4 w-4" />
+                    Download Template
+                  </a>
+                </Button>
+              </div>
+            </div>
+
+            <form
+              onSubmit={handleImportSubmit}
+              className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+            >
+              <div className="space-y-2">
+                <Label htmlFor="clientImportFile">CSV file</Label>
+                <Input
+                  id="clientImportFile"
+                  type="file"
+                  accept=".csv,text/csv"
+                  onChange={(event) => {
+                    setImportResult(null);
+                    setImportFile(event.target.files?.[0] ?? null);
+                  }}
+                />
+                <p className="text-xs text-slate-500">
+                  Exact headers required: `companyName,contactName,email,phone,street,postalCode,city,country,language,vatNumber`
+                </p>
+              </div>
+              <Button type="submit" disabled={isImporting} className="w-full md:w-auto">
+                <Upload className="h-4 w-4" />
+                {isImporting ? "Importing..." : "Import Clients"}
+              </Button>
+            </form>
+
+            {importResult ? (
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.createdCount}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Duplicates skipped</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.skippedDuplicateCount}</p>
+                  </div>
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invalid rows</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.invalidRowCount}</p>
+                  </div>
+                </div>
+
+                {importResult.errors.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-slate-900">Rows to review</p>
+                    <div className="space-y-2">
+                      {importResult.errors.map((error) => (
+                        <div
+                          key={`${error.rowNumber}-${error.type}-${error.message}`}
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+                        >
+                          <p className="font-medium text-slate-900">
+                            Row {error.rowNumber} - {error.type === "duplicate" ? "Duplicate" : "Invalid"}
+                          </p>
+                          <p className="mt-1">{error.message}</p>
+                          {error.email ? <p className="mt-1 text-xs text-slate-500">{error.email}</p> : null}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </CardContent>
+        ) : null}
       </Card>
     </div>
   );

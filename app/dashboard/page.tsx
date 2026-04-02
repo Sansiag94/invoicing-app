@@ -17,6 +17,70 @@ import {
   TrendingDown,
 } from "lucide-react";
 
+function DashboardLoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <div className="h-10 w-48 animate-pulse rounded-xl bg-slate-200/80" />
+        <div className="h-4 w-80 max-w-full animate-pulse rounded bg-slate-200/70" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={`dashboard-skeleton-stat-${index}`} className="border-slate-200 bg-white">
+            <CardHeader className="space-y-3 pb-2">
+              <div className="h-4 w-28 animate-pulse rounded bg-slate-200/80" />
+              <div className="h-8 w-32 animate-pulse rounded bg-slate-200/70" />
+            </CardHeader>
+            <CardContent>
+              <div className="h-4 w-40 animate-pulse rounded bg-slate-200/70" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="h-6 w-24 animate-pulse rounded bg-slate-200/80" />
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div
+              key={`dashboard-skeleton-priority-${index}`}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+            >
+              <div className="h-3 w-20 animate-pulse rounded bg-slate-200/80" />
+              <div className="mt-3 h-8 w-24 animate-pulse rounded bg-slate-200/70" />
+              <div className="mt-3 h-4 w-40 animate-pulse rounded bg-slate-200/70" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div className="h-6 w-32 animate-pulse rounded bg-slate-200/80" />
+          <div className="h-9 w-20 animate-pulse rounded-lg bg-slate-200/70" />
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={`dashboard-skeleton-row-${index}`}
+              className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+            >
+              <div className="space-y-2">
+                <div className="h-4 w-28 animate-pulse rounded bg-slate-200/80" />
+                <div className="h-4 w-40 animate-pulse rounded bg-slate-200/70" />
+              </div>
+              <div className="h-6 w-20 animate-pulse rounded-full bg-slate-200/70" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("de-CH", {
     minimumFractionDigits: 2,
@@ -108,6 +172,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -123,11 +188,13 @@ export default function DashboardPage() {
 
         if (mounted) {
           setDashboard(data as DashboardOverview);
+          setLoadError(null);
         }
       } catch (error) {
         console.error("Error loading dashboard:", error);
         if (mounted) {
           setDashboard(null);
+          setLoadError("Unable to load dashboard.");
         }
       } finally {
         if (mounted) {
@@ -142,13 +209,13 @@ export default function DashboardPage() {
   }, []);
 
   if (isLoading) {
-    return <div>Loading dashboard...</div>;
+    return <DashboardLoadingSkeleton />;
   }
 
   if (!dashboard) {
     return (
       <div className="rounded-md border border-red-200 bg-red-50/80 p-4 text-red-800 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-100">
-        Unable to load dashboard.
+        {loadError ?? "Unable to load dashboard."}
       </div>
     );
   }
