@@ -561,13 +561,6 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
             </Button>
           ) : null}
 
-          <Button asChild type="button" variant="outline" size="sm" className="hidden lg:inline-flex">
-            <Link href="/help?from=app">
-              <LifeBuoy className="h-4 w-4" />
-              Help
-            </Link>
-          </Button>
-
           <div ref={searchContainerRef} className="relative hidden w-full max-w-sm lg:block">
             <form onSubmit={handleSearchSubmit}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />

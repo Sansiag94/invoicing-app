@@ -18,6 +18,7 @@ import { expenseCategoryOptions, getExpenseCategoryLabel } from "@/lib/expenses"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import {
   Dialog,
@@ -86,6 +87,7 @@ export default function ExpensesPage() {
   const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ExpenseRecord | null>(null);
+  const [createReceiptFile, setCreateReceiptFile] = useState<File | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -166,6 +168,7 @@ export default function ExpensesPage() {
 
   const resetCreateForm = (nextCurrency: InvoiceCurrency) => {
     setFormState(buildEmptyExpenseForm(nextCurrency));
+    setCreateReceiptFile(null);
   };
 
   const openEditExpense = (expense: ExpenseRecord) => {
@@ -183,6 +186,62 @@ export default function ExpensesPage() {
       vatReclaimable: expense.vatReclaimable,
       vatAmount: expense.vatAmount === null ? "" : String(expense.vatAmount),
     });
+  };
+
+  const uploadReceiptFile = async (
+    expenseId: string,
+    file: File | null,
+    options?: { showSuccessToast?: boolean }
+  ) => {
+    if (!file) return false;
+
+    setUploadingReceiptId(expenseId);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await authenticatedFetch(`/api/expenses/${expenseId}/receipt`, {
+        method: "POST",
+        body: formData,
+      });
+      const result = (await response.json()) as { receiptUrl?: string; error?: string };
+
+      if (!response.ok || !result.receiptUrl) {
+        toast({
+          title: "Receipt upload failed",
+          description: result.error ?? "Unable to upload receipt",
+          variant: "error",
+        });
+        return false;
+      }
+
+      setEditingExpense((current) =>
+        current && current.id === expenseId
+          ? { ...current, receiptUrl: result.receiptUrl ?? current.receiptUrl }
+          : current
+      );
+
+      if (options?.showSuccessToast ?? true) {
+        toast({
+          title: "Receipt uploaded",
+          description: "The receipt is now attached to this expense.",
+          variant: "success",
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error uploading receipt:", error);
+      toast({
+        title: "Receipt upload failed",
+        description: "Unable to upload receipt",
+        variant: "error",
+      });
+      return false;
+    } finally {
+      setUploadingReceiptId(null);
+    }
   };
 
   const handleCreateExpense = async (event: FormEvent<HTMLFormElement>) => {
@@ -218,10 +277,17 @@ export default function ExpensesPage() {
         return;
       }
 
+      let receiptUploaded = false;
+      if (createReceiptFile) {
+        receiptUploaded = await uploadReceiptFile(result.id, createReceiptFile, {
+          showSuccessToast: false,
+        });
+      }
+
       await fetchExpenses();
       resetCreateForm(currency);
       setIsCreateFormOpen(false);
-      setSuccessMessage("Expense added successfully.");
+      setSuccessMessage(receiptUploaded ? "Expense added with receipt attached." : "Expense added successfully.");
     } catch (error) {
       console.error("Error creating expense:", error);
       toast({
@@ -319,49 +385,9 @@ export default function ExpensesPage() {
   };
 
   const handleUploadReceipt = async (expenseId: string, file: File | null) => {
-    if (!file) return;
-
-    setUploadingReceiptId(expenseId);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await authenticatedFetch(`/api/expenses/${expenseId}/receipt`, {
-        method: "POST",
-        body: formData,
-      });
-      const result = (await response.json()) as { receiptUrl?: string; error?: string };
-
-      if (!response.ok || !result.receiptUrl) {
-        toast({
-          title: "Receipt upload failed",
-          description: result.error ?? "Unable to upload receipt",
-          variant: "error",
-        });
-        return;
-      }
-
+    const didUpload = await uploadReceiptFile(expenseId, file);
+    if (didUpload) {
       await fetchExpenses();
-      setEditingExpense((current) =>
-        current && current.id === expenseId
-          ? { ...current, receiptUrl: result.receiptUrl ?? current.receiptUrl }
-          : current
-      );
-      toast({
-        title: "Receipt uploaded",
-        description: "The receipt is now attached to this expense.",
-        variant: "success",
-      });
-    } catch (error) {
-      console.error("Error uploading receipt:", error);
-      toast({
-        title: "Receipt upload failed",
-        description: "Unable to upload receipt",
-        variant: "error",
-      });
-    } finally {
-      setUploadingReceiptId(null);
     }
   };
 
@@ -432,6 +458,34 @@ export default function ExpensesPage() {
           <CardContent>
             <form onSubmit={handleCreateExpense} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <ExpenseFormFields idPrefix="create" formState={formState} onChange={setFormState} />
+              <div className="md:col-span-2 xl:col-span-3">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-sm font-medium text-slate-900">Receipt photo or file</p>
+                  <p className="mt-1 text-sm text-slate-500">
+                    Optional. On mobile devices you can take a photo directly, or upload an image/PDF later.
+                  </p>
+                  <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                    <div className="space-y-2">
+                      <Label htmlFor="createExpenseReceipt">Receipt file</Label>
+                      <Input
+                        id="createExpenseReceipt"
+                        type="file"
+                        accept="image/*,application/pdf"
+                        capture="environment"
+                        onChange={(event) => setCreateReceiptFile(event.target.files?.[0] ?? null)}
+                      />
+                      <p className="text-xs text-slate-500">
+                        Accepted formats: photo or PDF receipt.
+                      </p>
+                    </div>
+                    {createReceiptFile ? (
+                      <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                        {createReceiptFile.name}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
               <div className="md:col-span-2 xl:col-span-3">
                 <Button type="submit" disabled={isCreating}>
                   <Plus className="h-4 w-4" />

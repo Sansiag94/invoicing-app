@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText, LifeBuoy } from "lucide-react";
+import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/appBrand";
 
@@ -13,7 +13,6 @@ const sidebarLinks = [
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/expenses", label: "Expenses", icon: ReceiptText },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/help?from=app", label: "Help", icon: LifeBuoy },
 ];
 
 type SidebarProps = {

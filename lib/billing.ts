@@ -309,6 +309,7 @@ export async function getBusinessBillingStatus(
     canIssueInvoice: unlimited || monthlyIssuedInvoices < FREE_MONTHLY_ISSUE_LIMIT,
     usagePeriodStart: start.toISOString(),
     usagePeriodEndExclusive: endExclusive.toISOString(),
+    subscriptionCurrentPeriodEnd: business.subscriptionCurrentPeriodEnd?.toISOString() ?? null,
     currency: "CHF",
     proPriceMonthlyChf: PRO_MONTHLY_PRICE_CHF,
     checkoutUrl: BILLING_CHECKOUT_PATH,

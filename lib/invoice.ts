@@ -2,6 +2,7 @@ import type { InvoiceCurrency } from "@/lib/types";
 
 export const SUPPORTED_INVOICE_CURRENCIES: readonly InvoiceCurrency[] = ["CHF", "EUR"];
 const DRAFT_INVOICE_PREFIX = "DRAFT-";
+const SEQUENTIAL_INVOICE_NUMBER_PATTERN = /^([A-Z0-9]+)(\d{4})-(\d+)$/;
 
 export type ParsedPostalAddress = {
   street: string;
@@ -10,6 +11,18 @@ export type ParsedPostalAddress = {
   city: string;
   country: string;
   displayLines: string[];
+};
+
+export type ParsedSequentialInvoiceNumber = {
+  prefix: string;
+  year: number;
+  sequence: number;
+};
+
+export type InvoiceRecencySortInput = {
+  invoiceNumber: string | null | undefined;
+  issuedAt?: Date | string | null | undefined;
+  createdAt?: Date | string | null | undefined;
 };
 
 type LineItemAmounts = {
@@ -179,4 +192,93 @@ export function formatDraftInvoiceNumber(issueDate: Date, suffix: string): strin
 
 export function isDraftInvoiceNumber(value: string | null | undefined): boolean {
   return typeof value === "string" && value.startsWith(DRAFT_INVOICE_PREFIX);
+}
+
+export function parseSequentialInvoiceNumber(
+  value: string | null | undefined
+): ParsedSequentialInvoiceNumber | null {
+  const normalizedValue = normalizeLine(value || "").toUpperCase();
+  if (!normalizedValue || isDraftInvoiceNumber(normalizedValue)) {
+    return null;
+  }
+
+  const match = normalizedValue.match(SEQUENTIAL_INVOICE_NUMBER_PATTERN);
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[2]);
+  const sequence = Number(match[3]);
+  if (!Number.isInteger(year) || !Number.isInteger(sequence)) {
+    return null;
+  }
+
+  return {
+    prefix: match[1],
+    year,
+    sequence,
+  };
+}
+
+function toTimestamp(value: Date | string | null | undefined): number {
+  if (!value) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  const timestamp = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  return Number.isNaN(timestamp) ? Number.NEGATIVE_INFINITY : timestamp;
+}
+
+export function compareSequentialInvoiceNumbers(
+  left: string | null | undefined,
+  right: string | null | undefined
+): number {
+  const leftParsed = parseSequentialInvoiceNumber(left);
+  const rightParsed = parseSequentialInvoiceNumber(right);
+
+  if (leftParsed && rightParsed) {
+    if (leftParsed.year !== rightParsed.year) {
+      return rightParsed.year - leftParsed.year;
+    }
+
+    if (leftParsed.sequence !== rightParsed.sequence) {
+      return rightParsed.sequence - leftParsed.sequence;
+    }
+
+    return 0;
+  }
+
+  if (leftParsed) {
+    return -1;
+  }
+
+  if (rightParsed) {
+    return 1;
+  }
+
+  return 0;
+}
+
+export function compareInvoicesByRecency(
+  left: InvoiceRecencySortInput,
+  right: InvoiceRecencySortInput
+): number {
+  const numberComparison = compareSequentialInvoiceNumbers(left.invoiceNumber, right.invoiceNumber);
+  if (numberComparison !== 0) {
+    return numberComparison;
+  }
+
+  const issuedComparison = toTimestamp(right.issuedAt) - toTimestamp(left.issuedAt);
+  if (issuedComparison !== 0) {
+    return issuedComparison;
+  }
+
+  const createdComparison = toTimestamp(right.createdAt) - toTimestamp(left.createdAt);
+  if (createdComparison !== 0) {
+    return createdComparison;
+  }
+
+  return normalizeLine(right.invoiceNumber || "").localeCompare(normalizeLine(left.invoiceNumber || ""), undefined, {
+    sensitivity: "base",
+  });
 }

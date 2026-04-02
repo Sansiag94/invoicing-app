@@ -235,6 +235,14 @@ export interface AnalyticsExpenseBreakdown {
   amount: number;
 }
 
+export interface AnalyticsMonthProgress {
+  issuedAmount: number;
+  issuedCount: number;
+  collectedAmount: number;
+  openAmount: number;
+  overdueAmount: number;
+}
+
 export interface AnalyticsOverview {
   currency: InvoiceCurrency;
   revenueThisMonth: number;
@@ -249,6 +257,7 @@ export interface AnalyticsOverview {
   unpaidInvoices: number;
   averageDaysToPay: number | null;
   averagePaidInvoiceValue: number;
+  monthProgress: AnalyticsMonthProgress;
   monthlySeries: AnalyticsSeriesPoint[];
   topClients: AnalyticsClientBreakdown[];
   expenseBreakdown: AnalyticsExpenseBreakdown[];
@@ -266,6 +275,7 @@ export interface BillingStatus {
   canIssueInvoice: boolean;
   usagePeriodStart: string;
   usagePeriodEndExclusive: string;
+  subscriptionCurrentPeriodEnd: string | null;
   currency: "CHF";
   proPriceMonthlyChf: number;
   checkoutUrl: string;

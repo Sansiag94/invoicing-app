@@ -96,17 +96,17 @@ export default function SettingsPage() {
       ? "Platform Stripe account active"
       : "Platform Stripe account needs attention"
     : !stripeAccountId
-    ? "Stripe not connected"
-    : isStripeFullyEnabled
-      ? "Stripe ready to accept payments"
-      : "Stripe connected, onboarding incomplete";
+      ? "Stripe not connected"
+      : isStripeFullyEnabled
+        ? "Stripe ready to accept payments"
+        : "Stripe connected, onboarding incomplete";
   const stripeStatusDescription = usesPlatformStripe
     ? "This business charges directly on your platform Stripe account. Stripe Connect onboarding is skipped for it."
     : !stripeAccountId
-    ? "Connect Stripe only if you want this business to accept card payments online."
-    : isStripeFullyEnabled
-      ? "Card payments are enabled for this business."
-      : "Stripe still needs some onboarding or verification before card payments can be accepted.";
+      ? "Connect Stripe only if you want this business to accept card payments online."
+      : isStripeFullyEnabled
+        ? "Card payments are enabled for this business."
+        : "Stripe still needs some onboarding or verification before card payments can be accepted.";
   const stripePendingSteps = [
     !stripeDetailsSubmitted ? "finish Stripe account details" : null,
     !stripeChargesEnabled ? "enable charges" : null,
@@ -688,462 +688,491 @@ export default function SettingsPage() {
         <p className="text-sm text-slate-500">Business profile, appearance, payments, and account controls</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Logo</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt="Business logo"
-              className="h-40 w-40 rounded-md border border-slate-200 object-contain"
-            />
-          ) : (
-            <p className="text-sm text-slate-500">No logo uploaded.</p>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="secondary" disabled={isUploadingLogo}>
-              <label>
-                <Upload className="h-4 w-4" />
-                {isUploadingLogo ? "Uploading..." : "Upload Logo"}
-                <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
-              </label>
-            </Button>
-
-            <Button
-              variant="destructive"
-              onClick={handleRemoveLogo}
-              disabled={isSaving || isUploadingLogo || !logoUrl}
-            >
-              <Trash2 className="h-4 w-4" />
-              Remove Logo
-            </Button>
-          </div>
-
-          <p className="text-xs text-slate-500">
-            Bucket: <strong>{logosBucket}</strong>. Configure it as public for invoice rendering.
+      <section className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Workspace profile</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Business identity and payment details</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            This information appears on invoices, public invoice pages, and payment instructions.
           </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Business Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="name">Business Name</Label>
-            <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="ownerName">Person Name</Label>
-            <Input
-              id="ownerName"
-              value={ownerName}
-              onChange={(event) => setOwnerName(event.target.value)}
-              placeholder="Your full name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="invoiceSenderType">Invoice Sender</Label>
-            <Select
-              id="invoiceSenderType"
-              value={invoiceSenderType}
-              onChange={(event) => setInvoiceSenderType(event.target.value as InvoiceSenderType)}
-            >
-              <option value="company">Company name</option>
-              <option value="owner">Owner name</option>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="street">Street</Label>
-            <Input id="street" value={street} onChange={(event) => setStreet(event.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="postalCode">Postal Code</Label>
-            <Input
-              id="postalCode"
-              value={postalCode}
-              onChange={(event) => setPostalCode(event.target.value)}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="city">City</Label>
-            <Input id="city" value={city} onChange={(event) => setCity(event.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              placeholder="Optional"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Business Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="Optional"
-            />
-            <p className="text-xs text-slate-500">Use a shared inbox if you want replies and payment questions in one place.</p>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="website">Website</Label>
-            <Input
-              id="website"
-              type="url"
-              value={website}
-              onChange={(event) => setWebsite(event.target.value)}
-              placeholder="Optional"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="country">Country</Label>
-            <Input id="country" value={country} onChange={(event) => setCountry(event.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="currency">Currency</Label>
-            <Select id="currency" value={currency} onChange={(event) => setCurrency(event.target.value)}>
-              <option value="CHF">CHF</option>
-              <option value="EUR">EUR</option>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="vatNumber">VAT Number</Label>
-            <Input id="vatNumber" value={vatNumber} onChange={(event) => setVatNumber(event.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="iban">IBAN</Label>
-            <Input id="iban" value={iban} onChange={(event) => setIban(event.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bankName">Bank Name</Label>
-            <Input
-              id="bankName"
-              value={bankName}
-              onChange={(event) => setBankName(event.target.value)}
-              placeholder="Optional"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bic">BIC / SWIFT</Label>
-            <Input
-              id="bic"
-              value={bic}
-              onChange={(event) => setBic(event.target.value)}
-              placeholder="Optional"
-            />
-            <p className="text-xs text-slate-500">Use the 8 or 11 character bank code, for example `RAIFCH22XXX`.</p>
-          </div>
-          <div className="md:col-span-2">
-            <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
-              <Save className="h-4 w-4" />
-              {isSaving ? "Saving..." : "Save Settings"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice Numbering</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="nextOfficialInvoiceSequence">Next Official Invoice Number</Label>
-            <Input
-              id="nextOfficialInvoiceSequence"
-              type="number"
-              min="1"
-              step="1"
-              value={nextOfficialInvoiceSequence}
-              onChange={(event) => setNextOfficialInvoiceSequence(event.target.value)}
-            />
-            <p className="text-xs text-slate-500">
-              If you already issued invoices elsewhere, set the next number here before sending
-              your first official invoice from this app. To continue from invoice 29, enter 29.
-            </p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Preview with today&apos;s date
-            </p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{nextOfficialInvoicePreview}</p>
-            <p className="mt-2 text-sm text-slate-600">
-              Official invoice numbers now use the first 2 letters of the client company. If the
-              client has no company, the app uses the first 2 letters of the client&apos;s first name.
-              Draft invoices still get a temporary draft number until they are sent.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice Sender Preview</CardTitle>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Header sender</p>
-            <p className="font-semibold text-slate-900">{name || "Business name"}</p>
-            {ownerName && ownerName !== name ? <p className="text-sm text-slate-600">{ownerName}</p> : null}
-            {previewAddressLines.map((line) => (
-              <p key={`header-${line}`} className="text-sm text-slate-700">
-                {line}
-              </p>
-            ))}
-            {email ? <p className="mt-2 text-sm text-slate-700">{email}</p> : null}
-            {phone ? <p className="text-sm text-slate-700">{phone}</p> : null}
-            {website ? <p className="text-sm text-slate-700">{website}</p> : null}
-          </div>
-
-          <div className="rounded-lg border border-slate-200 p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment recipient</p>
-            <p className="font-semibold text-slate-900">{previewDisplayName || "Recipient name"}</p>
-            {previewAddressLines.map((line) => (
-              <p key={`recipient-${line}`} className="text-sm text-slate-700">
-                {line}
-              </p>
-            ))}
-            {iban ? <p className="mt-2 text-sm text-slate-700">{iban}</p> : null}
-            {bankName ? <p className="text-sm text-slate-700">{bankName}</p> : null}
-            {bic ? <p className="text-sm text-slate-700">BIC / SWIFT: {bic}</p> : null}
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Stripe Payments</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg border border-slate-200 p-4">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4 text-slate-600" />
-                  <p className="font-semibold text-slate-900">
-                    {usesPlatformStripe
-                      ? "Platform Stripe account"
-                      : stripeAccountId
-                        ? "Stripe account connected"
-                        : "Optional card payments"}
-                  </p>
-                </div>
-                <p className="max-w-2xl text-sm text-slate-600">
-                  Stripe is only needed if this business wants to accept card payments online. Bank transfers and Swiss QR payments work without it.
-                </p>
-                <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${stripeStatusTone}`}>
-                  {stripeStatusLabel}
-                </div>
-                <p className="max-w-2xl text-sm text-slate-600">{stripeStatusDescription}</p>
-                {stripePendingSteps.length > 0 ? (
-                  <p className="text-xs text-slate-500">
-                    Still pending in Stripe: {stripePendingSteps.join(", ")}.
-                  </p>
-                ) : null}
-                {!usesPlatformStripe && !stripeAccountId ? (
-                  <p className="text-xs text-slate-500">
-                    You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
-                  </p>
-                ) : null}
-                {!usesPlatformStripe && stripeAccountId ? (
-                  <p className="text-xs text-slate-500">
-                    Disconnecting removes this Stripe link from the app. Reconnecting starts Stripe onboarding again.
-                  </p>
-                ) : null}
-                {usesPlatformStripe ? (
-                  <p className="text-xs text-slate-500">
-                    This business uses the app-wide Stripe platform account, so it cannot be disconnected here.
-                  </p>
-                ) : null}
-                {stripeAccountId ? (
-                  <p className="text-xs text-slate-500">
-                    {usesPlatformStripe ? "Platform" : "Connected"} account ID:{" "}
-                    <span className="font-mono">{stripeAccountId}</span>
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                {!usesPlatformStripe && !isStripeFullyEnabled ? (
-                  <Button
-                    onClick={() => void handleConnectStripe()}
-                    disabled={isConnectingStripe}
-                    className="w-full sm:w-auto"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    {isConnectingStripe
-                      ? "Opening Stripe..."
-                      : stripeAccountId
-                        ? "Continue Stripe setup"
-                        : "Connect Stripe"}
-                  </Button>
-                ) : null}
-                {(usesPlatformStripe || stripeAccountId) ? (
-                  <Button
-                    variant="secondary"
-                    onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
-                    disabled={isRefreshingStripe || isDisconnectingStripe}
-                    className="w-full sm:w-auto"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
-                    {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
-                  </Button>
-                ) : null}
-                {!usesPlatformStripe && stripeAccountId ? (
-                  <Button
-                    variant="destructive"
-                    onClick={() => setShowDisconnectStripeDialog(true)}
-                    disabled={isDisconnectingStripe || isConnectingStripe || isRefreshingStripe}
-                    className="w-full sm:w-auto"
-                  >
-                    {isDisconnectingStripe ? "Disconnecting..." : "Disconnect Stripe"}
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <BillingStatusCard
-        title="Plan & Billing"
-        description="Free includes 3 issued invoices per calendar month. Upgrade to Pro for CHF 19/month to issue unlimited invoices."
-        billingStatus={billingStatus}
-        onUpgrade={() => void openBillingCheckout()}
-        onManageBilling={() => void openBillingPortal()}
-        isSubmitting={isOpeningBilling}
-      />
-
-      <Card className="border-amber-200 bg-amber-50/50">
-        <CardHeader>
-          <CardTitle>Help & onboarding</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-slate-600">
-            If you get stuck, open the help guide or review the optional CHF{" "}
-            {billingStatus?.onboardingPriceChf ?? 99} onboarding service for hands-on setup help.
-          </p>
-          <div className="rounded-xl border border-amber-200 bg-white p-4">
-            <p className="text-sm font-medium text-slate-900">What the onboarding service includes</p>
-            <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li>Business profile, branding, and invoice numbering setup</li>
-              <li>Stripe guidance if you want online card payments</li>
-              <li>Help importing or creating your first client records</li>
-            </ul>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button asChild>
-              <Link href="/help?from=settings">Open help guide</Link>
-            </Button>
-          </div>
-          {billingStatus?.supportEmail ? (
-            <p className="text-sm text-slate-500">
-              Contact support at{" "}
-              <a
-                href={`mailto:${billingStatus.supportEmail}?subject=Sierra%20Invoices%20Onboarding%20Request`}
-                className="font-medium text-slate-700 underline underline-offset-4"
-              >
-                {billingStatus.supportEmail}
-              </a>
-              . If your email app does not open, copy and paste the address into your email app.
-            </p>
-          ) : null}
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+        </div>
         <Card>
-          <CardHeader>
-            <CardTitle>App Install</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4">
+          <CardContent className="grid gap-6 p-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
+            <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-900">
-                  {isInstalled
-                    ? "Installed on this device"
-                    : canInstall
-                      ? "Ready to install"
-                      : showInstallInstructions
-                        ? "Install from your browser menu"
-                        : "Open in a supported browser to install"}
-                </p>
-                <p className="text-sm text-slate-500">
-                  Installing gives {APP_NAME} its own home-screen icon and a cleaner app-like window. Core pages and the offline screen are cached for weak connections.
-                </p>
-                {!isInstalled ? (
-                  <p className="text-xs text-slate-500">{installHelpText}</p>
-                ) : null}
+                <p className="text-sm font-medium text-slate-900">Logo</p>
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt="Business logo"
+                    className="h-24 w-24 rounded-xl border border-slate-200 bg-white object-contain"
+                  />
+                ) : (
+                  <div className="flex h-24 w-24 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-400">
+                    No logo
+                  </div>
+                )}
               </div>
-              {!isInstalled ? (
-                <Button onClick={() => void handleInstallApp()} className="w-full sm:w-auto">
-                  {canInstall ? "Install App" : "Show Install Steps"}
+              <div className="flex flex-col gap-2">
+                <Button asChild variant="secondary" disabled={isUploadingLogo}>
+                  <label>
+                    <Upload className="h-4 w-4" />
+                    {isUploadingLogo ? "Uploading..." : "Upload logo"}
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                  </label>
                 </Button>
-              ) : null}
+                <Button
+                  variant="outline"
+                  onClick={handleRemoveLogo}
+                  disabled={isSaving || isUploadingLogo || !logoUrl}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove logo
+                </Button>
+              </div>
+              <p className="text-xs leading-5 text-slate-500">
+                Bucket: <strong>{logosBucket}</strong>. Make it public so invoice rendering can show
+                the logo correctly.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="name">Business Name</Label>
+                <Input id="name" value={name} onChange={(event) => setName(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="ownerName">Person Name</Label>
+                <Input
+                  id="ownerName"
+                  value={ownerName}
+                  onChange={(event) => setOwnerName(event.target.value)}
+                  placeholder="Your full name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoiceSenderType">Invoice Sender</Label>
+                <Select
+                  id="invoiceSenderType"
+                  value={invoiceSenderType}
+                  onChange={(event) => setInvoiceSenderType(event.target.value as InvoiceSenderType)}
+                >
+                  <option value="company">Company name</option>
+                  <option value="owner">Owner name</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Business Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  type="url"
+                  value={website}
+                  onChange={(event) => setWebsite(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="street">Street</Label>
+                <Input id="street" value={street} onChange={(event) => setStreet(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="postalCode">Postal Code</Label>
+                <Input
+                  id="postalCode"
+                  value={postalCode}
+                  onChange={(event) => setPostalCode(event.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="city">City</Label>
+                <Input id="city" value={city} onChange={(event) => setCity(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="country">Country</Label>
+                <Input id="country" value={country} onChange={(event) => setCountry(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="currency">Currency</Label>
+                <Select id="currency" value={currency} onChange={(event) => setCurrency(event.target.value)}>
+                  <option value="CHF">CHF</option>
+                  <option value="EUR">EUR</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vatNumber">VAT Number</Label>
+                <Input id="vatNumber" value={vatNumber} onChange={(event) => setVatNumber(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="iban">IBAN</Label>
+                <Input id="iban" value={iban} onChange={(event) => setIban(event.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bankName">Bank Name</Label>
+                <Input
+                  id="bankName"
+                  value={bankName}
+                  onChange={(event) => setBankName(event.target.value)}
+                  placeholder="Optional"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="bic">BIC / SWIFT</Label>
+                <Input
+                  id="bic"
+                  value={bic}
+                  onChange={(event) => setBic(event.target.value)}
+                  placeholder="Optional"
+                />
+                <p className="text-xs text-slate-500">Use the 8 or 11 character bank code, for example `RAIFCH22XXX`.</p>
+              </div>
+              <div className="md:col-span-2">
+                <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save workspace profile"}
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
+      </section>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Appearance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="space-y-1">
-                <Label htmlFor="themeToggle">Dark mode</Label>
-                <p className="text-sm text-slate-500">
-                  Switch the workspace between light and dark.
+      <section className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice setup</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Numbering and sender preview</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Check this section before you send the first official invoice from the workspace.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoice Numbering</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="nextOfficialInvoiceSequence">Next Official Invoice Number</Label>
+                <Input
+                  id="nextOfficialInvoiceSequence"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value={nextOfficialInvoiceSequence}
+                  onChange={(event) => setNextOfficialInvoiceSequence(event.target.value)}
+                />
+                <p className="text-xs text-slate-500">
+                  Continue from your existing numbering if you already invoiced elsewhere. To continue
+                  from invoice 29, enter 29 here before sending the first official invoice.
                 </p>
               </div>
-              <button
-                id="themeToggle"
-                type="button"
-                aria-pressed={theme === "dark"}
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="inline-flex w-full items-center justify-between rounded-full border px-3 py-2 text-sm font-medium transition-colors sm:min-w-44 sm:w-auto"
-                style={{
-                  borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
-                  backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
-                  color: theme === "dark" ? "#f8fafc" : "#0f172a",
-                }}
-              >
-                <span className="flex items-center gap-2">
-                  {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                  {theme === "dark" ? "Dark mode" : "Light mode"}
-                </span>
-                <span
-                  className="relative h-6 w-11 overflow-hidden rounded-full transition-colors"
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  Preview with today&apos;s date
+                </p>
+                <p className="mt-2 text-lg font-semibold text-slate-900">{nextOfficialInvoicePreview}</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Official invoice numbers use the first 2 letters of the client company or first name.
+                  Draft invoices keep a temporary draft number until they become official.
+                </p>
+              </div>
+              <div className="md:col-span-2">
+                <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save invoice setup"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Invoice Sender Preview</CardTitle>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
+              <div className="rounded-lg border border-slate-200 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Header sender</p>
+                <p className="font-semibold text-slate-900">{name || "Business name"}</p>
+                {ownerName && ownerName !== name ? <p className="text-sm text-slate-600">{ownerName}</p> : null}
+                {previewAddressLines.map((line) => (
+                  <p key={`header-${line}`} className="text-sm text-slate-700">
+                    {line}
+                  </p>
+                ))}
+                {email ? <p className="mt-2 text-sm text-slate-700">{email}</p> : null}
+                {phone ? <p className="text-sm text-slate-700">{phone}</p> : null}
+                {website ? <p className="text-sm text-slate-700">{website}</p> : null}
+              </div>
+
+              <div className="rounded-lg border border-slate-200 p-4">
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment recipient</p>
+                <p className="font-semibold text-slate-900">{previewDisplayName || "Recipient name"}</p>
+                {previewAddressLines.map((line) => (
+                  <p key={`recipient-${line}`} className="text-sm text-slate-700">
+                    {line}
+                  </p>
+                ))}
+                {iban ? <p className="mt-2 text-sm text-slate-700">{iban}</p> : null}
+                {bankName ? <p className="text-sm text-slate-700">{bankName}</p> : null}
+                {bic ? <p className="text-sm text-slate-700">BIC / SWIFT: {bic}</p> : null}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payments & billing</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Stripe and workspace plan</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Stripe is optional for card payments. Plan upgrades, management, and cancellation stay here.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+          <Card>
+            <CardHeader>
+              <CardTitle>Stripe Payments</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-slate-200 p-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-slate-600" />
+                      <p className="font-semibold text-slate-900">
+                        {usesPlatformStripe
+                          ? "Platform Stripe account"
+                          : stripeAccountId
+                            ? "Stripe account connected"
+                            : "Optional card payments"}
+                      </p>
+                    </div>
+                    <p className="max-w-2xl text-sm text-slate-600">
+                      Connect Stripe only if this business wants to accept card payments online.
+                      Bank transfers and Swiss QR bills work without it.
+                    </p>
+                    <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${stripeStatusTone}`}>
+                      {stripeStatusLabel}
+                    </div>
+                    <p className="max-w-2xl text-sm text-slate-600">{stripeStatusDescription}</p>
+                    {stripePendingSteps.length > 0 ? (
+                      <p className="text-xs text-slate-500">
+                        Still pending in Stripe: {stripePendingSteps.join(", ")}.
+                      </p>
+                    ) : null}
+                    {!usesPlatformStripe && !stripeAccountId ? (
+                      <p className="text-xs text-slate-500">
+                        You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
+                      </p>
+                    ) : null}
+                    {usesPlatformStripe ? (
+                      <p className="text-xs text-slate-500">
+                        This workspace uses the app-wide platform Stripe account, so disconnecting is not available here.
+                      </p>
+                    ) : null}
+                    {stripeAccountId ? (
+                      <p className="text-xs text-slate-500">
+                        {usesPlatformStripe ? "Platform" : "Connected"} account ID:{" "}
+                        <span className="font-mono">{stripeAccountId}</span>
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+                    {!usesPlatformStripe && !isStripeFullyEnabled ? (
+                      <Button
+                        onClick={() => void handleConnectStripe()}
+                        disabled={isConnectingStripe}
+                        className="w-full sm:w-auto"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        {isConnectingStripe
+                          ? "Opening Stripe..."
+                          : stripeAccountId
+                            ? "Continue Stripe setup"
+                            : "Connect Stripe"}
+                      </Button>
+                    ) : null}
+                    {(usesPlatformStripe || stripeAccountId) ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
+                        disabled={isRefreshingStripe || isDisconnectingStripe}
+                        className="w-full sm:w-auto"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
+                        {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <BillingStatusCard
+            title="Plan & Billing"
+            description="Free includes 3 issued invoices per calendar month. Upgrade to Pro for CHF 19/month to issue unlimited invoices."
+            billingStatus={billingStatus}
+            onUpgrade={() => void openBillingCheckout()}
+            onManageBilling={() => void openBillingPortal()}
+            isSubmitting={isOpeningBilling}
+          />
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Help & onboarding</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Guidance when you need it</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Use the guide for self-serve setup, or contact support if you want the optional onboarding service.
+          </p>
+        </div>
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardContent className="space-y-4 p-6">
+            <div className="rounded-xl border border-amber-200 bg-white p-4">
+              <p className="text-sm font-medium text-slate-900">What the onboarding service includes</p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                <li>Business profile, branding, and invoice numbering setup</li>
+                <li>Stripe guidance if you want online card payments</li>
+                <li>Help importing or creating your first client records</li>
+                <li>Help checking the first invoice before it is sent</li>
+              </ul>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button asChild>
+                <Link href="/help?from=settings">Open help guide</Link>
+              </Button>
+            </div>
+            {billingStatus?.supportEmail ? (
+              <p className="text-sm text-slate-500">
+                Need direct help? Contact support at{" "}
+                <a
+                  href={`mailto:${billingStatus.supportEmail}?subject=Sierra%20Invoices%20Onboarding%20Request`}
+                  className="font-medium text-slate-700 underline underline-offset-4"
+                >
+                  {billingStatus.supportEmail}
+                </a>
+                . If your email app does not open, copy and paste the address into your email app.
+              </p>
+            ) : null}
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">App preferences</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Device and appearance</h2>
+        </div>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>App Install</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4">
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-slate-900">
+                    {isInstalled
+                      ? "Installed on this device"
+                      : canInstall
+                        ? "Ready to install"
+                        : showInstallInstructions
+                          ? "Install from your browser menu"
+                          : "Open in a supported browser to install"}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    Installing gives {APP_NAME} its own home-screen icon and a cleaner app-like window.
+                    Core pages and the offline screen are cached for weak connections.
+                  </p>
+                  {!isInstalled ? <p className="text-xs text-slate-500">{installHelpText}</p> : null}
+                </div>
+                {!isInstalled ? (
+                  <Button onClick={() => void handleInstallApp()} className="w-full sm:w-auto">
+                    {canInstall ? "Install App" : "Show Install Steps"}
+                  </Button>
+                ) : null}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Appearance</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="themeToggle">Dark mode</Label>
+                  <p className="text-sm text-slate-500">
+                    Switch the workspace between light and dark.
+                  </p>
+                </div>
+                <button
+                  id="themeToggle"
+                  type="button"
+                  aria-pressed={theme === "dark"}
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  className="inline-flex w-full items-center justify-between rounded-full border px-3 py-2 text-sm font-medium transition-colors sm:min-w-44 sm:w-auto"
                   style={{
-                    backgroundColor: theme === "dark" ? "#334155" : "#cbd5e1",
+                    borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
+                    backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
+                    color: theme === "dark" ? "#f8fafc" : "#0f172a",
                   }}
                 >
+                  <span className="flex items-center gap-2">
+                    {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                    {theme === "dark" ? "Dark mode" : "Light mode"}
+                  </span>
                   <span
-                    className={`absolute top-0.5 h-5 w-5 rounded-full shadow-sm transition-all ${
-                      theme === "dark" ? "left-0.5" : "left-[22px]"
-                    }`}
-                    style={{ backgroundColor: "#ffffff" }}
-                  />
-                </span>
-              </button>
-            </div>
-          </CardContent>
-        </Card>
+                    className="relative h-6 w-11 overflow-hidden rounded-full transition-colors"
+                    style={{
+                      backgroundColor: theme === "dark" ? "#334155" : "#cbd5e1",
+                    }}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-5 w-5 rounded-full shadow-sm transition-all ${
+                        theme === "dark" ? "left-0.5" : "left-[22px]"
+                      }`}
+                      style={{ backgroundColor: "#ffffff" }}
+                    />
+                  </span>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
+      <section className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Security</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Access and password</h2>
+        </div>
         <Card>
-          <CardHeader>
-            <CardTitle>Security</CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             <div className="flex flex-wrap items-center gap-3">
               <Button onClick={() => router.push("/settings/password")} className="w-full sm:w-auto">
                 Change Password
@@ -1151,47 +1180,81 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </section>
 
-      <Card className="border-amber-200 bg-amber-50/50">
-        <CardHeader>
-          <CardTitle>Close Workspace Safely</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-sm text-slate-600">
-            Self-serve hard deletion is disabled because invoice, payment, expense, and accounting
-            records may need to be retained for bookkeeping, tax, and audit reasons.
+      <section className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Danger Zone</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Destructive account actions</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            These actions affect payment connections or workspace access and should only be used intentionally.
           </p>
-          <div className="rounded-xl border border-amber-200 bg-white p-4">
-            <p className="text-sm font-medium text-slate-900">Safer closure approach</p>
-            <ul className="mt-3 space-y-2 text-sm text-slate-600">
-              <li>Export or archive the invoices, expenses, and payment records your business still needs.</li>
-              <li>Disconnect Stripe first if you no longer want this workspace tied to a payment account.</li>
-              <li>Use the closure action below so access is removed while required records can still be retained.</li>
-              <li>Delete or anonymize non-essential data only where that does not conflict with legal retention duties.</li>
-            </ul>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
-              variant="destructive"
-              onClick={() => setShowCloseWorkspaceDialog(true)}
-              disabled={isClosingWorkspace || isDisconnectingStripe}
-            >
-              {isClosingWorkspace ? "Closing workspace..." : "Close workspace now"}
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/imprint">View imprint</Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link href="/privacy">Review privacy policy</Link>
-            </Button>
-          </div>
-          <p className="text-sm text-slate-500">
-            The legal pages below explain the retention and contact details that still apply after
-            a workspace is closed.
-          </p>
-        </CardContent>
-      </Card>
+        </div>
+        <Card className="border-red-200 bg-red-50/40">
+          <CardContent className="space-y-4 p-6">
+            <div className="grid gap-4 xl:grid-cols-2">
+              <div className="rounded-xl border border-red-200 bg-white p-4">
+                <p className="text-sm font-medium text-slate-900">Disconnect Stripe account</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Remove the connected Stripe account from this workspace. Card payments will stop until
+                  you connect a new account.
+                </p>
+                {!usesPlatformStripe && stripeAccountId ? (
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowDisconnectStripeDialog(true)}
+                    disabled={isDisconnectingStripe || isConnectingStripe || isRefreshingStripe}
+                    className="mt-4 w-full sm:w-auto"
+                  >
+                    {isDisconnectingStripe ? "Disconnecting..." : "Disconnect Stripe"}
+                  </Button>
+                ) : (
+                  <p className="mt-4 text-xs text-slate-500">
+                    {usesPlatformStripe
+                      ? "This workspace uses the platform Stripe account and cannot disconnect it here."
+                      : "No Stripe account is currently connected to this workspace."}
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-xl border border-red-200 bg-white p-4">
+                <p className="text-sm font-medium text-slate-900">Close workspace</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Self-serve hard deletion is disabled because invoice, payment, expense, and accounting
+                  records may need to be retained for bookkeeping, tax, and audit reasons.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowCloseWorkspaceDialog(true)}
+                  disabled={isClosingWorkspace || isDisconnectingStripe}
+                  className="mt-4 w-full sm:w-auto"
+                >
+                  {isClosingWorkspace ? "Closing workspace..." : "Close workspace now"}
+                </Button>
+              </div>
+            </div>
+
+            <div className="rounded-xl border border-amber-200 bg-white p-4">
+              <p className="text-sm font-medium text-slate-900">Before you close the workspace</p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-600">
+                <li>Export or archive the invoices, expenses, and payment records your business still needs.</li>
+                <li>Disconnect Stripe first if you no longer want this workspace tied to a payment account.</li>
+                <li>Use closure only when you are ready to remove access while retained records remain protected.</li>
+                <li>Keep legal retention duties in mind before asking for any personal-data deletion.</li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Button asChild variant="outline">
+                <Link href="/imprint">View imprint</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href="/privacy">Review privacy policy</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
 
       <ConfirmDialog
         open={showDisconnectStripeDialog}

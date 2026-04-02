@@ -3,6 +3,7 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
+import { compareInvoicesByRecency } from "@/lib/invoice";
 
 function getMonthRange(today: Date): { startOfMonth: Date; startOfNextMonth: Date } {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -149,14 +150,14 @@ export async function GET(request: Request) {
         where: {
           businessId: business.id,
         },
-        orderBy: { createdAt: "desc" },
-        take: 5,
         select: {
           id: true,
           invoiceNumber: true,
           totalAmount: true,
           status: true,
           currency: true,
+          issuedAt: true,
+          createdAt: true,
           client: {
             select: {
               companyName: true,
@@ -168,15 +169,18 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const recentInvoices = recentInvoicesRaw.map((invoice) => ({
-      id: invoice.id,
-      invoiceNumber: invoice.invoiceNumber,
-      totalAmount: invoice.totalAmount,
-      status: invoice.status,
-      currency: invoice.currency,
-      clientName:
-        invoice.client.companyName || invoice.client.contactName || invoice.client.email,
-    }));
+    const recentInvoices = recentInvoicesRaw
+      .sort(compareInvoicesByRecency)
+      .slice(0, 5)
+      .map((invoice) => ({
+        id: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        totalAmount: invoice.totalAmount,
+        status: invoice.status,
+        currency: invoice.currency,
+        clientName:
+          invoice.client.companyName || invoice.client.contactName || invoice.client.email,
+      }));
 
     return NextResponse.json({
       currency: business.currency,

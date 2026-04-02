@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   calculateInvoiceTotals,
+  compareInvoicesByRecency,
   deriveClientInvoicePrefix,
   deriveOfficialInvoicePrefix,
   formatDraftInvoiceNumber,
   formatSequentialInvoiceNumber,
   isDraftInvoiceNumber,
   normalizeInvoicePrefix,
+  parseSequentialInvoiceNumber,
 } from "@/lib/invoice";
 
 describe("invoice helpers", () => {
@@ -23,6 +25,16 @@ describe("invoice helpers", () => {
     expect(formatSequentialInvoiceNumber("CO", new Date("2026-03-15T00:00:00Z"), 27)).toBe(
       "CO2026-027"
     );
+  });
+
+  it("parses sequential invoice numbers for sorting", () => {
+    expect(parseSequentialInvoiceNumber("MA2026-031")).toEqual({
+      prefix: "MA",
+      year: 2026,
+      sequence: 31,
+    });
+    expect(parseSequentialInvoiceNumber("DRAFT-20260318-AB12")).toBeNull();
+    expect(parseSequentialInvoiceNumber("invoice-1")).toBeNull();
   });
 
   it("derives official invoice prefixes from the client company or first name", () => {
@@ -43,6 +55,40 @@ describe("invoice helpers", () => {
     expect(value).toBe("DRAFT-20260318-AB12");
     expect(isDraftInvoiceNumber(value)).toBe(true);
     expect(isDraftInvoiceNumber("SI2026-001")).toBe(false);
+  });
+
+  it("sorts official invoice numbers ahead of drafts and by year then sequence", () => {
+    const invoices = [
+      {
+        invoiceNumber: "DRAFT-20260401-AB12",
+        issuedAt: null,
+        createdAt: "2026-04-01T10:00:00.000Z",
+      },
+      {
+        invoiceNumber: "MA2026-030",
+        issuedAt: "2026-03-31T08:00:00.000Z",
+        createdAt: "2026-03-31T08:00:00.000Z",
+      },
+      {
+        invoiceNumber: "MI2026-032",
+        issuedAt: "2026-04-01T08:00:00.000Z",
+        createdAt: "2026-04-01T08:00:00.000Z",
+      },
+      {
+        invoiceNumber: "AA2027-002",
+        issuedAt: "2027-01-02T08:00:00.000Z",
+        createdAt: "2027-01-02T08:00:00.000Z",
+      },
+    ];
+
+    invoices.sort(compareInvoicesByRecency);
+
+    expect(invoices.map((invoice) => invoice.invoiceNumber)).toEqual([
+      "AA2027-002",
+      "MI2026-032",
+      "MA2026-030",
+      "DRAFT-20260401-AB12",
+    ]);
   });
 
   it("calculates subtotal, tax, and total", () => {

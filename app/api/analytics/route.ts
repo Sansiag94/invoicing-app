@@ -54,8 +54,20 @@ export async function GET(request: Request) {
     const currency: InvoiceCurrency = normalizeExpenseCurrency(business.currency, "CHF");
     const months = getTrailingMonths(12);
     const currentMonthStart = startOfMonth(new Date());
+    const nextMonthStart = new Date(
+      currentMonthStart.getFullYear(),
+      currentMonthStart.getMonth() + 1,
+      1
+    );
 
-    const [paidInvoicesRaw, openInvoicesRaw, expensesRaw, paidInvoicesCount, unpaidInvoicesCount] =
+    const [
+      paidInvoicesRaw,
+      openInvoicesRaw,
+      issuedThisMonthRaw,
+      expensesRaw,
+      paidInvoicesCount,
+      unpaidInvoicesCount,
+    ] =
       await prisma.$transaction([
         prisma.invoice.findMany({
           where: {
@@ -92,6 +104,25 @@ export async function GET(request: Request) {
           select: {
             status: true,
             totalAmount: true,
+          },
+        }),
+        prisma.invoice.findMany({
+          where: {
+            businessId: business.id,
+            issuedAt: {
+              gte: currentMonthStart,
+              lt: nextMonthStart,
+            },
+          },
+          select: {
+            status: true,
+            totalAmount: true,
+            payments: {
+              select: {
+                amount: true,
+                createdAt: true,
+              },
+            },
           },
         }),
         prisma.expense.findMany({
@@ -179,6 +210,33 @@ export async function GET(request: Request) {
     const overdueAmount = openInvoicesRaw
       .filter((invoice) => invoice.status === "overdue")
       .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+    const monthProgress = issuedThisMonthRaw.reduce(
+      (summary, invoice) => {
+        summary.issuedAmount += invoice.totalAmount;
+        summary.issuedCount += 1;
+
+        summary.collectedAmount += invoice.payments
+          .filter((payment) => payment.createdAt >= currentMonthStart && payment.createdAt < nextMonthStart)
+          .reduce((sum, payment) => sum + payment.amount, 0);
+
+        if (invoice.status !== "paid") {
+          summary.openAmount += invoice.totalAmount;
+        }
+
+        if (invoice.status === "overdue") {
+          summary.overdueAmount += invoice.totalAmount;
+        }
+
+        return summary;
+      },
+      {
+        issuedAmount: 0,
+        issuedCount: 0,
+        collectedAmount: 0,
+        openAmount: 0,
+        overdueAmount: 0,
+      }
+    );
 
     const monthlySeries = months.map((month) => {
       const revenue = monthlyRevenue.get(month.key) ?? 0;
@@ -218,6 +276,7 @@ export async function GET(request: Request) {
       unpaidInvoices: unpaidInvoicesCount,
       averageDaysToPay,
       averagePaidInvoiceValue: paidInvoicesCount > 0 ? totalRevenue / paidInvoicesCount : 0,
+      monthProgress,
       monthlySeries,
       topClients,
       expenseBreakdown,

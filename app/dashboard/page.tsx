@@ -259,7 +259,9 @@ export default function DashboardPage() {
             <p className="mt-2 text-2xl font-semibold text-slate-900">
               {dashboard.currency} {formatMoney(dashboard.prospectRevenue)}
             </p>
-            <p className="text-sm text-slate-600">{dashboard.sentInvoices} sent invoices still awaiting payment</p>
+            <p className="text-sm text-slate-600">
+              Draft, sent, and overdue invoices not yet paid
+            </p>
           </div>
           <div className="flex flex-col justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
             <div>

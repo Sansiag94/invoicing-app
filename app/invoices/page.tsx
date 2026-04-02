@@ -5,7 +5,7 @@ import { FocusEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState }
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { BellRing, CheckCircle2, ChevronDown, ChevronUp, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
-import BillingStatusCard from "@/components/billing/BillingStatusCard";
+import BillingPlanChip from "@/components/billing/BillingPlanChip";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails, isBillingStatus } from "@/lib/billingClient";
@@ -1086,19 +1086,18 @@ function InvoicePageContent() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Invoices</h1>
-        <p className="text-sm text-slate-500">Create invoices and manage their lifecycle.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Invoices</h1>
+          <p className="text-sm text-slate-500">Create invoices and manage their lifecycle.</p>
+        </div>
+        <BillingPlanChip
+          billingStatus={billingStatus}
+          onUpgrade={() => void openBillingCheckout()}
+          onManageBilling={() => void openBillingPortal()}
+          isSubmitting={isOpeningBilling}
+        />
       </div>
-
-      <BillingStatusCard
-        title="Plan usage"
-        description="Free includes 3 issued invoices per calendar month. Drafts stay free until you turn them into official invoices."
-        billingStatus={billingStatus}
-        onUpgrade={() => void openBillingCheckout()}
-        onManageBilling={() => void openBillingPortal()}
-        isSubmitting={isOpeningBilling}
-      />
 
       {successMessage ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">

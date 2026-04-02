@@ -348,6 +348,51 @@ export default function AnalyticsPage() {
         />
       </div>
 
+      <Card>
+        <CardHeader>
+          <CardTitle>Month In Progress</CardTitle>
+          <p className="text-sm text-slate-500">
+            Focus on invoices officially issued this month so you can see what has already been
+            billed, what has been collected, and what is still open.
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Issued this month</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {analytics.currency} {formatMoney(analytics.monthProgress.issuedAmount)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">
+                {analytics.monthProgress.issuedCount} official invoice
+                {analytics.monthProgress.issuedCount === 1 ? "" : "s"} issued this month
+              </p>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Collected this month</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {analytics.currency} {formatMoney(analytics.monthProgress.collectedAmount)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">Cash received this month from this month&apos;s invoices</p>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Still open</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {analytics.currency} {formatMoney(analytics.monthProgress.openAmount)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">Issued this month but not fully paid yet</p>
+            </div>
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-700">Overdue from this month</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {analytics.currency} {formatMoney(analytics.monthProgress.overdueAmount)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600">Already overdue among this month&apos;s issued invoices</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <Card>
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -504,7 +549,7 @@ export default function AnalyticsPage() {
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
               <p className="text-sm font-medium text-slate-900">Collections risk</p>
               <div className="mt-2 space-y-1 text-sm text-slate-600">
-                <p>Prospect revenue: {analytics.currency} {formatMoney(analytics.prospectRevenue)}</p>
+                <p>Open pipeline: {analytics.currency} {formatMoney(analytics.prospectRevenue)}</p>
                 <p>Overdue amount: {analytics.currency} {formatMoney(analytics.overdueAmount)}</p>
               </div>
             </div>
