@@ -1074,7 +1074,7 @@ export default function SettingsPage() {
                 >
                   {billingStatus.supportEmail}
                 </a>
-                . If your email app does not open, copy and paste the address into your email app.
+                .
               </p>
             ) : null}
           </CardContent>
@@ -1168,22 +1168,6 @@ export default function SettingsPage() {
 
       <section className="space-y-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Security</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Access and password</h2>
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={() => router.push("/settings/password")} className="w-full sm:w-auto">
-                Change Password
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="space-y-4">
-        <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Danger Zone</p>
           <h2 className="mt-1 text-xl font-semibold text-slate-950">Destructive account actions</h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -1192,7 +1176,21 @@ export default function SettingsPage() {
         </div>
         <Card className="border-red-200 bg-red-50/40">
           <CardContent className="space-y-4 p-6">
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-4 xl:grid-cols-3">
+              <div className="rounded-xl border border-red-200 bg-white p-4">
+                <p className="text-sm font-medium text-slate-900">Change password</p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Open the password reset flow for this account if you want to replace your current login password.
+                </p>
+                <Button
+                  variant="destructive"
+                  onClick={() => router.push("/settings/password")}
+                  className="mt-4 w-full sm:w-auto"
+                >
+                  Change password
+                </Button>
+              </div>
+
               <div className="rounded-xl border border-red-200 bg-white p-4">
                 <p className="text-sm font-medium text-slate-900">Disconnect Stripe account</p>
                 <p className="mt-2 text-sm text-slate-600">
