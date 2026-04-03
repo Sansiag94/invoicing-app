@@ -53,26 +53,18 @@ function getReturnContent(source: HelpSource) {
 function getActionLinks(source: HelpSource) {
   if (source === "public") {
     return {
-      settingsHref: "/signup",
-      settingsLabel: "Create account",
-      clientsHref: "/signup",
-      clientsLabel: "Create account to add clients",
-      invoicesHref: "/login",
-      invoicesLabel: "Log in",
-      expensesHref: "/login",
-      expensesLabel: "Log in",
+      primaryHref: "/signup",
+      primaryLabel: "Create account",
+      secondaryHref: "/login",
+      secondaryLabel: "Log in",
     };
   }
 
   return {
-    settingsHref: "/settings",
-    settingsLabel: "Open settings",
-    clientsHref: "/clients",
-    clientsLabel: "Open clients",
-    invoicesHref: "/invoices",
-    invoicesLabel: "Open invoices",
-    expensesHref: "/expenses",
-    expensesLabel: "Open expenses",
+    primaryHref: "/settings",
+    primaryLabel: "Open settings",
+    secondaryHref: "/invoices",
+    secondaryLabel: "Open invoices",
   };
 }
 
@@ -223,16 +215,10 @@ export default async function HelpPage({
 
             <div className="flex flex-wrap gap-3">
               <Button asChild>
-                <Link href={actionLinks.settingsHref}>{actionLinks.settingsLabel}</Link>
+                <Link href={actionLinks.primaryHref}>{actionLinks.primaryLabel}</Link>
               </Button>
               <Button asChild variant="outline">
-                <Link href={actionLinks.clientsHref}>{actionLinks.clientsLabel}</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={actionLinks.invoicesHref}>{actionLinks.invoicesLabel}</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link href={actionLinks.expensesHref}>{actionLinks.expensesLabel}</Link>
+                <Link href={actionLinks.secondaryHref}>{actionLinks.secondaryLabel}</Link>
               </Button>
             </div>
           </CardContent>

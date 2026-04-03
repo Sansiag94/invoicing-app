@@ -25,21 +25,21 @@ const proofPoints = [
 const previewInvoices = [
   {
     number: "MA2026-034",
-    client: "Studio Alpina",
+    client: "Example Studio GmbH",
     amount: "CHF 1,250.00",
     status: "paid",
     tone: "bg-emerald-100 text-emerald-700",
   },
   {
     number: "MA2026-035",
-    client: "Maggie Widmer",
+    client: "Sample Client AG",
     amount: "CHF 280.00",
     status: "sent",
     tone: "bg-amber-100 text-amber-700",
   },
   {
     number: "MA2026-036",
-    client: "Mindful Journey",
+    client: "Demo Wellness Sarl",
     amount: "CHF 441.67",
     status: "draft",
     tone: "bg-slate-100 text-slate-700",
