@@ -10,6 +10,7 @@ import { DEFAULT_INVOICE_LANGUAGE, INVOICE_LANGUAGE_OPTIONS, getInvoiceLanguageL
 import { ClientImportResult, ClientSummary } from "@/lib/types";
 import { isValidEmail } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CountryCombobox } from "@/components/ui/country-combobox";
@@ -76,10 +77,14 @@ function formatImportErrorMessage(message: string): string {
   return message;
 }
 
+const CLIENTS_CACHE_KEY = "clients-list";
+
 function ClientsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [clients, setClients] = useState<ClientSummary[]>([]);
+  const [clients, setClients] = useState<ClientSummary[]>(() =>
+    readPrivatePageCache<ClientSummary[]>(CLIENTS_CACHE_KEY) ?? []
+  );
   const [companyName, setCompanyName] = useState("");
   const [contactName, setContactName] = useState("");
   const [email, setEmail] = useState("");
@@ -97,7 +102,9 @@ function ClientsPageContent() {
   const [importResult, setImportResult] = useState<ClientImportResult | null>(null);
   const [isImportPanelOpen, setIsImportPanelOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(
+    () => !readPrivatePageCache<ClientSummary[]>(CLIENTS_CACHE_KEY)
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
   const createClientRef = useRef<HTMLDivElement | null>(null);
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
@@ -136,7 +143,9 @@ function ClientsPageContent() {
     }
 
     const dataClients = (await response.json()) as ClientSummary[];
-    setClients(Array.isArray(dataClients) ? dataClients : []);
+    const nextClients = Array.isArray(dataClients) ? dataClients : [];
+    writePrivatePageCache(CLIENTS_CACHE_KEY, nextClients);
+    setClients(nextClients);
     setLoadError(null);
   }
 
@@ -293,14 +302,18 @@ function ClientsPageContent() {
         }
         const dataClients = (await response.json()) as ClientSummary[];
         if (mounted) {
-          setClients(Array.isArray(dataClients) ? dataClients : []);
+          const nextClients = Array.isArray(dataClients) ? dataClients : [];
+          writePrivatePageCache(CLIENTS_CACHE_KEY, nextClients);
+          setClients(nextClients);
           setLoadError(null);
         }
       } catch (error) {
         console.error("Error fetching clients:", error);
         if (mounted) {
-          setClients([]);
-          setLoadError("Unable to load clients.");
+          if (!readPrivatePageCache<ClientSummary[]>(CLIENTS_CACHE_KEY)) {
+            setClients([]);
+            setLoadError("Unable to load clients.");
+          }
         }
       } finally {
         if (mounted) {

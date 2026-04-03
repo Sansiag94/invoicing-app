@@ -1,10 +1,11 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Clock3, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { AnalyticsOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { getExpenseCategoryLabel } from "@/lib/expenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,7 @@ function AnalyticsPageSkeleton() {
 }
 
 type TimeRange = 3 | 6 | 12;
+const ANALYTICS_CACHE_KEY = "analytics-overview";
 
 function buildLinePath(
   values: number[],
@@ -164,8 +166,9 @@ function buildPoints(
 
 export default function AnalyticsPage() {
   const { theme } = useTheme();
-  const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialAnalyticsRef = useRef(readPrivatePageCache<AnalyticsOverview>(ANALYTICS_CACHE_KEY));
+  const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(initialAnalyticsRef.current);
+  const [isLoading, setIsLoading] = useState(() => !initialAnalyticsRef.current);
   const [timeRange, setTimeRange] = useState<TimeRange>(6);
 
   useEffect(() => {
@@ -180,12 +183,14 @@ export default function AnalyticsPage() {
           throw new Error(("error" in data ? data.error : null) ?? "Failed to load analytics");
         }
 
+        writePrivatePageCache(ANALYTICS_CACHE_KEY, data as AnalyticsOverview);
+
         if (mounted) {
           setAnalytics(data as AnalyticsOverview);
         }
       } catch (error) {
         console.error("Error loading analytics:", error);
-        if (mounted) {
+        if (mounted && !initialAnalyticsRef.current) {
           setAnalytics(null);
         }
       } finally {

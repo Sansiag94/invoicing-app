@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ExpenseRecord, ExpensesPageData, InvoiceCurrency } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { expenseCategoryOptions, getExpenseCategoryLabel } from "@/lib/expenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,9 +78,12 @@ function ExpenseStatCard(props: { label: string; value: string; helper: string }
   );
 }
 
+const EXPENSES_CACHE_KEY = "expenses-page-data";
+
 export default function ExpensesPage() {
-  const [pageData, setPageData] = useState<ExpensesPageData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialExpensesPageDataRef = useRef(readPrivatePageCache<ExpensesPageData>(EXPENSES_CACHE_KEY));
+  const [pageData, setPageData] = useState<ExpensesPageData | null>(initialExpensesPageDataRef.current);
+  const [isLoading, setIsLoading] = useState(() => !initialExpensesPageDataRef.current);
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
@@ -95,7 +99,9 @@ export default function ExpensesPage() {
   const { toast } = useToast();
 
   const currency = pageData?.overview.currency ?? "CHF";
-  const [formState, setFormState] = useState<ExpenseFormState>(buildEmptyExpenseForm("CHF"));
+  const [formState, setFormState] = useState<ExpenseFormState>(() =>
+    buildEmptyExpenseForm(initialExpensesPageDataRef.current?.overview.currency ?? "CHF")
+  );
 
   async function fetchExpenses() {
     const response = await authenticatedFetch("/api/expenses");
@@ -105,6 +111,7 @@ export default function ExpensesPage() {
       throw new Error(("error" in data ? data.error : null) ?? "Failed to load expenses");
     }
 
+    writePrivatePageCache(EXPENSES_CACHE_KEY, data as ExpensesPageData);
     setPageData(data as ExpensesPageData);
     setFormState((current) => ({
       ...current,
@@ -120,7 +127,7 @@ export default function ExpensesPage() {
         await fetchExpenses();
       } catch (error) {
         console.error("Error loading expenses:", error);
-        if (mounted) {
+        if (mounted && !initialExpensesPageDataRef.current) {
           setPageData(null);
         }
       } finally {

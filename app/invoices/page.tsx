@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FocusEvent, ReactNode, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { FocusEvent, ReactNode, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
 import { BellRing, CheckCircle2, ChevronDown, ChevronUp, CircleOff, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
@@ -13,6 +13,7 @@ import { getInvoiceVatLabel } from "@/lib/invoice";
 import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
 import { BillingLimitDetails, BillingStatus, BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { getInvoiceSenderName } from "@/lib/business";
 import { getDefaultDueDate, getTodayDateInputValue } from "@/lib/invoiceDates";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +44,13 @@ type ConfirmDialogState = {
   confirmLabel: string;
   confirmVariant?: "default" | "secondary" | "outline" | "destructive" | "ghost";
   onConfirm: () => void;
+};
+
+type InvoicePageBootstrap = {
+  clients: ClientSummary[];
+  invoices: InvoiceRow[];
+  business: BusinessSettingsData;
+  billing: BillingStatus | null;
 };
 
 function statusVariant(status: string): "default" | "success" | "warning" | "danger" {
@@ -97,17 +105,67 @@ function buildInvoicePaymentNoteTemplate(
   return buildDefaultInvoicePaymentNote(client?.language ?? "en", twintPhoneNumber.trim());
 }
 
+const INVOICES_PAGE_CACHE_KEY = "invoices-page-bootstrap";
+
+function InvoicesPageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-3">
+          <div className="h-10 w-36 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
+          <div className="h-4 w-72 max-w-full animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
+        </div>
+        <div className="h-9 w-28 animate-pulse rounded-full bg-slate-200/70 dark:bg-slate-800/70" />
+      </div>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="h-6 w-32 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+          <div className="h-9 w-24 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+        </CardHeader>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div className="h-6 w-24 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+          <div className="flex gap-2">
+            <div className="h-9 w-32 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+            <div className="h-9 w-32 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={`invoices-skeleton-row-${index}`}
+              className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60"
+            >
+              <div className="space-y-2">
+                <div className="h-4 w-28 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+                <div className="h-4 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
+              </div>
+              <div className="h-8 w-44 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function InvoicePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialInvoicePageRef = useRef(readPrivatePageCache<InvoicePageBootstrap>(INVOICES_PAGE_CACHE_KEY));
+  const initialBusiness = initialInvoicePageRef.current?.business ?? null;
   const requestedClientId = (searchParams.get("clientId") ?? "").trim();
   const defaultIssueDate = getTodayDateInputValue();
-  const [clients, setClients] = useState<ClientSummary[]>([]);
-  const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
-  const [invoiceSenderName, setInvoiceSenderName] = useState("User_name");
-  const [businessCurrency, setBusinessCurrency] = useState<"CHF" | "EUR">("CHF");
-  const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(false);
-  const [twintPhoneNumber, setTwintPhoneNumber] = useState("");
+  const [clients, setClients] = useState<ClientSummary[]>(initialInvoicePageRef.current?.clients ?? []);
+  const [invoices, setInvoices] = useState<InvoiceRow[]>(initialInvoicePageRef.current?.invoices ?? []);
+  const [businessData, setBusinessData] = useState<BusinessSettingsData | null>(initialBusiness);
+  const [invoiceSenderName, setInvoiceSenderName] = useState(
+    initialBusiness ? getInvoiceSenderName(initialBusiness) : "User_name"
+  );
+  const [businessCurrency, setBusinessCurrency] = useState<"CHF" | "EUR">(initialBusiness?.currency === "EUR" ? "EUR" : "CHF");
+  const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(Boolean(initialBusiness?.acceptsTwintPayments));
+  const [twintPhoneNumber, setTwintPhoneNumber] = useState(initialBusiness?.twintPhoneNumber ?? "");
   const [lineItems, setLineItems] = useState<LineItemData[]>([
     { description: "", quantity: 1, unitPrice: 0, taxRate: 0 },
   ]);
@@ -128,12 +186,14 @@ function InvoicePageContent() {
   const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(initialInvoicePageRef.current?.billing ?? null);
   const [billingLimitDetails, setBillingLimitDetails] = useState<BillingLimitDetails | null>(null);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
   const [bulkActionLabel, setBulkActionLabel] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(() => !initialInvoicePageRef.current);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [openActionsInvoiceId, setOpenActionsInvoiceId] = useState<string | null>(null);
   const [actionsMenuPosition, setActionsMenuPosition] = useState<{ top: number; left: number } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<ConfirmDialogState | null>(null);
@@ -233,6 +293,25 @@ function InvoicePageContent() {
     await Promise.all([fetchInvoices(), fetchBillingStatus()]);
   }
 
+  const refreshBillingStatusEvent = useEffectEvent(() => {
+    void fetchBillingStatus().catch((error) => {
+      console.error("Unable to refresh billing status:", error);
+    });
+  });
+
+  useEffect(() => {
+    if (!businessData) {
+      return;
+    }
+
+    writePrivatePageCache(INVOICES_PAGE_CACHE_KEY, {
+      clients,
+      invoices,
+      business: businessData,
+      billing: billingStatus,
+    });
+  }, [billingStatus, businessData, clients, invoices]);
+
   function handleBillingLimitResponse(payload: { code?: string; details?: unknown }): boolean {
     const details = getBillingLimitDetails(payload);
     if (!details) {
@@ -328,14 +407,23 @@ function InvoicePageContent() {
         if (mounted) {
           setClients(Array.isArray(loadedClients) ? loadedClients : []);
           setInvoices(Array.isArray(loadedInvoices) ? loadedInvoices : []);
+          setBusinessData(loadedBusiness);
           setInvoiceSenderName(getInvoiceSenderName(loadedBusiness || { name: "User_name" }));
           setBusinessCurrency(loadedBusiness?.currency === "EUR" ? "EUR" : "CHF");
           setAcceptsTwintPayments(Boolean(loadedBusiness?.acceptsTwintPayments));
           setTwintPhoneNumber(loadedBusiness?.twintPhoneNumber || "");
           setBillingStatus(isBillingStatus(loadedBilling) ? loadedBilling : null);
+          setLoadError(null);
         }
       } catch (error) {
         console.error("Error loading invoice page data:", error);
+        if (mounted && !initialInvoicePageRef.current) {
+          setLoadError("Unable to load invoices.");
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     })();
 
@@ -359,9 +447,7 @@ function InvoicePageContent() {
       return;
     }
 
-    void fetchBillingStatus().catch((error) => {
-      console.error("Unable to refresh billing status:", error);
-    });
+    refreshBillingStatusEvent();
 
     toast({
       title: billingQueryStatus === "success" ? "Subscription updated" : "Checkout cancelled",
@@ -1151,8 +1237,17 @@ function InvoicePageContent() {
     </div>
   );
 
+  if (isLoading) {
+    return <InvoicesPageSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
+      {loadError ? (
+        <div className="rounded-md border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-100">
+          {loadError}
+        </div>
+      ) : null}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Invoices</h1>

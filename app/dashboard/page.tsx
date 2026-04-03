@@ -1,10 +1,11 @@
 "use client";
 
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DashboardOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -168,10 +169,13 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
   return "default";
 }
 
+const DASHBOARD_CACHE_KEY = "dashboard-overview";
+
 export default function DashboardPage() {
   const router = useRouter();
-  const [dashboard, setDashboard] = useState<DashboardOverview | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const initialDashboardRef = useRef(readPrivatePageCache<DashboardOverview>(DASHBOARD_CACHE_KEY));
+  const [dashboard, setDashboard] = useState<DashboardOverview | null>(initialDashboardRef.current);
+  const [isLoading, setIsLoading] = useState(() => !initialDashboardRef.current);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -186,13 +190,15 @@ export default function DashboardPage() {
           throw new Error(("error" in data ? data.error : null) ?? "Failed to load dashboard");
         }
 
+        writePrivatePageCache(DASHBOARD_CACHE_KEY, data as DashboardOverview);
+
         if (mounted) {
           setDashboard(data as DashboardOverview);
           setLoadError(null);
         }
       } catch (error) {
         console.error("Error loading dashboard:", error);
-        if (mounted) {
+        if (mounted && !initialDashboardRef.current) {
           setDashboard(null);
           setLoadError("Unable to load dashboard.");
         }

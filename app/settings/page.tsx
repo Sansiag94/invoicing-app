@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useEffectEvent, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
@@ -15,6 +15,7 @@ import { BillingStatus, BusinessSettingsData, InvoiceSenderType } from "@/lib/ty
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { startClientLogout } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,45 +27,104 @@ import { useToast } from "@/components/ui/toast";
 import { useTheme } from "@/components/ui/theme";
 import { APP_NAME } from "@/lib/appBrand";
 
+type SettingsPageBootstrap = {
+  business: BusinessSettingsData;
+  billing: BillingStatus;
+};
+
+const SETTINGS_PAGE_CACHE_KEY = "settings-page-bootstrap";
+
+function SettingsPageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <div className="h-10 w-40 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
+        <div className="h-4 w-[30rem] max-w-full animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
+      </div>
+      <Card>
+        <CardContent className="grid gap-6 p-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
+          <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+            <div className="h-20 w-20 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
+            <div className="h-9 w-full animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+            <div className="h-9 w-full animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+          </div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={`settings-field-skeleton-${index}`} className="space-y-2">
+                <div className="h-4 w-24 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+                <div className="h-10 w-full animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="h-6 w-40 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+              <div className="h-28 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-800/70" />
+              <div className="h-10 w-56 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="h-6 w-32 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+              <div className="h-28 animate-pulse rounded-xl bg-slate-200/70 dark:bg-slate-800/70" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
+  const initialSettingsRef = useRef(readPrivatePageCache<SettingsPageBootstrap>(SETTINGS_PAGE_CACHE_KEY));
+  const initialBusiness = initialSettingsRef.current?.business;
+  const initialBilling = initialSettingsRef.current?.billing ?? null;
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { canInstall, install, installHelpText, isInstalled, showInstallInstructions } = usePwa();
-  const [businessId, setBusinessId] = useState("");
-  const [name, setName] = useState("");
-  const [ownerName, setOwnerName] = useState("");
-  const [invoiceSenderType, setInvoiceSenderType] = useState<InvoiceSenderType>("company");
-  const [nextOfficialInvoiceSequence, setNextOfficialInvoiceSequence] = useState("1");
-  const [street, setStreet] = useState("");
-  const [postalCode, setPostalCode] = useState("");
-  const [city, setCity] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [website, setWebsite] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [bic, setBic] = useState("");
-  const [country, setCountry] = useState("");
-  const [currency, setCurrency] = useState("CHF");
-  const [vatNumber, setVatNumber] = useState("");
-  const [iban, setIban] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
-  const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(false);
-  const [twintPhoneNumber, setTwintPhoneNumber] = useState("");
-  const [usesPlatformStripe, setUsesPlatformStripe] = useState(false);
-  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
-  const [stripeChargesEnabled, setStripeChargesEnabled] = useState(false);
-  const [stripePayoutsEnabled, setStripePayoutsEnabled] = useState(false);
-  const [stripeDetailsSubmitted, setStripeDetailsSubmitted] = useState(false);
+  const [businessId, setBusinessId] = useState(initialBusiness?.id ?? "");
+  const [name, setName] = useState(initialBusiness?.name ?? "");
+  const [ownerName, setOwnerName] = useState(initialBusiness?.ownerName ?? "");
+  const [invoiceSenderType, setInvoiceSenderType] = useState<InvoiceSenderType>(initialBusiness?.invoiceSenderType ?? "company");
+  const [nextOfficialInvoiceSequence, setNextOfficialInvoiceSequence] = useState(String(initialBusiness?.nextOfficialInvoiceSequence ?? 1));
+  const [street, setStreet] = useState(initialBusiness?.street ?? "");
+  const [postalCode, setPostalCode] = useState(initialBusiness?.postalCode ?? "");
+  const [city, setCity] = useState(initialBusiness?.city ?? "");
+  const [phone, setPhone] = useState(initialBusiness?.phone ?? "");
+  const [email, setEmail] = useState(initialBusiness?.email ?? "");
+  const [website, setWebsite] = useState(initialBusiness?.website ?? "");
+  const [bankName, setBankName] = useState(initialBusiness?.bankName ?? "");
+  const [bic, setBic] = useState(initialBusiness?.bic ?? "");
+  const [country, setCountry] = useState(initialBusiness?.country ?? "");
+  const [currency, setCurrency] = useState(initialBusiness?.currency ?? "CHF");
+  const [vatNumber, setVatNumber] = useState(initialBusiness?.vatNumber ?? "");
+  const [iban, setIban] = useState(initialBusiness?.iban ?? "");
+  const [logoUrl, setLogoUrl] = useState(initialBusiness?.logoUrl ?? "");
+  const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(Boolean(initialBusiness?.acceptsTwintPayments));
+  const [twintPhoneNumber, setTwintPhoneNumber] = useState(initialBusiness?.twintPhoneNumber ?? "");
+  const [usesPlatformStripe, setUsesPlatformStripe] = useState(Boolean(initialBusiness?.usesPlatformStripe));
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(initialBusiness?.stripeAccountId ?? null);
+  const [stripeChargesEnabled, setStripeChargesEnabled] = useState(Boolean(initialBusiness?.stripeChargesEnabled));
+  const [stripePayoutsEnabled, setStripePayoutsEnabled] = useState(Boolean(initialBusiness?.stripePayoutsEnabled));
+  const [stripeDetailsSubmitted, setStripeDetailsSubmitted] = useState(Boolean(initialBusiness?.stripeDetailsSubmitted));
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isRefreshingStripe, setIsRefreshingStripe] = useState(false);
   const [isDisconnectingStripe, setIsDisconnectingStripe] = useState(false);
-  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(null);
+  const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(initialBilling);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
   const [isClosingWorkspace, setIsClosingWorkspace] = useState(false);
   const [showDisconnectStripeDialog, setShowDisconnectStripeDialog] = useState(false);
   const [showCloseWorkspaceDialog, setShowCloseWorkspaceDialog] = useState(false);
+  const [isLoading, setIsLoading] = useState(() => !initialSettingsRef.current);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
@@ -124,6 +184,11 @@ export default function SettingsPage() {
   const refreshStripeStatusEvent = useEffectEvent(() => {
     void refreshStripeStatus({ showSuccessToast: true });
   });
+  const refreshBillingStatusEvent = useEffectEvent(() => {
+    void fetchBillingStatus().catch((error) => {
+      console.error("Unable to refresh billing status:", error);
+    });
+  });
 
   async function fetchBillingStatus() {
     const response = await authenticatedFetch("/api/billing/status");
@@ -134,6 +199,40 @@ export default function SettingsPage() {
     }
 
     setBillingStatus(result);
+    if (billingStatus || initialBilling) {
+      writePrivatePageCache(SETTINGS_PAGE_CACHE_KEY, {
+        business: {
+          ...(initialBusiness ?? ({} as BusinessSettingsData)),
+          id: businessId,
+          name,
+          ownerName,
+          invoiceSenderType,
+          nextOfficialInvoiceSequence: normalizedNextOfficialInvoiceSequence,
+          street,
+          postalCode,
+          city,
+          phone,
+          email,
+          website,
+          bankName,
+          bic,
+          country,
+          currency,
+          vatNumber,
+          iban,
+          logoUrl,
+          acceptsTwintPayments,
+          twintPhoneNumber,
+          usesPlatformStripe,
+          stripeAccountId,
+          stripeChargesEnabled,
+          stripePayoutsEnabled,
+          stripeDetailsSubmitted,
+          address: buildAddressString({ street, postalCode, city }),
+        } as BusinessSettingsData,
+        billing: result,
+      });
+    }
   }
 
   async function openBillingCheckout() {
@@ -325,6 +424,13 @@ export default function SettingsPage() {
     setStripePayoutsEnabled(Boolean(updatedBusiness.stripePayoutsEnabled));
     setStripeDetailsSubmitted(Boolean(updatedBusiness.stripeDetailsSubmitted));
     setIsSaving(false);
+
+    if (billingStatus || initialBilling) {
+      writePrivatePageCache(SETTINGS_PAGE_CACHE_KEY, {
+        business: updatedBusiness,
+        billing: billingStatus ?? initialBilling!,
+      });
+    }
 
     if (options?.successMessage) {
       toast({
@@ -620,6 +726,10 @@ export default function SettingsPage() {
         const parsedAddress = parsePostalAddress(data?.address, data?.country);
 
         if (mounted) {
+          writePrivatePageCache(SETTINGS_PAGE_CACHE_KEY, {
+            business: data,
+            billing: billingData,
+          });
           setBusinessId(data?.id || "");
           setName(data?.name || "");
           setOwnerName(data?.ownerName || "");
@@ -646,9 +756,17 @@ export default function SettingsPage() {
           setStripePayoutsEnabled(Boolean(data?.stripePayoutsEnabled));
           setStripeDetailsSubmitted(Boolean(data?.stripeDetailsSubmitted));
           setBillingStatus(billingData);
+          setLoadError(null);
         }
       } catch (error) {
         console.error("Error loading settings page data:", error);
+        if (mounted && !initialSettingsRef.current) {
+          setLoadError("Unable to load settings.");
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     })();
 
@@ -687,9 +805,7 @@ export default function SettingsPage() {
       return;
     }
 
-    void fetchBillingStatus().catch((error) => {
-      console.error("Unable to refresh billing status:", error);
-    });
+    refreshBillingStatusEvent();
 
     toast({
       title: billingQueryStatus === "success" ? "Subscription updated" : "Checkout cancelled",
@@ -702,12 +818,22 @@ export default function SettingsPage() {
     window.history.replaceState({}, "", "/settings");
   }, [toast]);
 
+  if (isLoading) {
+    return <SettingsPageSkeleton />;
+  }
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">Workspace details, payments, appearance, and account controls</p>
       </div>
+
+      {loadError ? (
+        <div className="rounded-md border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-100">
+          {loadError}
+        </div>
+      ) : null}
 
       <section className="space-y-4">
         <div>
@@ -833,7 +959,11 @@ export default function SettingsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">Currency</Label>
-                <Select id="currency" value={currency} onChange={(event) => setCurrency(event.target.value)}>
+                <Select
+                  id="currency"
+                  value={currency}
+                  onChange={(event) => setCurrency(event.target.value as "CHF" | "EUR")}
+                >
                   <option value="CHF">CHF</option>
                   <option value="EUR">EUR</option>
                 </Select>
@@ -968,16 +1098,16 @@ export default function SettingsPage() {
             Configure manual payment notes, optional card payments, and the workspace plan.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Manual payment note</CardTitle>
-                <p className="text-sm text-slate-500">
-                  Let invoices prefill a TWINT payment note with your own phone number.
-                </p>
-              </CardHeader>
-              <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(20rem,0.85fr)]">
+          <Card>
+            <CardHeader>
+              <CardTitle>Manual payment note</CardTitle>
+              <p className="text-sm text-slate-500">
+                Let invoices prefill a TWINT payment note with your own phone number.
+              </p>
+            </CardHeader>
+            <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
+              <div className="space-y-4">
                 <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
                   <input
                     type="checkbox"
@@ -1003,7 +1133,9 @@ export default function SettingsPage() {
                     disabled={!acceptsTwintPayments}
                   />
                 </div>
+              </div>
 
+              <div className="space-y-4">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoice note preview</p>
                   <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
@@ -1015,91 +1147,9 @@ export default function SettingsPage() {
                   <Save className="h-4 w-4" />
                   {isSaving ? "Saving..." : "Save payment settings"}
                 </Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Stripe Payments</CardTitle>
-                <p className="text-sm text-slate-500">Card payments are optional. Bank transfer and Swiss QR bills work without Stripe.</p>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-slate-600 dark:text-slate-400" />
-                        <p className="font-semibold text-slate-900 dark:text-slate-100">
-                          {usesPlatformStripe
-                            ? "Platform Stripe account"
-                            : stripeAccountId
-                              ? "Stripe account connected"
-                              : "Optional card payments"}
-                        </p>
-                      </div>
-                      <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">
-                        Connect Stripe only if this business wants to accept card payments online.
-                        Bank transfers and Swiss QR bills work without it.
-                      </p>
-                      <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${stripeStatusTone}`}>
-                        {stripeStatusLabel}
-                      </div>
-                      <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">{stripeStatusDescription}</p>
-                      {stripePendingSteps.length > 0 ? (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          Still pending in Stripe: {stripePendingSteps.join(", ")}.
-                        </p>
-                      ) : null}
-                      {!usesPlatformStripe && !stripeAccountId ? (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
-                        </p>
-                      ) : null}
-                      {usesPlatformStripe ? (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          This workspace uses the app-wide platform Stripe account, so disconnecting is not available here.
-                        </p>
-                      ) : null}
-                      {stripeAccountId ? (
-                        <p className="text-xs text-slate-500 dark:text-slate-400">
-                          {usesPlatformStripe ? "Platform" : "Connected"} account ID:{" "}
-                          <span className="font-mono">{stripeAccountId}</span>
-                        </p>
-                      ) : null}
-                    </div>
-
-                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                      {!usesPlatformStripe && !isStripeFullyEnabled ? (
-                        <Button
-                          onClick={() => void handleConnectStripe()}
-                          disabled={isConnectingStripe}
-                          className="w-full sm:w-auto"
-                        >
-                          <ExternalLink className="h-4 w-4" />
-                          {isConnectingStripe
-                            ? "Opening Stripe..."
-                            : stripeAccountId
-                              ? "Continue Stripe setup"
-                              : "Connect Stripe"}
-                        </Button>
-                      ) : null}
-                      {(usesPlatformStripe || stripeAccountId) ? (
-                        <Button
-                          variant="secondary"
-                          onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
-                          disabled={isRefreshingStripe || isDisconnectingStripe}
-                          className="w-full sm:w-auto"
-                        >
-                          <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
-                          {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
-                        </Button>
-                      ) : null}
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              </div>
+            </CardContent>
+          </Card>
 
           <BillingStatusCard
             title="Plan & Billing"
@@ -1109,6 +1159,88 @@ export default function SettingsPage() {
             onManageBilling={() => void openBillingPortal()}
             isSubmitting={isOpeningBilling}
           />
+
+          <Card className="xl:col-span-2">
+            <CardHeader>
+              <CardTitle>Stripe Payments</CardTitle>
+              <p className="text-sm text-slate-500">Card payments are optional. Bank transfer and Swiss QR bills work without Stripe.</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40">
+                <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
+                        {usesPlatformStripe
+                          ? "Platform Stripe account"
+                          : stripeAccountId
+                            ? "Stripe account connected"
+                            : "Optional card payments"}
+                      </p>
+                    </div>
+                    <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">
+                      Connect Stripe only if this business wants to accept card payments online.
+                      Bank transfers and Swiss QR bills work without it.
+                    </p>
+                    <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${stripeStatusTone}`}>
+                      {stripeStatusLabel}
+                    </div>
+                    <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">{stripeStatusDescription}</p>
+                    {stripePendingSteps.length > 0 ? (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Still pending in Stripe: {stripePendingSteps.join(", ")}.
+                      </p>
+                    ) : null}
+                    {!usesPlatformStripe && !stripeAccountId ? (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
+                      </p>
+                    ) : null}
+                    {usesPlatformStripe ? (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        This workspace uses the app-wide platform Stripe account, so disconnecting is not available here.
+                      </p>
+                    ) : null}
+                    {stripeAccountId ? (
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        {usesPlatformStripe ? "Platform" : "Connected"} account ID:{" "}
+                        <span className="font-mono">{stripeAccountId}</span>
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap lg:w-auto lg:flex-col lg:items-stretch">
+                    {!usesPlatformStripe && !isStripeFullyEnabled ? (
+                      <Button
+                        onClick={() => void handleConnectStripe()}
+                        disabled={isConnectingStripe}
+                        className="w-full sm:w-auto"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        {isConnectingStripe
+                          ? "Opening Stripe..."
+                          : stripeAccountId
+                            ? "Continue Stripe setup"
+                            : "Connect Stripe"}
+                      </Button>
+                    ) : null}
+                    {(usesPlatformStripe || stripeAccountId) ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
+                        disabled={isRefreshingStripe || isDisconnectingStripe}
+                        className="w-full sm:w-auto"
+                      >
+                        <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
+                        {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
