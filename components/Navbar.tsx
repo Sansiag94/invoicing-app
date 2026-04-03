@@ -7,7 +7,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { Bell, Download, LifeBuoy, LogOut, Menu, Search, Settings } from "lucide-react";
 import { WorkspaceNotification } from "@/lib/types";
 import { usePwa } from "@/components/PwaProvider";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 import { clearPwaAppCache } from "@/lib/pwaCache";
@@ -468,19 +467,6 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
         </nav>
 
         <div className="ml-auto flex min-w-0 items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-          {!isInstalled && (canInstall || showInstallInstructions) ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => void handleInstallApp()}
-              className="hidden lg:inline-flex"
-            >
-              <Download className="h-4 w-4" />
-              Install App
-            </Button>
-          ) : null}
-
           <div ref={searchContainerRef} className="relative hidden w-full max-w-sm lg:block">
             <form onSubmit={handleSearchSubmit}>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" />

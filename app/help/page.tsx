@@ -119,7 +119,7 @@ export default async function HelpPage({
             >
               {legalProfile.supportEmail}
             </a>
-            . If your email app does not open, you can copy and paste the address manually.
+            .
           </p>
         </div>
       </section>
@@ -238,20 +238,20 @@ export default async function HelpPage({
           </CardContent>
         </Card>
 
-        <Card id="onboarding-service" className="border-amber-200 bg-[linear-gradient(180deg,#fff7ed_0%,#ffffff_100%)]">
+        <Card id="onboarding-service" className="border-slate-200">
           <CardHeader className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-              Optional onboarding
+              Paid setup help
             </p>
-            <CardTitle className="text-3xl text-slate-950">CHF 99 setup help</CardTitle>
+            <CardTitle className="text-2xl text-slate-950">Need hands-on support?</CardTitle>
             <p className="text-sm leading-7 text-slate-600">
-              This is a manual service for people who want a human to help them configure the
-              workspace quickly and correctly.
+              If you would rather have a human help you configure the workspace, Sierra Invoices
+              offers a CHF 99 onboarding service.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-2xl border border-amber-200 bg-white p-5">
-              <p className="text-sm font-medium text-slate-900">What is included</p>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="text-sm font-medium text-slate-900">This support can help with</p>
               <div className="mt-3 space-y-2 text-sm text-slate-600">
                 <div className="flex items-start gap-2">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
@@ -267,32 +267,21 @@ export default async function HelpPage({
                 </div>
                 <div className="flex items-start gap-2">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
-                  <span>Help building and checking the first invoice before it is sent</span>
+                  <span>Help checking the first invoice before it is sent</span>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-medium text-slate-900">What to include in your message</p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>Your business name and best contact email</li>
-                <li>Whether you want card payments or bank transfer only</li>
-                <li>Whether you already have clients in a spreadsheet</li>
-                <li>Whether you need to continue an existing invoice numbering sequence</li>
-                <li>Any deadline for sending the first invoice</li>
-              </ul>
-            </div>
-
             <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-600">
-              Contact support at{" "}
+              Contact{" "}
               <a
                 href={onboardingMailtoHref}
                 className="font-medium text-slate-700 underline underline-offset-4"
               >
                 {legalProfile.supportEmail}
               </a>{" "}
-              and mention that you want the CHF 99 onboarding service. If your email app does not
-              open, copy and paste the address into your normal email app.
+              and mention your business name, whether you want card payments, and whether you
+              already keep clients in a spreadsheet.
             </div>
           </CardContent>
         </Card>

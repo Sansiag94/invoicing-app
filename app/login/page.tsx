@@ -92,7 +92,7 @@ export default function LoginPage() {
       <AuthSplitShell
         eyebrow="Log in"
         title="Welcome back"
-        description="Access your billing workspace, review revenue, and keep every invoice under control."
+        description="Access your workspace and pick up right where your invoicing left off."
         alternateText="Need a new account instead?"
         alternateLabel="Create account"
         alternateHref="/signup"

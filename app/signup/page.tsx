@@ -108,7 +108,7 @@ export default function SignupPage() {
 
       toast({
         title: "Account created",
-        description: "Account created. Check your inbox if email confirmation is required before logging in.",
+        description: "Account created. If email confirmation is enabled, verify your inbox before your first login.",
         variant: "success",
       });
       router.push("/login");
@@ -123,7 +123,7 @@ export default function SignupPage() {
       <AuthSplitShell
         eyebrow="Create account"
         title={`Start with ${APP_NAME}`}
-        description="Set up your billing workspace and start sending client-ready invoices within minutes."
+        description="Create your workspace now. You can finish business details and first clients right after sign-up."
         alternateText="Already have an account?"
         alternateLabel="Log in"
         alternateHref="/login"
@@ -208,6 +208,10 @@ export default function SignupPage() {
               >
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
+              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                If email confirmation is enabled, we&apos;ll send a verification email before your
+                first login.
+              </p>
             </div>
           </div>
         </form>

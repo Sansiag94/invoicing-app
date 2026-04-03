@@ -2,9 +2,6 @@ import Link from "next/link";
 import {
   ArrowRight,
   CheckCircle2,
-  CircleDollarSign,
-  FileClock,
-  ReceiptSwissFranc,
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -12,29 +9,41 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
 import { APP_NAME } from "@/lib/appBrand";
 
-const benefitCards = [
-  {
-    title: "Swiss-ready invoicing",
-    description: "Create polished invoices with clear business details, payment information, and QR-bill support.",
-    icon: ReceiptSwissFranc,
-  },
-  {
-    title: "See cash flow clearly",
-    description: "Track paid, unpaid, and overdue invoices without losing sight of what is still expected.",
-    icon: FileClock,
-  },
-  {
-    title: "Payment links built in",
-    description: "Send client-friendly invoice emails with downloadable PDFs and online payment options.",
-    icon: CircleDollarSign,
-  },
+const heroHighlights = [
+  "Swiss-ready invoices with QR-bill support",
+  "3 issued invoices free every month",
+  "CHF 19/month Pro when you need unlimited invoicing",
 ];
 
 const proofPoints = [
   "Branded invoice PDFs and public invoice views",
-  "Client management and business settings in one place",
   "Payment links, reminders, and invoice status visibility",
+  "Clients, expenses, and analytics in one focused workspace",
   "Secure business-scoped access with Supabase and Prisma",
+];
+
+const previewInvoices = [
+  {
+    number: "MA2026-034",
+    client: "Studio Alpina",
+    amount: "CHF 1,250.00",
+    status: "paid",
+    tone: "bg-emerald-100 text-emerald-700",
+  },
+  {
+    number: "MA2026-035",
+    client: "Maggie Widmer",
+    amount: "CHF 280.00",
+    status: "sent",
+    tone: "bg-amber-100 text-amber-700",
+  },
+  {
+    number: "MA2026-036",
+    client: "Mindful Journey",
+    amount: "CHF 441.67",
+    status: "draft",
+    tone: "bg-slate-100 text-slate-700",
+  },
 ];
 
 const pricingTiers = [
@@ -71,8 +80,8 @@ export default function LandingPage() {
                       Swiss invoicing for freelancers and small businesses
                     </h1>
                     <p className="max-w-2xl text-lg leading-8 text-slate-600">
-                      Create Swiss-ready invoices, send payment links, and stay in control of paid,
-                      pending, and overdue revenue without accounting-suite overhead.
+                      Create Swiss-ready invoices with QR-bill support, send payment links, and start
+                      free with 3 official invoices per month before switching to Pro at CHF 19/month.
                     </p>
                   </div>
                 </div>
@@ -94,22 +103,16 @@ export default function LandingPage() {
                   </Button>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {benefitCards.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <div
-                        key={item.title}
-                        className="rounded-2xl border border-slate-200 bg-white/80 p-4 backdrop-blur-sm"
-                      >
-                        <div className="mb-3 inline-flex rounded-xl bg-slate-100 p-2.5 text-slate-700">
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <p className="font-medium text-slate-900">{item.title}</p>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>
-                      </div>
-                    );
-                  })}
+                <div className="flex flex-wrap gap-3">
+                  {heroHighlights.map((item) => (
+                    <div
+                      key={item}
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-3 py-2 text-sm text-slate-700 backdrop-blur-sm"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                      <span>{item}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -118,18 +121,70 @@ export default function LandingPage() {
               <div className="space-y-6">
                 <div className="space-y-3">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/65">
-                    Built for daily billing work
+                    Workspace preview
                   </p>
                   <h2 className="text-3xl font-semibold tracking-tight">One place to run your invoice flow</h2>
                   <p className="text-sm leading-7 text-white/78">
-                    Less generic SaaS overhead, more clarity around invoices, clients, reminders, and
-                    incoming payments.
+                    A focused workspace for invoices, clients, payments, and the month in progress.
                   </p>
+                </div>
+
+                <div className="rounded-[24px] border border-white/12 bg-white/8 p-5 shadow-[0_18px_60px_rgba(2,6,23,0.28)] backdrop-blur-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-white">Dashboard</p>
+                      <p className="text-xs text-white/60">Monthly invoicing overview</p>
+                    </div>
+                    <div className="rounded-full border border-white/12 bg-white/10 px-3 py-1 text-xs font-medium text-white/80">
+                      Free plan
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid grid-cols-3 gap-3">
+                    <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/55">Issued</p>
+                      <p className="mt-2 text-lg font-semibold text-white">CHF 1,971</p>
+                      <p className="text-xs text-white/65">this month</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/55">Collected</p>
+                      <p className="mt-2 text-lg font-semibold text-white">CHF 1,530</p>
+                      <p className="text-xs text-white/65">cash received</p>
+                    </div>
+                    <div className="rounded-2xl border border-white/10 bg-slate-950/20 p-3">
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-white/55">Open</p>
+                      <p className="mt-2 text-lg font-semibold text-white">CHF 441</p>
+                      <p className="text-xs text-white/65">still unpaid</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 rounded-2xl border border-white/10 bg-slate-950/20 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium text-white">Recent invoices</p>
+                      <p className="text-xs text-white/55">Status at a glance</p>
+                    </div>
+                    <div className="mt-3 space-y-3">
+                      {previewInvoices.map((invoice) => (
+                        <div key={invoice.number} className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium text-white">{invoice.number}</p>
+                            <p className="text-xs text-white/60">{invoice.client}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <p className="text-sm text-white/82">{invoice.amount}</p>
+                            <span className={`rounded-full px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide ${invoice.tone}`}>
+                              {invoice.status}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <Card className="border-white/12 bg-white/8 text-white shadow-none">
                   <CardHeader>
-                    <CardTitle className="text-base">What you can do here</CardTitle>
+                    <CardTitle className="text-base">Why teams pick it</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm text-white/80">
                     {proofPoints.map((item) => (

@@ -2,7 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, Clock3, TrendingUp, Wallet } from "lucide-react";
+import { Clock3, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { AnalyticsOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getExpenseCategoryLabel } from "@/lib/expenses";
@@ -65,6 +65,49 @@ function MetricCard(props: {
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{props.helper}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function AnalyticsPageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        <div className="h-10 w-44 animate-pulse rounded-xl bg-slate-200/80" />
+        <div className="h-4 w-[32rem] max-w-full animate-pulse rounded bg-slate-200/70" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={`analytics-skeleton-stat-${index}`} className="border-slate-200 bg-white">
+            <CardHeader className="space-y-3 pb-2">
+              <div className="h-4 w-32 animate-pulse rounded bg-slate-200/80" />
+              <div className="h-8 w-36 animate-pulse rounded bg-slate-200/70" />
+            </CardHeader>
+            <CardContent>
+              <div className="h-4 w-44 animate-pulse rounded bg-slate-200/70" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="h-6 w-40 animate-pulse rounded bg-slate-200/80" />
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={`analytics-skeleton-progress-${index}`}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+            >
+              <div className="h-3 w-28 animate-pulse rounded bg-slate-200/80" />
+              <div className="mt-3 h-8 w-28 animate-pulse rounded bg-slate-200/70" />
+              <div className="mt-3 h-4 w-44 animate-pulse rounded bg-slate-200/70" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -215,7 +258,6 @@ export default function AnalyticsPage() {
     if (!analytics) {
       return {
         topClientShare: null as number | null,
-        profitMargin: null as number | null,
         overdueShare: null as number | null,
         topClientName: null as string | null,
       };
@@ -226,12 +268,18 @@ export default function AnalyticsPage() {
       topClientName: topClient?.clientName ?? null,
       topClientShare:
         topClient && analytics.totalRevenue > 0 ? (topClient.revenue / analytics.totalRevenue) * 100 : null,
-      profitMargin:
-        analytics.totalRevenue > 0 ? (analytics.totalProfit / analytics.totalRevenue) * 100 : null,
       overdueShare:
         analytics.prospectRevenue > 0 ? (analytics.overdueAmount / analytics.prospectRevenue) * 100 : null,
     };
   }, [analytics]);
+
+  const selectedRangeProfitMargin = useMemo(() => {
+    if (chartData.totals.revenue <= 0) {
+      return null;
+    }
+
+    return (chartData.totals.profit / chartData.totals.revenue) * 100;
+  }, [chartData.totals.profit, chartData.totals.revenue]);
 
   const chartWidth = 760;
   const chartHeight = 280;
@@ -298,7 +346,7 @@ export default function AnalyticsPage() {
   );
 
   if (isLoading) {
-    return <div>Loading analytics...</div>;
+    return <AnalyticsPageSkeleton />;
   }
 
   if (!analytics) {
@@ -310,41 +358,38 @@ export default function AnalyticsPage() {
       <div className="space-y-2">
         <h1 className="text-3xl font-bold">Analytics</h1>
         <p className="max-w-3xl text-sm text-slate-500">
-          Use this page for longer-term signals: profitability, payment behavior, client concentration, and where expenses are accumulating.
+          Use this page for performance trends, collections risk, client concentration, and where expenses are accumulating.
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
-          label="Total profit"
-          value={`${analytics.currency} ${formatMoney(analytics.totalProfit)}`}
-          helper={`${analytics.currency} ${formatMoney(analytics.totalRevenue)} revenue minus ${analytics.currency} ${formatMoney(analytics.totalExpenses)} expenses`}
-          tone={analytics.totalProfit >= 0 ? "success" : "danger"}
+          label="Revenue (selected range)"
+          value={`${analytics.currency} ${formatMoney(chartData.totals.revenue)}`}
+          helper={`Revenue across the ${timeRange}-month view shown below`}
+          tone="default"
           icon={<Wallet className="h-5 w-5" />}
         />
         <MetricCard
-          label="Profit margin"
-          value={derived.profitMargin === null ? "-" : formatPercent(derived.profitMargin)}
-          helper="How much of billed revenue remains after expenses"
-          tone={derived.profitMargin !== null && derived.profitMargin >= 0 ? "success" : "warning"}
+          label="Costs (selected range)"
+          value={`${analytics.currency} ${formatMoney(chartData.totals.expenses)}`}
+          helper={`Booked expenses across the same ${timeRange}-month view`}
+          tone="warning"
+          icon={<TrendingDown className="h-5 w-5" />}
+        />
+        <MetricCard
+          label="Net result (selected range)"
+          value={`${analytics.currency} ${formatMoney(chartData.totals.profit)}`}
+          helper="Revenue minus expenses in the selected range"
+          tone={chartData.totals.profit >= 0 ? "success" : "danger"}
           icon={<TrendingUp className="h-5 w-5" />}
         />
         <MetricCard
-          label="Average days to pay"
-          value={analytics.averageDaysToPay === null ? "-" : `${analytics.averageDaysToPay.toFixed(1)} d`}
-          helper="Based on invoices with recorded payments"
+          label="Margin (selected range)"
+          value={selectedRangeProfitMargin === null ? "-" : formatPercent(selectedRangeProfitMargin)}
+          helper="Net result divided by revenue in the selected range"
+          tone={selectedRangeProfitMargin !== null && selectedRangeProfitMargin >= 0 ? "success" : "warning"}
           icon={<Clock3 className="h-5 w-5" />}
-        />
-        <MetricCard
-          label="Overdue exposure"
-          value={`${analytics.currency} ${formatMoney(analytics.overdueAmount)}`}
-          helper={
-            derived.overdueShare === null
-              ? "No open revenue pipeline"
-              : `${formatPercent(derived.overdueShare)} of current pipeline is overdue`
-          }
-          tone="danger"
-          icon={<AlertCircle className="h-5 w-5" />}
         />
       </div>
 
@@ -397,7 +442,7 @@ export default function AnalyticsPage() {
         <Card>
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <CardTitle>Revenue, Costs & Profit</CardTitle>
+              <CardTitle>Revenue, costs, and net result</CardTitle>
               <p className="mt-1 text-sm text-slate-500">Interactive view of the last {timeRange} months.</p>
             </div>
             <div className="flex gap-2">
@@ -525,16 +570,28 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>What Needs Attention</CardTitle>
+            <CardTitle>Collections and payment behavior</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm font-medium text-slate-900">Current month</p>
+              <p className="text-sm font-medium text-slate-900">Overdue exposure</p>
               <div className="mt-2 space-y-1 text-sm text-slate-600">
-                <p>Revenue: {analytics.currency} {formatMoney(analytics.revenueThisMonth)}</p>
-                <p>Expenses: {analytics.currency} {formatMoney(analytics.expensesThisMonth)}</p>
-                <p className="font-medium text-slate-900">Net: {analytics.currency} {formatMoney(analytics.netProfitThisMonth)}</p>
+                <p>{analytics.currency} {formatMoney(analytics.overdueAmount)} currently overdue</p>
+                <p>
+                  {derived.overdueShare === null
+                    ? "No open revenue pipeline right now."
+                    : `${formatPercent(derived.overdueShare)} of the current open pipeline is overdue.`}
+                </p>
               </div>
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-sm font-medium text-slate-900">Average days to pay</p>
+              <p className="mt-2 text-sm text-slate-600">
+                {analytics.averageDaysToPay === null
+                  ? "Not enough paid invoices yet."
+                  : `${analytics.averageDaysToPay.toFixed(1)} days based on invoices with recorded payments.`}
+              </p>
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
@@ -547,10 +604,11 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm font-medium text-slate-900">Collections risk</p>
+              <p className="text-sm font-medium text-slate-900">Open pipeline</p>
               <div className="mt-2 space-y-1 text-sm text-slate-600">
                 <p>Open pipeline: {analytics.currency} {formatMoney(analytics.prospectRevenue)}</p>
-                <p>Overdue amount: {analytics.currency} {formatMoney(analytics.overdueAmount)}</p>
+                <p>Paid invoices: {analytics.paidInvoices}</p>
+                <p>Unpaid invoices: {analytics.unpaidInvoices}</p>
               </div>
             </div>
 

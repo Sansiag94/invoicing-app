@@ -685,30 +685,30 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-sm text-slate-500">Business profile, appearance, payments, and account controls</p>
+        <p className="text-sm text-slate-500">Workspace details, payments, appearance, and account controls</p>
       </div>
 
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Workspace profile</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Business identity and payment details</h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Business identity</h2>
           <p className="mt-1 text-sm text-slate-500">
             This information appears on invoices, public invoice pages, and payment instructions.
           </p>
         </div>
         <Card>
-          <CardContent className="grid gap-6 p-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-            <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <CardContent className="grid gap-6 p-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
               <div className="space-y-2">
                 <p className="text-sm font-medium text-slate-900">Logo</p>
                 {logoUrl ? (
                   <img
                     src={logoUrl}
                     alt="Business logo"
-                    className="h-24 w-24 rounded-xl border border-slate-200 bg-white object-contain"
+                    className="h-20 w-20 rounded-xl border border-slate-200 bg-white object-contain"
                   />
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-400">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-400">
                     No logo
                   </div>
                 )}
@@ -731,8 +731,7 @@ export default function SettingsPage() {
                 </Button>
               </div>
               <p className="text-xs leading-5 text-slate-500">
-                Bucket: <strong>{logosBucket}</strong>. Make it public so invoice rendering can show
-                the logo correctly.
+                Stored in <strong>{logosBucket}</strong>. Keep the bucket public so invoices can render the logo.
               </p>
             </div>
 
@@ -943,15 +942,16 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payments & billing</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Stripe and workspace plan</h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Card payments and billing</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Stripe is optional for card payments. Plan upgrades, management, and cancellation stay here.
+            Use Stripe for card payments and manage the workspace plan here.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
           <Card>
             <CardHeader>
               <CardTitle>Stripe Payments</CardTitle>
+              <p className="text-sm text-slate-500">Card payments are optional. Bank transfer and Swiss QR bills work without Stripe.</p>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-slate-200 p-4">
@@ -1043,40 +1043,33 @@ export default function SettingsPage() {
 
       <section className="space-y-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Help & onboarding</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Guidance when you need it</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Use the guide for self-serve setup, or contact support if you want the optional onboarding service.
-          </p>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Help</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Open the guide when you need it</h2>
         </div>
-        <Card className="border-amber-200 bg-amber-50/50">
-          <CardContent className="space-y-4 p-6">
-            <div className="rounded-xl border border-amber-200 bg-white p-4">
-              <p className="text-sm font-medium text-slate-900">What the onboarding service includes</p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
-                <li>Business profile, branding, and invoice numbering setup</li>
-                <li>Stripe guidance if you want online card payments</li>
-                <li>Help importing or creating your first client records</li>
-                <li>Help checking the first invoice before it is sent</li>
-              </ul>
+        <Card>
+          <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-900">Step-by-step help guide</p>
+              <p className="text-sm text-slate-500">
+                Use the guide for setup steps, invoice numbering, Stripe, expenses, and client import questions.
+              </p>
+              {billingStatus?.supportEmail ? (
+                <p className="text-sm text-slate-500">
+                  Support:{" "}
+                  <a
+                    href={`mailto:${billingStatus.supportEmail}`}
+                    className="font-medium text-slate-700 underline underline-offset-4"
+                  >
+                    {billingStatus.supportEmail}
+                  </a>
+                </p>
+              ) : null}
             </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              <Button asChild className="w-full sm:w-auto">
                 <Link href="/help?from=settings">Open help guide</Link>
               </Button>
             </div>
-            {billingStatus?.supportEmail ? (
-              <p className="text-sm text-slate-500">
-                Need direct help? Contact support at{" "}
-                <a
-                  href={`mailto:${billingStatus.supportEmail}?subject=Sierra%20Invoices%20Onboarding%20Request`}
-                  className="font-medium text-slate-700 underline underline-offset-4"
-                >
-                  {billingStatus.supportEmail}
-                </a>
-                .
-              </p>
-            ) : null}
           </CardContent>
         </Card>
       </section>
@@ -1169,9 +1162,9 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Danger Zone</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Destructive account actions</h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Access and workspace controls</h2>
           <p className="mt-1 text-sm text-slate-500">
-            These actions affect payment connections or workspace access and should only be used intentionally.
+            Use these actions when you need to change account access, connected payments, or workspace status.
           </p>
         </div>
         <Card className="border-red-200 bg-red-50/40">

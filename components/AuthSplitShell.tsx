@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, CircleDollarSign, ReceiptSwissFranc, ShieldCheck } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 import { APP_NAME } from "@/lib/appBrand";
 
 type AuthSplitShellProps = {
@@ -16,21 +15,9 @@ type AuthSplitShellProps = {
 };
 
 const highlights = [
-  {
-    title: "Swiss-ready invoices",
-    description: "Clean invoice PDFs with QR-bill support and professional client presentation.",
-    icon: ReceiptSwissFranc,
-  },
-  {
-    title: "Payment links included",
-    description: "Send invoices with clear online payment options and downloadable PDF attachments.",
-    icon: CircleDollarSign,
-  },
-  {
-    title: "Clear business control",
-    description: "Track paid, pending, and overdue invoices without losing sight of your cash flow.",
-    icon: ShieldCheck,
-  },
+  "Swiss-ready invoices with QR-bill support",
+  "Payment links, reminders, and status visibility",
+  "Clients, invoices, and expenses in one workspace",
 ];
 
 export default function AuthSplitShell({
@@ -47,69 +34,32 @@ export default function AuthSplitShell({
       <div className="grid w-full overflow-hidden rounded-[28px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-slate-900 lg:grid-cols-[1.2fr_0.9fr]">
         <section className="order-2 relative overflow-hidden bg-[linear-gradient(135deg,#0f172a_0%,#1d3557_45%,#264653_100%)] px-8 py-8 text-white md:px-12 md:py-14 lg:order-1">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_28%)]" />
-          <div className="relative space-y-6 md:space-y-8">
+          <div className="relative space-y-6">
             <div className="space-y-4">
               <p className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/85">
                 {APP_NAME}
               </p>
               <div className="space-y-3">
                 <h1 className="max-w-xl text-3xl font-semibold leading-[1.02] tracking-tight md:text-5xl">
-                  Professional invoicing for Swiss businesses
+                  Swiss-ready invoicing, kept focused
                 </h1>
                 <p className="max-w-lg text-sm leading-6 text-white/78 md:text-lg md:leading-7">
-                  Create clean invoices, send payment links, and keep full visibility over what is
-                  paid, pending, or overdue.
+                  Clean invoicing, clear payment tracking, and less admin noise for freelancers and small businesses.
                 </p>
               </div>
             </div>
 
-            <div className="hidden gap-3 md:grid md:grid-cols-3">
-              {highlights.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <div
-                    key={item.title}
-                    className="rounded-2xl border border-white/15 bg-white/8 p-4 backdrop-blur-sm"
-                  >
-                    <div className="mb-3 inline-flex rounded-xl bg-white/12 p-2.5">
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <p className="font-medium">{item.title}</p>
-                    <p className="mt-2 text-sm leading-6 text-white/72">{item.description}</p>
+            <div className="rounded-2xl border border-white/15 bg-white/8 p-5 backdrop-blur-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/65">{eyebrow}</p>
+              <div className="mt-4 space-y-3 text-sm text-white/82">
+                {highlights.map((item) => (
+                  <div key={item} className="flex items-start gap-2">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
+                    <span>{item}</span>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-
-            <Card className="hidden border-white/12 bg-white/8 text-white shadow-none md:block">
-              <CardContent className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-center">
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/65">
-                    What you get
-                  </p>
-                  <ul className="mt-4 space-y-3 text-sm text-white/82">
-                    <li className="inline-flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
-                      Branded invoice PDFs and client-ready online views
-                    </li>
-                    <li className="inline-flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
-                      Payment links, overdue tracking, and status visibility
-                    </li>
-                    <li className="inline-flex items-start gap-2">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-300" />
-                      One workspace for clients, invoices, and business settings
-                    </li>
-                  </ul>
-                </div>
-                <div className="rounded-2xl border border-white/12 bg-slate-950/20 px-5 py-4">
-                  <p className="text-xs uppercase tracking-[0.18em] text-white/60">{eyebrow}</p>
-                  <p className="mt-2 max-w-[11rem] text-sm leading-6 text-white/80">
-                    Everything starts with one focused billing workspace.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </section>
 
