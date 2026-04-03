@@ -27,35 +27,35 @@ function ClientsPageSkeleton() {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <div className="h-10 w-40 animate-pulse rounded-xl bg-slate-200/80" />
-        <div className="h-4 w-72 max-w-full animate-pulse rounded bg-slate-200/70" />
+        <div className="h-10 w-40 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
+        <div className="h-4 w-72 max-w-full animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <div className="h-6 w-28 animate-pulse rounded bg-slate-200/80" />
+          <div className="h-6 w-28 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
           <div className="flex gap-2">
-            <div className="h-9 w-28 animate-pulse rounded-lg bg-slate-200/70" />
-            <div className="h-9 w-24 animate-pulse rounded-lg bg-slate-200/70" />
+            <div className="h-9 w-28 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
+            <div className="h-9 w-24 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
           </div>
         </CardHeader>
       </Card>
 
       <Card>
         <CardHeader>
-          <div className="h-6 w-32 animate-pulse rounded bg-slate-200/80" />
+          <div className="h-6 w-32 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
         </CardHeader>
         <CardContent className="space-y-3">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={`clients-skeleton-row-${index}`}
-              className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4"
+              className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60"
             >
               <div className="space-y-2">
-                <div className="h-4 w-36 animate-pulse rounded bg-slate-200/80" />
-                <div className="h-4 w-52 animate-pulse rounded bg-slate-200/70" />
+                <div className="h-4 w-36 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+                <div className="h-4 w-52 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
               </div>
-              <div className="h-8 w-28 animate-pulse rounded-lg bg-slate-200/70" />
+              <div className="h-8 w-28 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
             </div>
           ))}
         </CardContent>
@@ -336,7 +336,7 @@ function ClientsPageContent() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Clients</h1>
-        <p className="text-sm text-slate-500">Manage your customers and billing contacts.</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Manage your customers and billing contacts.</p>
       </div>
 
       {successMessage ? (
@@ -478,10 +478,10 @@ function ClientsPageContent() {
       </Card>
 
       {isImportPanelOpen ? (
-        <Card className="border-slate-200 bg-slate-50/70">
+        <Card className="border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/50">
           <CardHeader className="space-y-2">
             <CardTitle>Client import</CardTitle>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Use this if you already keep client details in a spreadsheet and want to migrate them into the app.
             </p>
           </CardHeader>
@@ -497,7 +497,7 @@ function ClientsPageContent() {
 
             <form
               onSubmit={handleImportSubmit}
-              className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
+              className="grid grid-cols-1 gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 md:grid-cols-[minmax(0,1fr)_auto] md:items-end"
             >
               <div className="space-y-2">
                 <Label htmlFor="clientImportFile">CSV file</Label>
@@ -510,7 +510,7 @@ function ClientsPageContent() {
                     setImportFile(event.target.files?.[0] ?? null);
                   }}
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   CSV only. If your source file is Excel, export it as CSV first and match the template headers exactly.
                 </p>
               </div>
@@ -521,36 +521,36 @@ function ClientsPageContent() {
             </form>
 
             {importResult ? (
-              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4">
+              <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950">
                 <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Created</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.createdCount}</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">{importResult.createdCount}</p>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Duplicates skipped</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.skippedDuplicateCount}</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">{importResult.skippedDuplicateCount}</p>
                   </div>
-                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invalid rows</p>
-                    <p className="mt-2 text-2xl font-semibold text-slate-900">{importResult.invalidRowCount}</p>
+                    <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">{importResult.invalidRowCount}</p>
                   </div>
                 </div>
 
                 {importResult.errors.length > 0 ? (
                   <div className="space-y-2">
-                    <p className="text-sm font-medium text-slate-900">Rows to review</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Rows to review</p>
                     <div className="space-y-2">
                       {importResult.errors.map((error) => (
                         <div
                           key={`${error.rowNumber}-${error.type}-${error.message}`}
-                          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+                          className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
                         >
-                          <p className="font-medium text-slate-900">
+                          <p className="font-medium text-slate-900 dark:text-slate-100">
                             Row {error.rowNumber} - {error.type === "duplicate" ? "Duplicate" : "Invalid"}
                           </p>
                           <p className="mt-1">{error.message}</p>
-                          {error.email ? <p className="mt-1 text-xs text-slate-500">{error.email}</p> : null}
+                          {error.email ? <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{error.email}</p> : null}
                         </div>
                       ))}
                     </div>
@@ -568,9 +568,9 @@ function ClientsPageContent() {
         </CardHeader>
         <CardContent>
           {clients.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-              <p className="text-base font-medium text-slate-900">No clients yet</p>
-              <p className="text-sm text-slate-600">Create your first client to start invoicing.</p>
+            <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-base font-medium text-slate-900 dark:text-slate-100">No clients yet</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Create your first client to start invoicing.</p>
               <Button
                 onClick={() => {
                   setIsCreateFormOpen(true);
@@ -581,9 +581,9 @@ function ClientsPageContent() {
               </Button>
             </div>
           ) : filteredClients.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-              <p className="text-base font-medium text-slate-900">No clients match your search</p>
-              <p className="text-sm text-slate-600">
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-base font-medium text-slate-900 dark:text-slate-100">No clients match your search</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
                 Try a different search term for name, email, phone, country, or VAT number.
               </p>
             </div>
@@ -619,7 +619,7 @@ function ClientsPageContent() {
                     <TableCell>
                       <Link
                         href={`/clients/${client.id}`}
-                        className="font-medium text-slate-900 hover:underline"
+                        className="font-medium text-slate-900 hover:underline dark:text-slate-100"
                         onClick={(event) => event.stopPropagation()}
                       >
                         {getClientDisplayName(client) || "-"}
@@ -646,7 +646,7 @@ function ClientsPageContent() {
               {filteredClients.map((client) => (
                 <div
                   key={client.id}
-                  className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+                  className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/80"
                   role="link"
                   tabIndex={0}
                   onClick={() => handleOpenClient(client.id)}
@@ -659,11 +659,11 @@ function ClientsPageContent() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
-                      <p className="font-semibold text-slate-900">{getClientDisplayName(client) || "-"}</p>
-                      <p className="text-sm text-slate-600">{client.email}</p>
-                      <p className="text-sm text-slate-600">{client.phone || "-"}</p>
-                      <p className="text-sm text-slate-600">{client.country}</p>
-                      <p className="text-sm text-slate-600">{getInvoiceLanguageLabel(client.language)}</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">{getClientDisplayName(client) || "-"}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{client.email}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{client.phone || "-"}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{client.country}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{getInvoiceLanguageLabel(client.language)}</p>
                     </div>
                   </div>
                   <div className="mt-4">

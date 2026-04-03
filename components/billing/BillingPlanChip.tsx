@@ -133,18 +133,18 @@ export default function BillingPlanChip({
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-20 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl">
+        <div className="absolute right-0 z-20 mt-2 w-[22rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-slate-700 dark:bg-slate-950">
           <div className="space-y-3">
             <div>
-              <div className="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                <CreditCard className="h-4 w-4 text-slate-600" />
+              <div className="inline-flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+                <CreditCard className="h-4 w-4 text-slate-600 dark:text-slate-400" />
                 {content.badgeLabel}
               </div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">{content.summary}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">{content.summary}</p>
             </div>
 
             {billingStatus ? (
-              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                 {!billingStatus.hasUnlimitedInvoices ? (
                   <p>
                     Free includes {billingStatus.monthlyInvoiceLimit} official invoices per calendar

@@ -459,9 +459,9 @@ export default function ExpensesPage() {
             <form onSubmit={handleCreateExpense} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               <ExpenseFormFields idPrefix="create" formState={formState} onChange={setFormState} />
               <div className="md:col-span-2 xl:col-span-3">
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                  <p className="text-sm font-medium text-slate-900">Receipt photo or file</p>
-                  <p className="mt-1 text-sm text-slate-500">
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Receipt photo or file</p>
+                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Optional. On mobile devices you can take a photo directly, or upload an image/PDF later.
                   </p>
                   <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
@@ -474,12 +474,12 @@ export default function ExpensesPage() {
                         capture="environment"
                         onChange={(event) => setCreateReceiptFile(event.target.files?.[0] ?? null)}
                       />
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
                         Accepted formats: photo or PDF receipt.
                       </p>
                     </div>
                     {createReceiptFile ? (
-                      <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600">
+                      <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
                         {createReceiptFile.name}
                       </div>
                     ) : null}
@@ -522,12 +522,12 @@ export default function ExpensesPage() {
         </CardHeader>
         <CardContent>
           {filteredExpenses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center dark:border-slate-800 dark:bg-slate-950/60">
               <ReceiptText className="h-6 w-6 text-slate-400" />
-              <p className="text-base font-medium text-slate-900">
+              <p className="text-base font-medium text-slate-900 dark:text-slate-100">
                 {pageData.expenses.length ? "No expenses match your filters" : "No expenses yet"}
               </p>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
                 {pageData.expenses.length
                   ? "Try a different search term or category."
                   : "Add your first recurring software bill, travel cost, or other business expense."}
@@ -545,9 +545,9 @@ export default function ExpensesPage() {
             </div>
           ) : (
             <>
-              <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
                 Showing {filteredExpenses.length} expense{filteredExpenses.length === 1 ? "" : "s"} totaling{" "}
-                <span className="font-semibold text-slate-900">
+                <span className="font-semibold text-slate-900 dark:text-slate-100">
                   {currency} {formatMoney(filteredTotal)}
                 </span>
                 .
@@ -570,18 +570,18 @@ export default function ExpensesPage() {
                     {filteredExpenses.map((expense) => (
                       <TableRow key={expense.id}>
                         <TableCell>{new Date(expense.expenseDate).toLocaleDateString()}</TableCell>
-                        <TableCell className="font-medium text-slate-900">{expense.description}</TableCell>
+                        <TableCell className="font-medium text-slate-900 dark:text-slate-100">{expense.description}</TableCell>
                         <TableCell>{getExpenseCategoryLabel(expense.category)}</TableCell>
                         <TableCell>{expense.vendor || "-"}</TableCell>
                         <TableCell>
                           {expense.currency} {formatMoney(expense.amount)}
                         </TableCell>
-                        <TableCell className="text-xs text-slate-600">
+                        <TableCell className="text-xs text-slate-600 dark:text-slate-300">
                           <div className="flex flex-wrap gap-2">
-                            {expense.isRecurring ? <span className="rounded-full bg-slate-100 px-2 py-1">Recurring</span> : null}
-                            {expense.taxDeductible ? <span className="rounded-full bg-slate-100 px-2 py-1">Deductible</span> : null}
+                            {expense.isRecurring ? <span className="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-800">Recurring</span> : null}
+                            {expense.taxDeductible ? <span className="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-800">Deductible</span> : null}
                             {expense.vatReclaimable ? (
-                              <span className="rounded-full bg-slate-100 px-2 py-1">
+                              <span className="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-800">
                                 VAT {expense.currency} {formatMoney(expense.vatAmount ?? 0)}
                               </span>
                             ) : null}
@@ -620,34 +620,34 @@ export default function ExpensesPage() {
 
               <div className="space-y-3 md:hidden">
                 {filteredExpenses.map((expense) => (
-                  <div key={expense.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div key={expense.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-semibold text-slate-900">{expense.description}</p>
-                        <p className="text-sm text-slate-600">{new Date(expense.expenseDate).toLocaleDateString()}</p>
-                        <p className="text-sm text-slate-600">{getExpenseCategoryLabel(expense.category)}</p>
-                        {expense.vendor ? <p className="text-sm text-slate-600">{expense.vendor}</p> : null}
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">{expense.description}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{new Date(expense.expenseDate).toLocaleDateString()}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{getExpenseCategoryLabel(expense.category)}</p>
+                        {expense.vendor ? <p className="text-sm text-slate-600 dark:text-slate-300">{expense.vendor}</p> : null}
                         {expense.receiptUrl ? (
                           <a
                             href={expense.receiptUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="mt-2 inline-flex items-center gap-1 text-sm text-slate-700 underline-offset-2 hover:underline"
+                            className="mt-2 inline-flex items-center gap-1 text-sm text-slate-700 underline-offset-2 hover:underline dark:text-slate-200"
                           >
                             <LinkIcon className="h-3.5 w-3.5" />
                             Receipt
                           </a>
                         ) : null}
                       </div>
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
                         {expense.currency} {formatMoney(expense.amount)}
                       </p>
                     </div>
-                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600">
-                      {expense.isRecurring ? <span className="rounded-full bg-slate-100 px-2 py-1">Recurring</span> : null}
-                      {expense.taxDeductible ? <span className="rounded-full bg-slate-100 px-2 py-1">Deductible</span> : null}
+                    <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-300">
+                      {expense.isRecurring ? <span className="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-800">Recurring</span> : null}
+                      {expense.taxDeductible ? <span className="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-800">Deductible</span> : null}
                       {expense.vatReclaimable ? (
-                        <span className="rounded-full bg-slate-100 px-2 py-1">
+                        <span className="rounded-full bg-slate-100 px-2 py-1 dark:bg-slate-800">
                           VAT {expense.currency} {formatMoney(expense.vatAmount ?? 0)}
                         </span>
                       ) : null}
@@ -684,9 +684,9 @@ export default function ExpensesPage() {
           <form onSubmit={handleSaveExpenseEdit} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <ExpenseFormFields idPrefix="edit" formState={formState} onChange={setFormState} />
             <div className="md:col-span-2 xl:col-span-3">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-medium text-slate-900">Receipt</p>
-                <p className="mt-1 text-sm text-slate-500">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Receipt</p>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   Attach an image or PDF so the expense has audit support.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">

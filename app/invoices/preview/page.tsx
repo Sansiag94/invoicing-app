@@ -102,7 +102,7 @@ function InvoicePreviewContent() {
     <div className="mx-auto max-w-5xl space-y-5 px-1 sm:space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl font-bold sm:text-3xl">Invoice Preview</h1>
-        <p className="text-sm leading-6 text-slate-500">Review the invoice before final creation.</p>
+        <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">Review the invoice before final creation.</p>
       </div>
 
       <Card>
@@ -110,21 +110,21 @@ function InvoicePreviewContent() {
           <CardTitle>Summary</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 text-sm sm:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-xs uppercase tracking-wide text-slate-500">Client ID</p>
-            <p className="mt-1 break-all font-medium text-slate-900">{clientId || "-"}</p>
+            <p className="mt-1 break-all font-medium text-slate-900 dark:text-slate-100">{clientId || "-"}</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-xs uppercase tracking-wide text-slate-500">Currency</p>
-            <p className="mt-1 font-medium text-slate-900">{currency}</p>
+            <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">{currency}</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-xs uppercase tracking-wide text-slate-500">Issue Date</p>
-            <p className="mt-1 font-medium text-slate-900">{issueDate || "-"}</p>
+            <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">{issueDate || "-"}</p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-xs uppercase tracking-wide text-slate-500">Due Date</p>
-            <p className="mt-1 font-medium text-slate-900">{dueDate || "-"}</p>
+            <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">{dueDate || "-"}</p>
           </div>
         </CardContent>
       </Card>
@@ -135,7 +135,7 @@ function InvoicePreviewContent() {
         </CardHeader>
         <CardContent>
           {lineItems.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600">
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
               No line items found in preview data.
             </div>
           ) : (
@@ -144,36 +144,36 @@ function InvoicePreviewContent() {
                 {lineItems.map((item, index) => (
                   <div
                     key={`${item.id ?? item.description}-${index}`}
-                    className="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                    className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                           Item {index + 1}
                         </p>
-                        <p className="mt-1 text-sm font-medium leading-6 text-slate-900">{item.description}</p>
+                        <p className="mt-1 text-sm font-medium leading-6 text-slate-900 dark:text-slate-100">{item.description}</p>
                       </div>
-                      <p className="shrink-0 text-sm font-semibold text-slate-900">
+                      <p className="shrink-0 text-sm font-semibold text-slate-900 dark:text-slate-100">
                         {formatMoney(item.quantity * item.unitPrice)}
                       </p>
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                      <div className="rounded-lg border border-white bg-white px-3 py-2">
+                      <div className="rounded-lg border border-white bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                         <p className="text-xs uppercase tracking-wide text-slate-500">Quantity</p>
-                        <p className="mt-1 font-medium text-slate-900">{item.quantity}</p>
+                        <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">{item.quantity}</p>
                       </div>
-                      <div className="rounded-lg border border-white bg-white px-3 py-2">
+                      <div className="rounded-lg border border-white bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                         <p className="text-xs uppercase tracking-wide text-slate-500">Unit Price</p>
-                        <p className="mt-1 font-medium text-slate-900">{formatMoney(item.unitPrice)}</p>
+                        <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">{formatMoney(item.unitPrice)}</p>
                       </div>
-                      <div className="rounded-lg border border-white bg-white px-3 py-2">
+                      <div className="rounded-lg border border-white bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                         <p className="text-xs uppercase tracking-wide text-slate-500">VAT %</p>
-                        <p className="mt-1 font-medium text-slate-900">{item.taxRate.toFixed(2)}</p>
+                        <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">{item.taxRate.toFixed(2)}</p>
                       </div>
-                      <div className="rounded-lg border border-white bg-white px-3 py-2">
+                      <div className="rounded-lg border border-white bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                         <p className="text-xs uppercase tracking-wide text-slate-500">Total</p>
-                        <p className="mt-1 font-medium text-slate-900">
+                        <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">
                           {formatMoney(item.quantity * item.unitPrice)}
                         </p>
                       </div>
@@ -215,16 +215,16 @@ function InvoicePreviewContent() {
         <CardHeader>
           <CardTitle>Totals</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3 text-sm text-slate-700">
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+        <CardContent className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
             <span>Subtotal</span>
-            <span className="font-medium text-slate-900">{formatMoney(subtotal)}</span>
+            <span className="font-medium text-slate-900 dark:text-slate-100">{formatMoney(subtotal)}</span>
           </div>
-          <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
             <span>{vatLabel}</span>
-            <span className="font-medium text-slate-900">{formatMoney(taxAmount)}</span>
+            <span className="font-medium text-slate-900 dark:text-slate-100">{formatMoney(taxAmount)}</span>
           </div>
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-300 bg-slate-100 px-4 py-4 text-base font-semibold text-slate-900">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-300 bg-slate-100 px-4 py-4 text-base font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50">
             <span>Total</span>
             <span>{formatMoney(totalAmount)}</span>
           </div>
@@ -248,7 +248,7 @@ export default function InvoicePreviewPage() {
     <Suspense
       fallback={
         <Card>
-          <CardContent className="pt-6 text-sm text-slate-600">Loading preview...</CardContent>
+          <CardContent className="pt-6 text-sm text-slate-600 dark:text-slate-300">Loading preview...</CardContent>
         </Card>
       }
     >

@@ -1026,7 +1026,7 @@ function InvoicePageContent() {
       {openActionsInvoiceId === invoice.id && actionsMenuPosition ? createPortal(
         <div
           data-invoice-actions
-          className="fixed z-50 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg"
+          className="fixed z-50 w-52 rounded-xl border border-slate-200 bg-white p-1.5 shadow-lg dark:border-slate-700 dark:bg-slate-950"
           style={{
             top: actionsMenuPosition.top,
             left: actionsMenuPosition.left,
@@ -1064,7 +1064,7 @@ function InvoicePageContent() {
           ) : (
             <button
               type="button"
-              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800")}
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200")}
               disabled={isUpdatingStatusId === invoice.id}
               onClick={() => {
                 setOpenActionsInvoiceId(null);
@@ -1081,7 +1081,7 @@ function InvoicePageContent() {
               type="button"
               className={cn(
                 buttonVariants({ variant: "ghost", size: "sm" }),
-                "w-full justify-start text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                "w-full justify-start text-slate-700 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
               )}
               disabled={isUpdatingStatusId === invoice.id}
               onClick={() => {
@@ -1135,7 +1135,7 @@ function InvoicePageContent() {
           </button>
           <button
             type="button"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-red-700 hover:bg-red-50 hover:text-red-800")}
+            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-300 dark:hover:bg-red-950/40 dark:hover:text-red-200")}
             onClick={() => {
               setOpenActionsInvoiceId(null);
               setActionsMenuPosition(null);
@@ -1156,7 +1156,7 @@ function InvoicePageContent() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Invoices</h1>
-          <p className="text-sm text-slate-500">Create invoices and manage their lifecycle.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Create invoices and manage their lifecycle.</p>
         </div>
         <BillingPlanChip
           billingStatus={billingStatus}
@@ -1523,8 +1523,8 @@ function InvoicePageContent() {
           <div className="space-y-2">
             <CardTitle>Invoices</CardTitle>
             {activeFilterLabel ? (
-              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
-                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 dark:border-slate-800 dark:bg-slate-950/60">
                   Filter: {activeFilterLabel}
                 </span>
                 <Button
@@ -1552,8 +1552,8 @@ function InvoicePageContent() {
         </CardHeader>
         <CardContent>
           {selectedInvoiceIds.length > 0 ? (
-            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3">
-              <p className="text-sm text-slate-700">{selectedInvoiceIds.length} selected</p>
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm text-slate-700 dark:text-slate-300">{selectedInvoiceIds.length} selected</p>
               <Button size="sm" variant="outline" onClick={() => handleBulkAction("send")} disabled={bulkActionLabel !== null}>
                 {bulkActionLabel === "send" ? "Sending..." : "Send"}
               </Button>
@@ -1569,9 +1569,9 @@ function InvoicePageContent() {
             </div>
           ) : null}
           {invoices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-              <p className="text-base font-medium text-slate-900">No invoices yet</p>
-              <p className="text-sm text-slate-600">Create your first invoice to start billing clients.</p>
+            <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-base font-medium text-slate-900 dark:text-slate-100">No invoices yet</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">Create your first invoice to start billing clients.</p>
               <Button
                 onClick={() => {
                   setIsCreateFormOpen(true);
@@ -1582,9 +1582,9 @@ function InvoicePageContent() {
               </Button>
             </div>
           ) : filteredInvoices.length === 0 ? (
-            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
-              <p className="text-base font-medium text-slate-900">No invoices match your search</p>
-              <p className="text-sm text-slate-600">
+            <div className="rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-base font-medium text-slate-900 dark:text-slate-100">No invoices match your search</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
                 Try a different term for invoice number, client, status, or currency.
               </p>
               <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
@@ -1707,7 +1707,7 @@ function InvoicePageContent() {
               {filteredInvoices.map((invoice) => (
                 <div
                   key={invoice.id}
-                  className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+                  className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/80"
                   role="link"
                   tabIndex={0}
                   onClick={() => handleOpenInvoice(invoice.id)}
@@ -1728,10 +1728,10 @@ function InvoicePageContent() {
                           onChange={() => toggleInvoiceSelection(invoice.id)}
                           aria-label={`Select ${invoice.invoiceNumber}`}
                         />
-                        <p className="font-semibold text-slate-900">{invoice.invoiceNumber}</p>
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">{invoice.invoiceNumber}</p>
                       </div>
-                      <p className="text-sm text-slate-600">{getInvoiceClientName(invoice)}</p>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{getInvoiceClientName(invoice)}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">
                         {invoice.currency} {invoice.totalAmount.toFixed(2)}
                       </p>
                     </div>

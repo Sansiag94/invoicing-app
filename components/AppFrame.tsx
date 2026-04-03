@@ -230,7 +230,7 @@ export default function AppFrame({ children }: AppFrameProps) {
 
   if (hideShell) {
     return (
-      <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900">
+      <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
           <div className="mx-auto w-full max-w-7xl">{children}</div>
         </main>
@@ -241,7 +241,7 @@ export default function AppFrame({ children }: AppFrameProps) {
 
   if (authStatus !== "authenticated") {
     return (
-      <div className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         <main className="flex min-h-screen items-center justify-center px-4 py-6 md:px-8 md:py-8">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white px-6 py-8 text-center shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
             <p className="text-sm text-slate-500 dark:text-slate-400">Checking your session...</p>
@@ -252,7 +252,7 @@ export default function AppFrame({ children }: AppFrameProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       <button
         type="button"
         className={cn(
@@ -265,7 +265,7 @@ export default function AppFrame({ children }: AppFrameProps) {
 
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] border-r border-slate-200 bg-white shadow-lg transition-transform md:hidden",
+          "fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] border-r border-slate-200 bg-white shadow-lg transition-transform dark:border-slate-800 dark:bg-slate-950 md:hidden",
           mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

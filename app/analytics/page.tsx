@@ -8,6 +8,7 @@ import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getExpenseCategoryLabel } from "@/lib/expenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/components/ui/theme";
 import { cn } from "@/lib/utils";
 
 function formatMoney(value: number): string {
@@ -72,19 +73,19 @@ function AnalyticsPageSkeleton() {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <div className="h-10 w-44 animate-pulse rounded-xl bg-slate-200/80" />
-        <div className="h-4 w-[32rem] max-w-full animate-pulse rounded bg-slate-200/70" />
+        <div className="h-10 w-44 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
+        <div className="h-4 w-[32rem] max-w-full animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={`analytics-skeleton-stat-${index}`} className="border-slate-200 bg-white">
+          <Card key={`analytics-skeleton-stat-${index}`} className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
             <CardHeader className="space-y-3 pb-2">
-              <div className="h-4 w-32 animate-pulse rounded bg-slate-200/80" />
-              <div className="h-8 w-36 animate-pulse rounded bg-slate-200/70" />
+              <div className="h-4 w-32 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+              <div className="h-8 w-36 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
             </CardHeader>
             <CardContent>
-              <div className="h-4 w-44 animate-pulse rounded bg-slate-200/70" />
+              <div className="h-4 w-44 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
             </CardContent>
           </Card>
         ))}
@@ -92,17 +93,17 @@ function AnalyticsPageSkeleton() {
 
       <Card>
         <CardHeader>
-          <div className="h-6 w-40 animate-pulse rounded bg-slate-200/80" />
+          <div className="h-6 w-40 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={`analytics-skeleton-progress-${index}`}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60"
             >
-              <div className="h-3 w-28 animate-pulse rounded bg-slate-200/80" />
-              <div className="mt-3 h-8 w-28 animate-pulse rounded bg-slate-200/70" />
-              <div className="mt-3 h-4 w-44 animate-pulse rounded bg-slate-200/70" />
+              <div className="h-3 w-28 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+              <div className="mt-3 h-8 w-28 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
+              <div className="mt-3 h-4 w-44 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
             </div>
           ))}
         </CardContent>
@@ -162,6 +163,7 @@ function buildPoints(
 }
 
 export default function AnalyticsPage() {
+  const { theme } = useTheme();
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [timeRange, setTimeRange] = useState<TimeRange>(6);
@@ -354,13 +356,28 @@ export default function AnalyticsPage() {
     chartPadding.bottom,
     chartData.maxValue
   );
+  const chartColors = theme === "dark"
+    ? {
+        grid: "#334155",
+        label: "#94a3b8",
+        profit: "#e2e8f0",
+      }
+    : {
+        grid: "#e2e8f0",
+        label: "#64748b",
+        profit: "#475569",
+      };
 
   if (isLoading) {
     return <AnalyticsPageSkeleton />;
   }
 
   if (!analytics) {
-    return <div className="rounded-md border border-red-200 bg-red-50 p-4">Unable to load analytics.</div>;
+    return (
+      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-red-800 dark:border-red-900/70 dark:bg-red-950/35 dark:text-red-100">
+        Unable to load analytics.
+      </div>
+    );
   }
 
   return (
@@ -413,36 +430,36 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Issued this month</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.issuedAmount)}
               </p>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                 {analytics.monthProgress.issuedCount} official invoice
                 {analytics.monthProgress.issuedCount === 1 ? "" : "s"} issued this month
               </p>
             </div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Collected this month</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/70 dark:bg-emerald-950/30">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Collected this month</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.collectedAmount)}
               </p>
-              <p className="mt-1 text-sm text-slate-600">Cash received this month from this month&apos;s invoices</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Cash received this month from this month&apos;s invoices</p>
             </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">Still open</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/70 dark:bg-amber-950/30">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Still open</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.openAmount)}
               </p>
-              <p className="mt-1 text-sm text-slate-600">Issued this month but not fully paid yet</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Issued this month but not fully paid yet</p>
             </div>
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-700">Overdue from this month</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900">
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/70 dark:bg-red-950/30">
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Overdue from this month</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.overdueAmount)}
               </p>
-              <p className="mt-1 text-sm text-slate-600">Already overdue among this month&apos;s issued invoices</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Already overdue among this month&apos;s issued invoices</p>
             </div>
           </div>
         </CardContent>
@@ -457,13 +474,13 @@ export default function AnalyticsPage() {
           </p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last closed month</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">
+            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
               {monthlyReport.lastClosedMonth?.label ?? "Not available yet"}
             </p>
             {monthlyReport.lastClosedMonth ? (
-              <div className="mt-3 space-y-2 text-sm text-slate-600">
+              <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                 <p>
                   Revenue: {analytics.currency} {formatMoney(monthlyReport.lastClosedMonth.revenue)}
                 </p>
@@ -475,16 +492,16 @@ export default function AnalyticsPage() {
                 </p>
               </div>
             ) : (
-              <p className="mt-3 text-sm text-slate-500">The report becomes available once you have a prior month on the books.</p>
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">The report becomes available once you have a prior month on the books.</p>
             )}
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current month so far</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">
+            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
               {monthlyReport.currentMonth?.label ?? "This month"}
             </p>
-            <div className="mt-3 space-y-2 text-sm text-slate-600">
+            <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
               <p>
                 Revenue: {analytics.currency} {formatMoney(analytics.revenueThisMonth)}
               </p>
@@ -526,15 +543,15 @@ export default function AnalyticsPage() {
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="flex flex-wrap gap-4 text-sm">
-              <div className="flex items-center gap-2 text-slate-700">
+              <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                 <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                 Revenue
               </div>
-              <div className="flex items-center gap-2 text-slate-700">
+              <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
                 Costs
               </div>
-              <div className="flex items-center gap-2 text-slate-700">
+              <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                 <span className="h-2.5 w-2.5 rounded-full bg-slate-700 dark:bg-slate-200" />
                 Profit
               </div>
@@ -551,7 +568,7 @@ export default function AnalyticsPage() {
                       x2={chartWidth - chartPadding.right}
                       y1={y}
                       y2={y}
-                      stroke="#e2e8f0"
+                      stroke={chartColors.grid}
                       strokeDasharray="4 4"
                     />
                   );
@@ -559,7 +576,7 @@ export default function AnalyticsPage() {
 
                 <path d={revenuePath} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
                 <path d={expensePath} fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
-                <path d={profitPath} fill="none" stroke="#475569" strokeWidth="3" strokeLinecap="round" />
+                <path d={profitPath} fill="none" stroke={chartColors.profit} strokeWidth="3" strokeLinecap="round" />
 
                 {revenuePoints.map((point, index) => (
                   <circle key={`revenue-${index}`} cx={point.x} cy={point.y} r="4" fill="#10b981">
@@ -572,7 +589,7 @@ export default function AnalyticsPage() {
                   </circle>
                 ))}
                 {profitPoints.map((point, index) => (
-                  <circle key={`profit-${index}`} cx={point.x} cy={point.y} r="4" fill="#475569">
+                  <circle key={`profit-${index}`} cx={point.x} cy={point.y} r="4" fill={chartColors.profit}>
                     <title>{`${visibleSeries[index]?.label}: Profit ${analytics.currency} ${formatMoney(visibleSeries[index]?.profit ?? 0)}`}</title>
                   </circle>
                 ))}
@@ -588,7 +605,7 @@ export default function AnalyticsPage() {
                       y={chartHeight - 8}
                       textAnchor="middle"
                       fontSize="11"
-                      fill="#64748b"
+                      fill={chartColors.label}
                     >
                       {entry.label}
                     </text>
@@ -598,30 +615,30 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected revenue</p>
-                <p className="mt-2 text-xl font-semibold text-slate-900">
+                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
                   {analytics.currency} {formatMoney(chartData.totals.revenue)}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   vs previous: {formatDeltaPercent(chartData.totals.revenue, comparisonData.previousTotals.revenue)}
                 </p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected costs</p>
-                <p className="mt-2 text-xl font-semibold text-slate-900">
+                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
                   {analytics.currency} {formatMoney(chartData.totals.expenses)}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   vs previous: {formatDeltaPercent(chartData.totals.expenses, comparisonData.previousTotals.expenses)}
                 </p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected profit</p>
-                <p className="mt-2 text-xl font-semibold text-slate-900">
+                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
                   {analytics.currency} {formatMoney(chartData.totals.profit)}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                   vs previous: {formatDeltaPercent(chartData.totals.profit, comparisonData.previousTotals.profit)}
                 </p>
               </div>
@@ -634,9 +651,9 @@ export default function AnalyticsPage() {
             <CardTitle>Collections and payment behavior</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm font-medium text-slate-900">Overdue exposure</p>
-              <div className="mt-2 space-y-1 text-sm text-slate-600">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Overdue exposure</p>
+              <div className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
                 <p>{analytics.currency} {formatMoney(analytics.overdueAmount)} currently overdue</p>
                 <p>
                   {derived.overdueShare === null
@@ -646,39 +663,39 @@ export default function AnalyticsPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm font-medium text-slate-900">Average days to pay</p>
-              <p className="mt-2 text-sm text-slate-600">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Average days to pay</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {analytics.averageDaysToPay === null
                   ? "Not enough paid invoices yet."
                   : `${analytics.averageDaysToPay.toFixed(1)} days based on invoices with recorded payments.`}
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm font-medium text-slate-900">Best month in this range</p>
-              <p className="mt-2 text-sm text-slate-600">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Best month in this range</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {comparisonData.bestMonth
                   ? `${comparisonData.bestMonth.label} delivered ${analytics.currency} ${formatMoney(comparisonData.bestMonth.profit)} profit.`
                   : "Not enough data yet."}
               </p>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm font-medium text-slate-900">Open pipeline</p>
-              <div className="mt-2 space-y-1 text-sm text-slate-600">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Open pipeline</p>
+              <div className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
                 <p>Open pipeline: {analytics.currency} {formatMoney(analytics.prospectRevenue)}</p>
                 <p>Paid invoices: {analytics.paidInvoices}</p>
                 <p>Unpaid invoices: {analytics.unpaidInvoices}</p>
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-              <p className="text-sm font-medium text-slate-900">Average paid invoice</p>
-              <p className="mt-2 text-sm text-slate-600">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Average paid invoice</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {analytics.currency} {formatMoney(analytics.averagePaidInvoiceValue)} average value per paid invoice.
               </p>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {derived.topClientName && derived.topClientShare !== null
                   ? `${derived.topClientName} represents ${formatPercent(derived.topClientShare)} of paid revenue.`
                   : "No paid client revenue yet."}
@@ -710,15 +727,15 @@ export default function AnalyticsPage() {
               analytics.topClients.map((client) => {
                 const share = analytics.totalRevenue > 0 ? (client.revenue / analytics.totalRevenue) * 100 : 0;
                 return (
-                  <div key={client.clientId} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+                  <div key={client.clientId} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="font-medium text-slate-900">{client.clientName}</p>
-                        <p className="text-sm text-slate-500">
+                        <p className="font-medium text-slate-900 dark:text-slate-100">{client.clientName}</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
                           {client.invoiceCount} paid invoices - {formatPercent(share)} of revenue
                         </p>
                       </div>
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
                         {analytics.currency} {formatMoney(client.revenue)}
                       </p>
                     </div>
@@ -741,12 +758,12 @@ export default function AnalyticsPage() {
               analytics.expenseBreakdown.map((entry) => (
                 <div key={entry.category} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-slate-900">{getExpenseCategoryLabel(entry.category)}</p>
-                    <p className="text-sm text-slate-600">
+                    <p className="font-medium text-slate-900 dark:text-slate-100">{getExpenseCategoryLabel(entry.category)}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">
                       {analytics.currency} {formatMoney(entry.amount)}
                     </p>
                   </div>
-                  <div className="h-2 rounded-full bg-slate-100">
+                  <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                     <div
                       className="h-2 rounded-full bg-slate-600 dark:bg-slate-300"
                       style={{ width: `${Math.max(6, (entry.amount / maxBreakdownValue) * 100)}%` }}

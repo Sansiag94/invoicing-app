@@ -84,13 +84,13 @@ export default async function HelpPage({
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-8 py-8 md:py-10">
-      <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm md:px-8">
+      <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:px-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 md:text-3xl">
+            <h1 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-slate-50 md:text-3xl">
               Help & onboarding
             </h1>
-            <p className="max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
+            <p className="max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-300 md:text-base">
               This guide is written for first-time users who want clear, practical setup steps.
               Follow the checklist in order and you will be ready to send your first invoice.
             </p>
@@ -100,14 +100,14 @@ export default async function HelpPage({
           </Button>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
-          <p className="text-sm font-medium text-slate-900">{returnContent.title}</p>
-          <p className="mt-1 text-sm text-slate-600">{returnContent.description}</p>
-          <p className="mt-3 text-sm text-slate-500">
+        <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60">
+          <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{returnContent.title}</p>
+          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{returnContent.description}</p>
+          <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
             Need a direct answer? Contact support at{" "}
             <a
               href={supportMailtoHref}
-              className="font-medium text-slate-700 underline underline-offset-4"
+              className="font-medium text-slate-700 underline underline-offset-4 dark:text-slate-200"
             >
               {legalProfile.supportEmail}
             </a>
@@ -122,19 +122,19 @@ export default async function HelpPage({
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
               Setup checklist
             </p>
-            <CardTitle className="text-3xl text-slate-950">How to send your first invoice</CardTitle>
-            <p className="text-sm leading-7 text-slate-600">
+            <CardTitle className="text-3xl text-slate-950 dark:text-slate-50">How to send your first invoice</CardTitle>
+            <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
               Work through these steps in order. Most new workspaces can be ready in 10 to 20
               minutes.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
               <div className="flex items-start gap-3">
-                <Settings className="mt-0.5 h-5 w-5 text-slate-600" />
+                <Settings className="mt-0.5 h-5 w-5 text-slate-600 dark:text-slate-400" />
                 <div className="space-y-1">
-                  <p className="font-medium text-slate-900">1. Fill in your workspace profile</p>
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">1. Fill in your workspace profile</p>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                     Add your business name, address, country, invoice sender, IBAN, and contact
                     details in Settings. If you want your invoices to look branded, upload your logo
                     there as well.
@@ -143,12 +143,12 @@ export default async function HelpPage({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
               <div className="flex items-start gap-3">
-                <FileSpreadsheet className="mt-0.5 h-5 w-5 text-slate-600" />
+                <FileSpreadsheet className="mt-0.5 h-5 w-5 text-slate-600 dark:text-slate-400" />
                 <div className="space-y-1">
-                  <p className="font-medium text-slate-900">2. Set your next invoice number</p>
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">2. Set your next invoice number</p>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                     If you already invoiced elsewhere, continue from your current numbering so your
                     records stay clean. If this is your first system, you can leave the default next
                     number and the app will format it for you automatically.
@@ -157,12 +157,12 @@ export default async function HelpPage({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
               <div className="flex items-start gap-3">
-                <Users className="mt-0.5 h-5 w-5 text-slate-600" />
+                <Users className="mt-0.5 h-5 w-5 text-slate-600 dark:text-slate-400" />
                 <div className="space-y-1">
-                  <p className="font-medium text-slate-900">3. Add clients manually or import them</p>
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">3. Add clients manually or import them</p>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                     Most users add their first few clients manually. Use CSV import only if you are
                     migrating from a spreadsheet or another tool and already have a client list that
                     you want to clean up into the template.
@@ -171,12 +171,12 @@ export default async function HelpPage({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
               <div className="flex items-start gap-3">
-                <CreditCard className="mt-0.5 h-5 w-5 text-slate-600" />
+                <CreditCard className="mt-0.5 h-5 w-5 text-slate-600 dark:text-slate-400" />
                 <div className="space-y-1">
-                  <p className="font-medium text-slate-900">4. Decide whether you need Stripe</p>
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">4. Decide whether you need Stripe</p>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                     Stripe is optional. You only need it if you want clients to pay invoices online
                     by card. If bank transfer or Swiss QR payment is enough, you can skip Stripe for
                     now and finish setup later.
@@ -185,12 +185,12 @@ export default async function HelpPage({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
               <div className="flex items-start gap-3">
-                <Wallet className="mt-0.5 h-5 w-5 text-slate-600" />
+                <Wallet className="mt-0.5 h-5 w-5 text-slate-600 dark:text-slate-400" />
                 <div className="space-y-1">
-                  <p className="font-medium text-slate-900">5. Create the first invoice as a draft</p>
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">5. Create the first invoice as a draft</p>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                     Drafts do not count against the free plan limit. Create the invoice, review the
                     PDF, and only send it once the business details, numbering, taxes, and payment
                     notes look correct.
@@ -199,12 +199,12 @@ export default async function HelpPage({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
               <div className="flex items-start gap-3">
-                <ReceiptText className="mt-0.5 h-5 w-5 text-slate-600" />
+                <ReceiptText className="mt-0.5 h-5 w-5 text-slate-600 dark:text-slate-400" />
                 <div className="space-y-1">
-                  <p className="font-medium text-slate-900">6. Add expenses and keep receipts attached</p>
-                  <p className="text-sm leading-6 text-slate-600">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">6. Add expenses and keep receipts attached</p>
+                  <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
                     Expenses help you understand whether the month is actually profitable. You can
                     add an expense manually and attach a receipt image or PDF right away, including
                     a phone photo when you are on a mobile device.
@@ -224,21 +224,21 @@ export default async function HelpPage({
           </CardContent>
         </Card>
 
-        <Card id="onboarding-service" className="border-slate-200">
+        <Card id="onboarding-service" className="border-slate-200 dark:border-slate-800">
           <CardHeader className="space-y-3">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
               Paid setup help
             </p>
-            <CardTitle className="text-2xl text-slate-950">Need hands-on support?</CardTitle>
-            <p className="text-sm leading-7 text-slate-600">
+            <CardTitle className="text-2xl text-slate-950 dark:text-slate-50">Need hands-on support?</CardTitle>
+            <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
               If you would rather have a human help you configure the workspace, Sierra Invoices
               offers a CHF 99 onboarding service.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="text-sm font-medium text-slate-900">This support can help with</p>
-              <div className="mt-3 space-y-2 text-sm text-slate-600">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">This support can help with</p>
+              <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                 <div className="flex items-start gap-2">
                   <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
                   <span>Business profile, branding, and invoice numbering setup</span>
@@ -258,11 +258,11 @@ export default async function HelpPage({
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-600">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm leading-7 text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
               Contact{" "}
               <a
                 href={onboardingMailtoHref}
-                className="font-medium text-slate-700 underline underline-offset-4"
+                className="font-medium text-slate-700 underline underline-offset-4 dark:text-slate-200"
               >
                 {legalProfile.supportEmail}
               </a>{" "}
@@ -327,28 +327,28 @@ export default async function HelpPage({
           </CardHeader>
           <CardContent className="space-y-4 text-sm leading-7 text-slate-600">
             <div>
-              <p className="font-medium text-slate-900">An invoice does not look right yet</p>
+              <p className="font-medium text-slate-900 dark:text-slate-100">An invoice does not look right yet</p>
               <p>
                 Keep it as a draft. Check your business profile, sender name, tax lines, invoice
                 numbering, payment notes, and client language before sending.
               </p>
             </div>
             <div>
-              <p className="font-medium text-slate-900">A client import fails</p>
+              <p className="font-medium text-slate-900 dark:text-slate-100">A client import fails</p>
               <p>
                 Download the official template again, make sure the headers match exactly, and check
                 whether duplicate client emails are being skipped.
               </p>
             </div>
             <div>
-              <p className="font-medium text-slate-900">Stripe is not connected yet</p>
+              <p className="font-medium text-slate-900 dark:text-slate-100">Stripe is not connected yet</p>
               <p>
                 You can still invoice without it. Stripe only matters if you want card payments
                 online. Bank transfer and Swiss QR billing can work without Stripe.
               </p>
             </div>
             <div>
-              <p className="font-medium text-slate-900">You reached the free invoice limit</p>
+              <p className="font-medium text-slate-900 dark:text-slate-100">You reached the free invoice limit</p>
               <p>
                 Existing invoices stay available. Only the next official invoice is blocked until
                 the new month starts or the workspace upgrades to Pro.
@@ -363,21 +363,21 @@ export default async function HelpPage({
           </CardHeader>
           <CardContent className="space-y-4 text-sm leading-7 text-slate-600">
             <div>
-              <p className="font-medium text-slate-900">Send reminders from the invoice workspace</p>
+              <p className="font-medium text-slate-900 dark:text-slate-100">Send reminders from the invoice workspace</p>
               <p>
                 Sent and overdue invoices can be followed up directly from the Invoices page. That
                 keeps collections work in one place.
               </p>
             </div>
             <div>
-              <p className="font-medium text-slate-900">Use Analytics to understand the month</p>
+              <p className="font-medium text-slate-900 dark:text-slate-100">Use Analytics to understand the month</p>
               <p>
                 Analytics shows cash collected, expenses, overdue exposure, and how much of this
                 month&apos;s issued work is still open.
               </p>
             </div>
             <div>
-              <p className="font-medium text-slate-900">Keep receipts attached as you go</p>
+              <p className="font-medium text-slate-900 dark:text-slate-100">Keep receipts attached as you go</p>
               <p>
                 Attaching receipt files when you create or edit expenses makes later bookkeeping and
                 review much easier.
@@ -387,14 +387,14 @@ export default async function HelpPage({
         </Card>
       </section>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm md:px-8">
+      <section className="rounded-[28px] border border-slate-200 bg-white px-6 py-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 md:px-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
-            <div className="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-              <CircleHelp className="h-4 w-4 text-slate-600" />
+            <div className="inline-flex items-center gap-2 text-sm font-medium text-slate-900 dark:text-slate-100">
+              <CircleHelp className="h-4 w-4 text-slate-600 dark:text-slate-400" />
               Legal and contact links
             </div>
-            <p className="text-sm leading-6 text-slate-600">
+            <p className="text-sm leading-6 text-slate-600 dark:text-slate-300">
               Pricing, billing, onboarding, and contact details are also described in the public
               legal pages.
             </p>

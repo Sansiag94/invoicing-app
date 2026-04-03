@@ -21,27 +21,27 @@ export default function LegalLinks({
       <Link
         href={`/imprint${suffix}`}
         className={cn(
-          "font-medium text-slate-600 underline underline-offset-4 transition-colors hover:text-slate-900",
+          "font-medium text-slate-600 underline underline-offset-4 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100",
           linkClassName
         )}
       >
         Imprint
       </Link>
-      <span className={cn("text-slate-300", separatorClassName)}>|</span>
+      <span className={cn("text-slate-300 dark:text-slate-700", separatorClassName)}>|</span>
       <Link
         href={`/privacy${suffix}`}
         className={cn(
-          "font-medium text-slate-600 underline underline-offset-4 transition-colors hover:text-slate-900",
+          "font-medium text-slate-600 underline underline-offset-4 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100",
           linkClassName
         )}
       >
         Privacy Policy
       </Link>
-      <span className={cn("text-slate-300", separatorClassName)}>|</span>
+      <span className={cn("text-slate-300 dark:text-slate-700", separatorClassName)}>|</span>
       <Link
         href={`/terms${suffix}`}
         className={cn(
-          "font-medium text-slate-600 underline underline-offset-4 transition-colors hover:text-slate-900",
+          "font-medium text-slate-600 underline underline-offset-4 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-100",
           linkClassName
         )}
       >

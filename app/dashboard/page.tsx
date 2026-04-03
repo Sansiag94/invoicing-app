@@ -21,19 +21,19 @@ function DashboardLoadingSkeleton() {
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <div className="h-10 w-48 animate-pulse rounded-xl bg-slate-200/80" />
-        <div className="h-4 w-80 max-w-full animate-pulse rounded bg-slate-200/70" />
+        <div className="h-10 w-48 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
+        <div className="h-4 w-80 max-w-full animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={`dashboard-skeleton-stat-${index}`} className="border-slate-200 bg-white">
+          <Card key={`dashboard-skeleton-stat-${index}`} className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
             <CardHeader className="space-y-3 pb-2">
-              <div className="h-4 w-28 animate-pulse rounded bg-slate-200/80" />
-              <div className="h-8 w-32 animate-pulse rounded bg-slate-200/70" />
+              <div className="h-4 w-28 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+              <div className="h-8 w-32 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
             </CardHeader>
             <CardContent>
-              <div className="h-4 w-40 animate-pulse rounded bg-slate-200/70" />
+              <div className="h-4 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
             </CardContent>
           </Card>
         ))}
@@ -41,17 +41,17 @@ function DashboardLoadingSkeleton() {
 
       <Card>
         <CardHeader>
-          <div className="h-6 w-24 animate-pulse rounded bg-slate-200/80" />
+          <div className="h-6 w-24 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, index) => (
             <div
               key={`dashboard-skeleton-priority-${index}`}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+              className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60"
             >
-              <div className="h-3 w-20 animate-pulse rounded bg-slate-200/80" />
-              <div className="mt-3 h-8 w-24 animate-pulse rounded bg-slate-200/70" />
-              <div className="mt-3 h-4 w-40 animate-pulse rounded bg-slate-200/70" />
+              <div className="h-3 w-20 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+              <div className="mt-3 h-8 w-24 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
+              <div className="mt-3 h-4 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
             </div>
           ))}
         </CardContent>
@@ -59,20 +59,20 @@ function DashboardLoadingSkeleton() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <div className="h-6 w-32 animate-pulse rounded bg-slate-200/80" />
-          <div className="h-9 w-20 animate-pulse rounded-lg bg-slate-200/70" />
+          <div className="h-6 w-32 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+          <div className="h-9 w-20 animate-pulse rounded-lg bg-slate-200/70 dark:bg-slate-800/70" />
         </CardHeader>
         <CardContent className="space-y-3">
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={`dashboard-skeleton-row-${index}`}
-              className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4"
+              className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-950/60"
             >
               <div className="space-y-2">
-                <div className="h-4 w-28 animate-pulse rounded bg-slate-200/80" />
-                <div className="h-4 w-40 animate-pulse rounded bg-slate-200/70" />
+                <div className="h-4 w-28 animate-pulse rounded bg-slate-200/80 dark:bg-slate-800/80" />
+                <div className="h-4 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
               </div>
-              <div className="h-6 w-20 animate-pulse rounded-full bg-slate-200/70" />
+              <div className="h-6 w-20 animate-pulse rounded-full bg-slate-200/70 dark:bg-slate-800/70" />
             </div>
           ))}
         </CardContent>
@@ -314,26 +314,26 @@ export default function DashboardPage() {
           <CardTitle>Priority</CardTitle>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Overdue now</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">{dashboard.overdueInvoices}</p>
-            <p className="text-sm text-slate-600">
+            <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">{dashboard.overdueInvoices}</p>
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               {dashboard.currency} {formatMoney(dashboard.overdueAmount)} currently overdue
             </p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Pipeline</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">
+            <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
               {dashboard.currency} {formatMoney(dashboard.prospectRevenue)}
             </p>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
               Draft, sent, and overdue invoices not yet paid
             </p>
           </div>
-          <div className="flex flex-col justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="flex flex-col justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Next action</p>
-              <p className="mt-2 text-sm text-slate-600">
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {dashboard.overdueInvoices > 0
                   ? `Review overdue invoices first, then follow up on ${dashboard.sentInvoices} sent invoice${dashboard.sentInvoices === 1 ? "" : "s"}.`
                   : "No overdue invoices right now. Focus on turning sent invoices into paid revenue."}
@@ -370,9 +370,9 @@ export default function DashboardPage() {
                 {dashboard.recentInvoices.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4}>
-                      <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center">
-                        <p className="text-base font-medium text-slate-900">No invoice activity yet</p>
-                        <p className="text-sm text-slate-600">Create an invoice or add a client to start building revenue.</p>
+                      <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center dark:border-slate-800 dark:bg-slate-950/60">
+                        <p className="text-base font-medium text-slate-900 dark:text-slate-100">No invoice activity yet</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">Create an invoice or add a client to start building revenue.</p>
                         <div className="flex flex-wrap gap-2">
                           <Button asChild size="sm">
                             <Link href="/invoices">Create Invoice</Link>
@@ -404,7 +404,7 @@ export default function DashboardPage() {
                       <TableCell>
                         <Link
                           href={`/invoices/${invoice.id}`}
-                          className="font-medium text-slate-900 hover:underline"
+                          className="font-medium text-slate-900 hover:underline dark:text-slate-100"
                           onClick={(event) => event.stopPropagation()}
                         >
                           {invoice.invoiceNumber}
@@ -426,9 +426,9 @@ export default function DashboardPage() {
 
           <div className="space-y-3 md:hidden">
             {dashboard.recentInvoices.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center">
-                <p className="text-base font-medium text-slate-900">No invoice activity yet</p>
-                <p className="text-sm text-slate-600">Create an invoice or add a client to start building revenue.</p>
+              <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center dark:border-slate-800 dark:bg-slate-950/60">
+                <p className="text-base font-medium text-slate-900 dark:text-slate-100">No invoice activity yet</p>
+                <p className="text-sm text-slate-600 dark:text-slate-300">Create an invoice or add a client to start building revenue.</p>
                 <div className="flex flex-wrap gap-2">
                   <Button asChild size="sm">
                     <Link href="/invoices">Create Invoice</Link>
@@ -443,13 +443,13 @@ export default function DashboardPage() {
                 <Link
                   key={invoice.id}
                   href={`/invoices/${invoice.id}`}
-                  className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+                  className="block rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800/80"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-slate-900">{invoice.invoiceNumber}</p>
-                      <p className="text-sm text-slate-600">{invoice.clientName}</p>
-                      <p className="mt-1 text-sm text-slate-700">
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">{invoice.invoiceNumber}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{invoice.clientName}</p>
+                      <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
                         {invoice.currency} {formatMoney(invoice.totalAmount)}
                       </p>
                     </div>

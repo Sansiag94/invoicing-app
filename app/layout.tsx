@@ -52,7 +52,8 @@ export default function RootLayout({
               (function () {
                 try {
                   var theme = localStorage.getItem("sierra-invoices-theme");
-                  var nextTheme = theme === "dark" ? "dark" : "light";
+                  var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+                  var nextTheme = theme === "dark" || theme === "light" ? theme : (prefersDark ? "dark" : "light");
                   document.documentElement.classList.toggle("dark", nextTheme === "dark");
                   document.documentElement.dataset.theme = nextTheme;
                 } catch (error) {}

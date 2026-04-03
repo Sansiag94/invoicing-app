@@ -33,8 +33,8 @@ export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
   const brandName = businessBrand?.name || APP_NAME;
 
   return (
-    <div className="h-full overflow-y-auto bg-white">
-      <div className="border-b border-slate-200 px-5 py-6">
+    <div className="h-full overflow-y-auto bg-white dark:bg-slate-950">
+      <div className="border-b border-slate-200 px-5 py-6 dark:border-slate-800">
         <div className="mb-3">
           {businessBrand?.logoUrl ? (
             <Image
@@ -42,17 +42,17 @@ export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
               alt={`${brandName} logo`}
               width={48}
               height={48}
-              className="h-12 w-12 rounded-xl border border-slate-200 object-cover"
+              className="h-12 w-12 rounded-xl border border-slate-200 object-cover dark:border-slate-700"
               unoptimized
             />
           ) : (
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-sm font-semibold text-white dark:bg-slate-100 dark:text-slate-950">
               {getBrandInitials(brandName).toUpperCase()}
             </div>
           )}
         </div>
-        <h1 className="text-lg font-bold tracking-tight text-slate-900">{brandName}</h1>
-        <p className="mt-1 text-xs text-slate-500">Invoicing solutions for freelancers</p>
+        <h1 className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">{brandName}</h1>
+        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Invoicing solutions for freelancers</p>
       </div>
 
       <nav className="px-3">
@@ -69,8 +69,8 @@ export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
                   className={cn(
                     "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     active
-                      ? "border border-slate-300 bg-slate-100 text-slate-900"
-                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-900"
+                      ? "border border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50"
+                      : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-50"
                   )}
                 >
                   <Icon className="h-4 w-4" />

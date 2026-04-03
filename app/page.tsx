@@ -66,20 +66,20 @@ export default function LandingPage() {
     <>
       <RedirectIfAuthenticated />
       <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-6xl flex-col justify-center gap-8 py-8">
-        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.08)]">
+        <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900">
           <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-            <div className="relative overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#ffffff_52%,#e2e8f0_100%)] px-8 py-10 md:px-12 md:py-14">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.06),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(38,70,83,0.12),transparent_26%)]" />
+            <div className="relative overflow-hidden bg-[linear-gradient(135deg,#f8fafc_0%,#ffffff_52%,#e2e8f0_100%)] px-8 py-10 dark:bg-[linear-gradient(135deg,#0f172a_0%,#111827_52%,#1e293b_100%)] md:px-12 md:py-14">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(15,23,42,0.06),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(38,70,83,0.12),transparent_26%)] dark:bg-[radial-gradient(circle_at_top_left,rgba(148,163,184,0.16),transparent_24%),radial-gradient(circle_at_bottom_right,rgba(14,165,233,0.12),transparent_26%)]" />
               <div className="relative space-y-7">
                 <div className="space-y-4">
-                  <p className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600">
+                  <p className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 dark:border-slate-700 dark:bg-slate-950/80 dark:text-slate-300">
                     {APP_NAME}
                   </p>
                   <div className="space-y-4">
-                    <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 md:text-6xl md:leading-[0.96]">
+                    <h1 className="max-w-3xl text-4xl font-semibold tracking-tight text-slate-950 dark:text-slate-50 md:text-6xl md:leading-[0.96]">
                       Swiss invoicing for freelancers and small businesses
                     </h1>
-                    <p className="max-w-2xl text-lg leading-8 text-slate-600">
+                    <p className="max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">
                       Create Swiss-ready invoices with QR-bill support, send payment links, and start
                       free with 3 official invoices per month before switching to Pro at CHF 19/month.
                     </p>
@@ -107,7 +107,7 @@ export default function LandingPage() {
                   {heroHighlights.map((item) => (
                     <div
                       key={item}
-                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-3 py-2 text-sm text-slate-700 backdrop-blur-sm"
+                      className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/85 px-3 py-2 text-sm text-slate-700 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-950/70 dark:text-slate-200"
                     >
                       <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                       <span>{item}</span>
@@ -212,25 +212,25 @@ export default function LandingPage() {
         </section>
 
         <section className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
-          <Card className="rounded-[28px] border-slate-200">
+          <Card className="rounded-[28px] border-slate-200 dark:border-slate-800">
             <CardHeader className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Pricing</p>
-              <CardTitle className="text-3xl text-slate-950">Simple plans for getting started, then growing</CardTitle>
-              <p className="max-w-2xl text-sm leading-7 text-slate-600">
+              <CardTitle className="text-3xl text-slate-950 dark:text-slate-50">Simple plans for getting started, then growing</CardTitle>
+              <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
                 Start free with 3 issued invoices per calendar month, then switch to Pro when you need unlimited invoicing.
               </p>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
               {pricingTiers.map((tier) => (
-                <div key={tier.name} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <div key={tier.name} className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-lg font-semibold text-slate-950">{tier.name}</p>
-                      <p className="mt-1 text-2xl font-semibold text-slate-900">{tier.price}</p>
-                      <p className="mt-1 text-sm text-slate-500">{tier.detail}</p>
+                      <p className="text-lg font-semibold text-slate-950 dark:text-slate-50">{tier.name}</p>
+                      <p className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{tier.price}</p>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{tier.detail}</p>
                     </div>
                   </div>
-                  <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <div className="mt-4 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                     {tier.points.map((point) => (
                       <div key={point} className="flex items-start gap-2">
                         <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
@@ -243,19 +243,19 @@ export default function LandingPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[28px] border-slate-200 bg-[linear-gradient(180deg,#fff7ed_0%,#ffffff_100%)]">
+          <Card className="rounded-[28px] border-slate-200 bg-[linear-gradient(180deg,#fff7ed_0%,#ffffff_100%)] dark:border-slate-800 dark:bg-[linear-gradient(180deg,#1c1917_0%,#0f172a_100%)]">
             <CardHeader className="space-y-3">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">Optional onboarding</p>
-              <CardTitle className="text-3xl text-slate-950">Need help setting up your first workspace?</CardTitle>
-              <p className="text-sm leading-7 text-slate-600">
+              <CardTitle className="text-3xl text-slate-950 dark:text-slate-50">Need help setting up your first workspace?</CardTitle>
+              <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                 Book the CHF 99 onboarding service if you want help with business details, invoice numbering,
                 Stripe setup, and your first clients or invoices.
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="rounded-2xl border border-amber-200 bg-white p-5">
-                <p className="text-sm font-medium text-slate-900">What the setup includes</p>
-                <div className="mt-3 space-y-2 text-sm text-slate-600">
+              <div className="rounded-2xl border border-amber-200 bg-white p-5 dark:border-amber-900/60 dark:bg-slate-950/70">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">What the setup includes</p>
+                <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
                     <span>Business profile, branding, and invoice numbering</span>

@@ -706,30 +706,30 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-sm text-slate-500">Workspace details, payments, appearance, and account controls</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400">Workspace details, payments, appearance, and account controls</p>
       </div>
 
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Workspace profile</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Business identity</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Business identity</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             This information appears on invoices, public invoice pages, and payment instructions.
           </p>
         </div>
         <Card>
           <CardContent className="grid gap-6 p-6 lg:grid-cols-[13rem_minmax(0,1fr)]">
-            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
               <div className="space-y-2">
-                <p className="text-sm font-medium text-slate-900">Logo</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Logo</p>
                 {logoUrl ? (
                   <img
                     src={logoUrl}
                     alt="Business logo"
-                    className="h-20 w-20 rounded-xl border border-slate-200 bg-white object-contain"
+                    className="h-20 w-20 rounded-xl border border-slate-200 bg-white object-contain dark:border-slate-700 dark:bg-slate-900"
                   />
                 ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-400">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white text-sm text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
                     No logo
                   </div>
                 )}
@@ -751,7 +751,7 @@ export default function SettingsPage() {
                   Remove logo
                 </Button>
               </div>
-              <p className="text-xs leading-5 text-slate-500">
+              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
                 Stored in <strong>{logosBucket}</strong>. Keep the bucket public so invoices can render the logo.
               </p>
             </div>
@@ -863,7 +863,7 @@ export default function SettingsPage() {
                   onChange={(event) => setBic(event.target.value)}
                   placeholder="Optional"
                 />
-                <p className="text-xs text-slate-500">Use the 8 or 11 character bank code, for example `RAIFCH22XXX`.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Use the 8 or 11 character bank code, for example `RAIFCH22XXX`.</p>
               </div>
               <div className="md:col-span-2">
                 <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
@@ -879,8 +879,8 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Invoice setup</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Numbering and sender preview</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Numbering and sender preview</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Check this section before you send the first official invoice from the workspace.
           </p>
         </div>
@@ -900,17 +900,17 @@ export default function SettingsPage() {
                   value={nextOfficialInvoiceSequence}
                   onChange={(event) => setNextOfficialInvoiceSequence(event.target.value)}
                 />
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Continue from your existing numbering if you already invoiced elsewhere. To continue
                   from invoice 29, enter 29 here before sending the first official invoice.
                 </p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                   Preview with today&apos;s date
                 </p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{nextOfficialInvoicePreview}</p>
-                <p className="mt-2 text-sm text-slate-600">
+                <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">{nextOfficialInvoicePreview}</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                   Official invoice numbers use the first 2 letters of the client company or first name.
                   Draft invoices keep a temporary draft number until they become official.
                 </p>
@@ -929,31 +929,31 @@ export default function SettingsPage() {
               <CardTitle>Invoice Sender Preview</CardTitle>
             </CardHeader>
             <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
-              <div className="rounded-lg border border-slate-200 p-4">
+              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Header sender</p>
-                <p className="font-semibold text-slate-900">{name || "Business name"}</p>
-                {ownerName && ownerName !== name ? <p className="text-sm text-slate-600">{ownerName}</p> : null}
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{name || "Business name"}</p>
+                {ownerName && ownerName !== name ? <p className="text-sm text-slate-600 dark:text-slate-300">{ownerName}</p> : null}
                 {previewAddressLines.map((line) => (
-                  <p key={`header-${line}`} className="text-sm text-slate-700">
+                  <p key={`header-${line}`} className="text-sm text-slate-700 dark:text-slate-200">
                     {line}
                   </p>
                 ))}
-                {email ? <p className="mt-2 text-sm text-slate-700">{email}</p> : null}
-                {phone ? <p className="text-sm text-slate-700">{phone}</p> : null}
-                {website ? <p className="text-sm text-slate-700">{website}</p> : null}
+                {email ? <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{email}</p> : null}
+                {phone ? <p className="text-sm text-slate-700 dark:text-slate-200">{phone}</p> : null}
+                {website ? <p className="text-sm text-slate-700 dark:text-slate-200">{website}</p> : null}
               </div>
 
-              <div className="rounded-lg border border-slate-200 p-4">
+              <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                 <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment recipient</p>
-                <p className="font-semibold text-slate-900">{previewDisplayName || "Recipient name"}</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-100">{previewDisplayName || "Recipient name"}</p>
                 {previewAddressLines.map((line) => (
-                  <p key={`recipient-${line}`} className="text-sm text-slate-700">
+                  <p key={`recipient-${line}`} className="text-sm text-slate-700 dark:text-slate-200">
                     {line}
                   </p>
                 ))}
-                {iban ? <p className="mt-2 text-sm text-slate-700">{iban}</p> : null}
-                {bankName ? <p className="text-sm text-slate-700">{bankName}</p> : null}
-                {bic ? <p className="text-sm text-slate-700">BIC / SWIFT: {bic}</p> : null}
+                {iban ? <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">{iban}</p> : null}
+                {bankName ? <p className="text-sm text-slate-700 dark:text-slate-200">{bankName}</p> : null}
+                {bic ? <p className="text-sm text-slate-700 dark:text-slate-200">BIC / SWIFT: {bic}</p> : null}
               </div>
             </CardContent>
           </Card>
@@ -963,8 +963,8 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payments & billing</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Payment methods and billing</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Payment methods and billing</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Configure manual payment notes, optional card payments, and the workspace plan.
           </p>
         </div>
@@ -978,7 +978,7 @@ export default function SettingsPage() {
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
                   <input
                     type="checkbox"
                     className="mt-0.5 h-4 w-4 rounded border-slate-300"
@@ -986,8 +986,8 @@ export default function SettingsPage() {
                     onChange={(event) => setAcceptsTwintPayments(event.target.checked)}
                   />
                   <span>
-                    <span className="block font-medium text-slate-900">Accept TWINT payments</span>
-                    <span className="mt-1 block text-slate-500">
+                    <span className="block font-medium text-slate-900 dark:text-slate-100">Accept TWINT payments</span>
+                    <span className="mt-1 block text-slate-500 dark:text-slate-400">
                       New invoices can prefill a payment note with your TWINT phone number.
                     </span>
                   </span>
@@ -1004,9 +1004,9 @@ export default function SettingsPage() {
                   />
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoice note preview</p>
-                  <p className="mt-2 text-sm text-slate-700">
+                  <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
                     {twintPreviewMessage ?? "TWINT is currently disabled for new invoices."}
                   </p>
                 </div>
@@ -1024,12 +1024,12 @@ export default function SettingsPage() {
                 <p className="text-sm text-slate-500">Card payments are optional. Bank transfer and Swiss QR bills work without Stripe.</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="rounded-lg border border-slate-200 p-4">
+                <div className="rounded-lg border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                   <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <CreditCard className="h-4 w-4 text-slate-600" />
-                        <p className="font-semibold text-slate-900">
+                        <CreditCard className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                        <p className="font-semibold text-slate-900 dark:text-slate-100">
                           {usesPlatformStripe
                             ? "Platform Stripe account"
                             : stripeAccountId
@@ -1037,31 +1037,31 @@ export default function SettingsPage() {
                               : "Optional card payments"}
                         </p>
                       </div>
-                      <p className="max-w-2xl text-sm text-slate-600">
+                      <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">
                         Connect Stripe only if this business wants to accept card payments online.
                         Bank transfers and Swiss QR bills work without it.
                       </p>
                       <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${stripeStatusTone}`}>
                         {stripeStatusLabel}
                       </div>
-                      <p className="max-w-2xl text-sm text-slate-600">{stripeStatusDescription}</p>
+                      <p className="max-w-2xl text-sm text-slate-600 dark:text-slate-300">{stripeStatusDescription}</p>
                       {stripePendingSteps.length > 0 ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           Still pending in Stripe: {stripePendingSteps.join(", ")}.
                         </p>
                       ) : null}
                       {!usesPlatformStripe && !stripeAccountId ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
                         </p>
                       ) : null}
                       {usesPlatformStripe ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           This workspace uses the app-wide platform Stripe account, so disconnecting is not available here.
                         </p>
                       ) : null}
                       {stripeAccountId ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                           {usesPlatformStripe ? "Platform" : "Connected"} account ID:{" "}
                           <span className="font-mono">{stripeAccountId}</span>
                         </p>
@@ -1115,21 +1115,21 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Help</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Open the guide when you need it</h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Open the guide when you need it</h2>
         </div>
         <Card>
           <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-900">Step-by-step help guide</p>
-              <p className="text-sm text-slate-500">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Step-by-step help guide</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 Use the guide for setup steps, invoice numbering, Stripe, expenses, and client import questions.
               </p>
               {billingStatus?.supportEmail ? (
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   Support:{" "}
                   <a
                     href={`mailto:${billingStatus.supportEmail}`}
-                    className="font-medium text-slate-700 underline underline-offset-4"
+                    className="font-medium text-slate-700 underline underline-offset-4 dark:text-slate-200"
                   >
                     {billingStatus.supportEmail}
                   </a>
@@ -1148,7 +1148,7 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">App preferences</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Device and appearance</h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Device and appearance</h2>
         </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <Card>
@@ -1156,9 +1156,9 @@ export default function SettingsPage() {
               <CardTitle>App Install</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4">
+              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium text-slate-900">
+                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
                     {isInstalled
                       ? "Installed on this device"
                       : canInstall
@@ -1167,11 +1167,11 @@ export default function SettingsPage() {
                           ? "Install from your browser menu"
                           : "Open in a supported browser to install"}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     Installing gives {APP_NAME} its own home-screen icon and a cleaner app-like window.
                     Core pages and the offline screen are cached for weak connections.
                   </p>
-                  {!isInstalled ? <p className="text-xs text-slate-500">{installHelpText}</p> : null}
+                  {!isInstalled ? <p className="text-xs text-slate-500 dark:text-slate-400">{installHelpText}</p> : null}
                 </div>
                 {!isInstalled ? (
                   <Button onClick={() => void handleInstallApp()} className="w-full sm:w-auto">
@@ -1187,10 +1187,10 @@ export default function SettingsPage() {
               <CardTitle>Appearance</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <Label htmlFor="themeToggle">Dark mode</Label>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
                     Switch the workspace between light and dark.
                   </p>
                 </div>
@@ -1233,17 +1233,17 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-600">Danger Zone</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Access and workspace controls</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Access and workspace controls</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             Use these actions when you need to change account access, connected payments, or workspace status.
           </p>
         </div>
-        <Card className="border-red-200 bg-red-50/40">
+        <Card className="border-red-200 bg-red-50/40 dark:border-red-950/70 dark:bg-red-950/15">
           <CardContent className="space-y-4 p-6">
             <div className="grid gap-4 xl:grid-cols-3">
-              <div className="rounded-xl border border-red-200 bg-white p-4">
-                <p className="text-sm font-medium text-slate-900">Change password</p>
-                <p className="mt-2 text-sm text-slate-600">
+              <div className="rounded-xl border border-red-200 bg-white p-4 dark:border-red-950/70 dark:bg-slate-950/70">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Change password</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                   Open the password reset flow for this account if you want to replace your current login password.
                 </p>
                 <Button
@@ -1255,9 +1255,9 @@ export default function SettingsPage() {
                 </Button>
               </div>
 
-              <div className="rounded-xl border border-red-200 bg-white p-4">
-                <p className="text-sm font-medium text-slate-900">Disconnect Stripe account</p>
-                <p className="mt-2 text-sm text-slate-600">
+              <div className="rounded-xl border border-red-200 bg-white p-4 dark:border-red-950/70 dark:bg-slate-950/70">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Disconnect Stripe account</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                   Remove the connected Stripe account from this workspace. Card payments will stop until
                   you connect a new account.
                 </p>
@@ -1271,7 +1271,7 @@ export default function SettingsPage() {
                     {isDisconnectingStripe ? "Disconnecting..." : "Disconnect Stripe"}
                   </Button>
                 ) : (
-                  <p className="mt-4 text-xs text-slate-500">
+                  <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
                     {usesPlatformStripe
                       ? "This workspace uses the platform Stripe account and cannot disconnect it here."
                       : "No Stripe account is currently connected to this workspace."}
@@ -1279,9 +1279,9 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              <div className="rounded-xl border border-red-200 bg-white p-4">
-                <p className="text-sm font-medium text-slate-900">Close workspace</p>
-                <p className="mt-2 text-sm text-slate-600">
+              <div className="rounded-xl border border-red-200 bg-white p-4 dark:border-red-950/70 dark:bg-slate-950/70">
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Close workspace</p>
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                   Self-serve hard deletion is disabled because invoice, payment, expense, and accounting
                   records may need to be retained for bookkeeping, tax, and audit reasons.
                 </p>
@@ -1296,9 +1296,9 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-amber-200 bg-white p-4">
-              <p className="text-sm font-medium text-slate-900">Before you close the workspace</p>
-              <ul className="mt-3 space-y-2 text-sm text-slate-600">
+            <div className="rounded-xl border border-amber-200 bg-white p-4 dark:border-amber-950/70 dark:bg-slate-950/70">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Before you close the workspace</p>
+              <ul className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                 <li>Export or archive the invoices, expenses, and payment records your business still needs.</li>
                 <li>Disconnect Stripe first if you no longer want this workspace tied to a payment account.</li>
                 <li>Use closure only when you are ready to remove access while retained records remain protected.</li>
