@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { getRememberSessionPreference, setRememberSession, supabase } from "@/utils/supabase";
 import AuthSplitShell from "@/components/AuthSplitShell";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
+import { buildVerifyEmailPath, isEmailConfirmationRequiredMessage } from "@/lib/authClient";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,16 @@ export default function LoginPage() {
       });
 
       if (error) {
+        if (isEmailConfirmationRequiredMessage(error.message)) {
+          toast({
+            title: "Confirm your email first",
+            description: "Open the verification email, then log in again.",
+            variant: "info",
+          });
+          router.replace(buildVerifyEmailPath(email));
+          return;
+        }
+
         toast({
           title: "Unable to log in",
           description: error.message,

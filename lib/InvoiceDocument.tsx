@@ -2,7 +2,7 @@ import React from "react";
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Image, Link, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { Prisma } from "@prisma/client";
-import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
+import { calculateInvoiceTotals, getInvoiceVatLabel, parsePostalAddress } from "@/lib/invoice";
 import { generateSwissQRCodeRects, getSwissQRBillMetadata, type SwissQRBillMetadata } from "@/lib/qrbill";
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
@@ -857,6 +857,7 @@ const InvoiceDocument = ({
   const subtotal = totals.subtotal;
   const taxAmount = totals.taxAmount;
   const totalAmountDue = totals.totalAmount;
+  const vatLabel = getInvoiceVatLabel(invoice.lineItems, strings.vat);
 
   const invoiceForQR = {
     ...invoice,
@@ -1048,7 +1049,7 @@ const InvoiceDocument = ({
                       </View>
                       {taxAmount > 0 ? (
                         <View style={styles.totalsRow}>
-                          <Text style={styles.totalsLabel}>{strings.vat}</Text>
+                          <Text style={styles.totalsLabel}>{vatLabel}</Text>
                           <Text style={styles.totalsValue}>
                             {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
                           </Text>

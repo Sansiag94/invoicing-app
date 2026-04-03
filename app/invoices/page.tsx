@@ -9,6 +9,7 @@ import BillingPlanChip from "@/components/billing/BillingPlanChip";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails, isBillingStatus } from "@/lib/billingClient";
+import { getInvoiceVatLabel } from "@/lib/invoice";
 import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
 import { BillingLimitDetails, BillingStatus, BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -84,10 +85,16 @@ function buildInvoiceNotesTemplate(client: ClientSummary | null, senderName: str
   );
 }
 
-const DEFAULT_TWINT_PHONE_NUMBER = "+41 76 231 02 35";
+function buildInvoicePaymentNoteTemplate(
+  client: ClientSummary | null,
+  acceptsTwintPayments: boolean,
+  twintPhoneNumber: string
+): string {
+  if (!acceptsTwintPayments || !twintPhoneNumber.trim()) {
+    return "";
+  }
 
-function buildInvoicePaymentNoteTemplate(client: ClientSummary | null): string {
-  return buildDefaultInvoicePaymentNote(client?.language ?? "en", DEFAULT_TWINT_PHONE_NUMBER);
+  return buildDefaultInvoicePaymentNote(client?.language ?? "en", twintPhoneNumber.trim());
 }
 
 function InvoicePageContent() {
@@ -99,6 +106,8 @@ function InvoicePageContent() {
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [invoiceSenderName, setInvoiceSenderName] = useState("User_name");
   const [businessCurrency, setBusinessCurrency] = useState<"CHF" | "EUR">("CHF");
+  const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(false);
+  const [twintPhoneNumber, setTwintPhoneNumber] = useState("");
   const [lineItems, setLineItems] = useState<LineItemData[]>([
     { description: "", quantity: 1, unitPrice: 0, taxRate: 0 },
   ]);
@@ -107,7 +116,7 @@ function InvoicePageContent() {
   const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate(null, "User_name"));
-  const [paymentNote, setPaymentNote] = useState(buildInvoicePaymentNoteTemplate(null));
+  const [paymentNote, setPaymentNote] = useState(buildInvoicePaymentNoteTemplate(null, false, ""));
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
   const [paymentNoteManuallyEdited, setPaymentNoteManuallyEdited] = useState(false);
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
@@ -321,6 +330,8 @@ function InvoicePageContent() {
           setInvoices(Array.isArray(loadedInvoices) ? loadedInvoices : []);
           setInvoiceSenderName(getInvoiceSenderName(loadedBusiness || { name: "User_name" }));
           setBusinessCurrency(loadedBusiness?.currency === "EUR" ? "EUR" : "CHF");
+          setAcceptsTwintPayments(Boolean(loadedBusiness?.acceptsTwintPayments));
+          setTwintPhoneNumber(loadedBusiness?.twintPhoneNumber || "");
           setBillingStatus(isBillingStatus(loadedBilling) ? loadedBilling : null);
         }
       } catch (error) {
@@ -377,8 +388,8 @@ function InvoicePageContent() {
   useEffect(() => {
     if (paymentNoteManuallyEdited) return;
 
-    setPaymentNote(buildInvoicePaymentNoteTemplate(selectedClient));
-  }, [paymentNoteManuallyEdited, selectedClient]);
+    setPaymentNote(buildInvoicePaymentNoteTemplate(selectedClient, acceptsTwintPayments, twintPhoneNumber));
+  }, [acceptsTwintPayments, paymentNoteManuallyEdited, selectedClient, twintPhoneNumber]);
 
   const totals = useMemo(() => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
@@ -389,6 +400,7 @@ function InvoicePageContent() {
 
     return { subtotal, taxAmount, totalAmount: subtotal + taxAmount };
   }, [lineItems]);
+  const vatLabel = useMemo(() => getInvoiceVatLabel(lineItems), [lineItems]);
 
   const handleIssueDateChange = (nextIssueDate: string) => {
     setIssueDate(nextIssueDate);
@@ -519,7 +531,7 @@ function InvoicePageContent() {
       setNotesManuallyEdited(false);
       setNotes(buildInvoiceNotesTemplate(null, invoiceSenderName || "User_name"));
       setPaymentNoteManuallyEdited(false);
-      setPaymentNote(buildInvoicePaymentNoteTemplate(null));
+      setPaymentNote(buildInvoicePaymentNoteTemplate(null, acceptsTwintPayments, twintPhoneNumber));
       setIsCreateFormOpen(false);
       setSuccessMessage("Invoice created successfully.");
 
@@ -1499,6 +1511,7 @@ function InvoicePageContent() {
                 subtotal={totals.subtotal}
                 taxAmount={totals.taxAmount}
                 totalAmount={totals.totalAmount}
+                vatLabel={vatLabel}
               />
             </div>
           </CardContent>
@@ -1508,7 +1521,7 @@ function InvoicePageContent() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div className="space-y-2">
-            <CardTitle>Invoice Table</CardTitle>
+            <CardTitle>Invoices</CardTitle>
             {activeFilterLabel ? (
               <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                 <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1">

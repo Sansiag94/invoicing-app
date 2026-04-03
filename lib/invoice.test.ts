@@ -6,6 +6,7 @@ import {
   deriveOfficialInvoicePrefix,
   formatDraftInvoiceNumber,
   formatSequentialInvoiceNumber,
+  getInvoiceVatLabel,
   isDraftInvoiceNumber,
   normalizeInvoicePrefix,
   parseSequentialInvoiceNumber,
@@ -102,5 +103,21 @@ describe("invoice helpers", () => {
       taxAmount: 8.1,
       totalAmount: 208.1,
     });
+  });
+
+  it("builds a VAT label from the tax rates on the invoice", () => {
+    expect(
+      getInvoiceVatLabel([
+        { quantity: 1, unitPrice: 100, taxRate: 8.1 },
+        { quantity: 2, unitPrice: 50, taxRate: 8.1 },
+      ])
+    ).toBe("VAT (8.1%)");
+
+    expect(
+      getInvoiceVatLabel([
+        { quantity: 1, unitPrice: 100, taxRate: 2.6 },
+        { quantity: 1, unitPrice: 100, taxRate: 8.1 },
+      ])
+    ).toBe("VAT (2.6%, 8.1%)");
   });
 });

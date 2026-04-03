@@ -7,6 +7,7 @@ import { ArrowLeft, BellRing, CheckCircle2, CircleOff, Copy, Download, Eye, Grip
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails } from "@/lib/billingClient";
+import { getInvoiceVatLabel } from "@/lib/invoice";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { BillingLimitDetails, InvoiceDetails, LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
@@ -129,6 +130,10 @@ export default function InvoiceDetailPage() {
   const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
 
   const editedTotals = useMemo(() => calculateTotals(lineItems), [lineItems]);
+  const vatLabel = useMemo(
+    () => getInvoiceVatLabel(isEditing ? lineItems : invoice?.lineItems ?? []),
+    [invoice?.lineItems, isEditing, lineItems]
+  );
   const billingReturnPath = id ? `/invoices/${id}` : "/invoices";
 
   function handleBillingLimitResponse(payload: { code?: string; details?: unknown }): boolean {
@@ -1446,7 +1451,7 @@ export default function InvoiceDetailPage() {
               {isEditing ? editedTotals.subtotal.toFixed(2) : invoice.subtotal.toFixed(2)}
             </p>
             <p>
-              Tax: {invoice.currency}{" "}
+              {vatLabel}: {invoice.currency}{" "}
               {isEditing ? editedTotals.taxAmount.toFixed(2) : invoice.taxAmount.toFixed(2)}
             </p>
             <p className="text-base font-semibold text-slate-900">

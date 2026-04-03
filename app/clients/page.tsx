@@ -564,7 +564,7 @@ function ClientsPageContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Client Table</CardTitle>
+            <CardTitle>Clients</CardTitle>
         </CardHeader>
         <CardContent>
           {clients.length === 0 ? (

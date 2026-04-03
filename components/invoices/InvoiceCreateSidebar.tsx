@@ -13,6 +13,7 @@ type InvoiceCreateSidebarProps = {
   subtotal: number;
   taxAmount: number;
   totalAmount: number;
+  vatLabel: string;
 };
 
 export default function InvoiceCreateSidebar({
@@ -23,6 +24,7 @@ export default function InvoiceCreateSidebar({
   subtotal,
   taxAmount,
   totalAmount,
+  vatLabel,
 }: InvoiceCreateSidebarProps) {
   return (
     <div className="space-y-4 xl:sticky xl:top-24 xl:self-start">
@@ -76,7 +78,7 @@ export default function InvoiceCreateSidebar({
                 </span>
               </div>
               <div className="mb-2 flex items-center justify-between text-slate-600">
-                <span>Tax</span>
+                <span>{vatLabel}</span>
                 <span>
                   {currency} {taxAmount.toFixed(2)}
                 </span>

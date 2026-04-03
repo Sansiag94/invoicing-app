@@ -4,6 +4,7 @@ import { Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
+import { getInvoiceVatLabel } from "@/lib/invoice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -49,6 +50,7 @@ function InvoicePreviewContent() {
     0
   );
   const totalAmount = subtotal + taxAmount;
+  const vatLabel = useMemo(() => getInvoiceVatLabel(lineItems), [lineItems]);
 
   const canCreate = Boolean(clientId && issueDate && dueDate && currency && lineItems.length > 0);
 
@@ -219,7 +221,7 @@ function InvoicePreviewContent() {
             <span className="font-medium text-slate-900">{formatMoney(subtotal)}</span>
           </div>
           <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
-            <span>VAT</span>
+            <span>{vatLabel}</span>
             <span className="font-medium text-slate-900">{formatMoney(taxAmount)}</span>
           </div>
           <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-300 bg-slate-100 px-4 py-4 text-base font-semibold text-slate-900">

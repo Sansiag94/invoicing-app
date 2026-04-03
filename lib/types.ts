@@ -99,6 +99,8 @@ export interface BusinessSettingsData {
   stripeChargesEnabled?: boolean;
   stripePayoutsEnabled?: boolean;
   stripeDetailsSubmitted?: boolean;
+  acceptsTwintPayments?: boolean;
+  twintPhoneNumber?: string | null;
 }
 
 export interface InvoiceSummary {

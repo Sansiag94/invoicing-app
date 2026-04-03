@@ -29,6 +29,8 @@ type UpdateBusinessBody = {
   vatNumber?: unknown;
   iban?: unknown;
   logoUrl?: unknown;
+  acceptsTwintPayments?: unknown;
+  twintPhoneNumber?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -54,12 +56,15 @@ type SenderPreferencesRow = {
   ownerName: string | null;
   invoiceSenderType: string | null;
   bic: string | null;
+  acceptsTwintPayments: boolean | null;
+  twintPhoneNumber: string | null;
 };
 
 async function loadSenderPreferences(businessId: string) {
   try {
     const rows = await prisma.$queryRaw<SenderPreferencesRow[]>`
       SELECT "ownerName", "invoiceSenderType", "bic"
+      ,"acceptsTwintPayments", "twintPhoneNumber"
       FROM "Business"
       WHERE "uuid" = ${businessId}
       LIMIT 1
@@ -70,6 +75,8 @@ async function loadSenderPreferences(businessId: string) {
       ownerName: row?.ownerName ?? null,
       invoiceSenderType: normalizeInvoiceSenderType(row?.invoiceSenderType ?? null),
       bic: row?.bic ?? null,
+      acceptsTwintPayments: Boolean(row?.acceptsTwintPayments),
+      twintPhoneNumber: row?.twintPhoneNumber ?? null,
     };
   } catch (error) {
     console.warn("Unable to load sender preferences (columns may not exist yet):", error);
@@ -77,6 +84,8 @@ async function loadSenderPreferences(businessId: string) {
       ownerName: null,
       invoiceSenderType: "company" as const,
       bic: null,
+      acceptsTwintPayments: false,
+      twintPhoneNumber: null,
     };
   }
 }
@@ -123,6 +132,8 @@ export async function PATCH(request: Request) {
     const normalizedEmail = asString(body.email);
     const normalizedIban = normalizeIban(asString(body.iban));
     const normalizedBic = normalizeBic(asString(body.bic));
+    const twintPhoneNumber = asString(body.twintPhoneNumber);
+    const acceptsTwintPayments = Boolean(body.acceptsTwintPayments);
     const requestedNextOfficialInvoiceSequence =
       body.nextOfficialInvoiceSequence === undefined
         ? null
@@ -155,6 +166,10 @@ export async function PATCH(request: Request) {
 
     if (normalizedBic && !isValidBic(normalizedBic)) {
       return apiError("Invalid BIC / SWIFT code", 400);
+    }
+
+    if (acceptsTwintPayments && !twintPhoneNumber) {
+      return apiError("Add a TWINT phone number or disable TWINT payments", 400);
     }
 
     if (body.nextOfficialInvoiceSequence !== undefined && !requestedNextOfficialInvoiceSequence) {
@@ -204,7 +219,9 @@ export async function PATCH(request: Request) {
         SET
           "ownerName" = ${ownerName},
           "invoiceSenderType" = ${invoiceSenderType},
-          "bic" = ${normalizedBic}
+          "bic" = ${normalizedBic},
+          "acceptsTwintPayments" = ${acceptsTwintPayments},
+          "twintPhoneNumber" = ${acceptsTwintPayments ? twintPhoneNumber : null}
         WHERE "uuid" = ${business.id}
       `;
     } catch (error) {

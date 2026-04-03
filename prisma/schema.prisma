@@ -50,6 +50,8 @@ model Business {
   stripeChargesEnabled Boolean @default(false)
   stripePayoutsEnabled Boolean @default(false)
   stripeDetailsSubmitted Boolean @default(false)
+  acceptsTwintPayments Boolean @default(false)
+  twintPhoneNumber String?
   invoicePrefix  String
   invoiceCounter Int       @default(0)
   closedAt       DateTime?

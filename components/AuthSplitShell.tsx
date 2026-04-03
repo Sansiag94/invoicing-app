@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2 } from "lucide-react";
 import { APP_NAME } from "@/lib/appBrand";
 
 type AuthSplitShellProps = {
@@ -35,6 +35,15 @@ export default function AuthSplitShell({
         <section className="order-2 relative overflow-hidden bg-[linear-gradient(135deg,#0f172a_0%,#1d3557_45%,#264653_100%)] px-8 py-8 text-white md:px-12 md:py-14 lg:order-1">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.18),transparent_32%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_28%)]" />
           <div className="relative space-y-6">
+            <div>
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 text-sm font-medium text-white/80 transition-colors hover:text-white"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to home
+              </Link>
+            </div>
             <div className="space-y-4">
               <p className="inline-flex items-center rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/85">
                 {APP_NAME}

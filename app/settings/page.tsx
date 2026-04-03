@@ -10,6 +10,7 @@ import { usePwa } from "@/components/PwaProvider";
 import { buildAddressString } from "@/lib/address";
 import { formatSequentialInvoiceNumber, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
+import { buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
 import { BillingStatus, BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
@@ -47,6 +48,8 @@ export default function SettingsPage() {
   const [vatNumber, setVatNumber] = useState("");
   const [iban, setIban] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(false);
+  const [twintPhoneNumber, setTwintPhoneNumber] = useState("");
   const [usesPlatformStripe, setUsesPlatformStripe] = useState(false);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [stripeChargesEnabled, setStripeChargesEnabled] = useState(false);
@@ -84,6 +87,9 @@ export default function SettingsPage() {
     new Date(),
     normalizedNextOfficialInvoiceSequence
   );
+  const twintPreviewMessage = acceptsTwintPayments && twintPhoneNumber.trim()
+    ? buildDefaultInvoicePaymentNote("en", twintPhoneNumber.trim())
+    : null;
   const isStripeFullyEnabled =
     stripeChargesEnabled && stripePayoutsEnabled && stripeDetailsSubmitted;
   const stripeStatusTone = !usesPlatformStripe && !stripeAccountId
@@ -241,6 +247,15 @@ export default function SettingsPage() {
       return null;
     }
 
+    if (acceptsTwintPayments && !twintPhoneNumber.trim()) {
+      toast({
+        title: "TWINT phone number required",
+        description: "Add the phone number customers should use for TWINT payments.",
+        variant: "error",
+      });
+      return null;
+    }
+
     setIsSaving(true);
 
     const response = await authenticatedFetch("/api/business", {
@@ -265,6 +280,8 @@ export default function SettingsPage() {
         currency,
         vatNumber,
         iban,
+        acceptsTwintPayments,
+        twintPhoneNumber,
         nextOfficialInvoiceSequence: Number(nextOfficialInvoiceSequence),
         logoUrl: options?.logoUrlOverride ?? logoUrl,
       }),
@@ -300,6 +317,8 @@ export default function SettingsPage() {
     setVatNumber(updatedBusiness.vatNumber || "");
     setIban(updatedBusiness.iban || "");
     setLogoUrl(updatedBusiness.logoUrl || "");
+    setAcceptsTwintPayments(Boolean(updatedBusiness.acceptsTwintPayments));
+    setTwintPhoneNumber(updatedBusiness.twintPhoneNumber || "");
     setUsesPlatformStripe(Boolean(updatedBusiness.usesPlatformStripe));
     setStripeAccountId(updatedBusiness.stripeAccountId || null);
     setStripeChargesEnabled(Boolean(updatedBusiness.stripeChargesEnabled));
@@ -619,6 +638,8 @@ export default function SettingsPage() {
           setVatNumber(data?.vatNumber || "");
           setIban(data?.iban || "");
           setLogoUrl(data?.logoUrl || "");
+          setAcceptsTwintPayments(Boolean(data?.acceptsTwintPayments));
+          setTwintPhoneNumber(data?.twintPhoneNumber || "");
           setUsesPlatformStripe(Boolean(data?.usesPlatformStripe));
           setStripeAccountId(data?.stripeAccountId || null);
           setStripeChargesEnabled(Boolean(data?.stripeChargesEnabled));
@@ -942,93 +963,143 @@ export default function SettingsPage() {
       <section className="space-y-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Payments & billing</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">Card payments and billing</h2>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">Payment methods and billing</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Use Stripe for card payments and manage the workspace plan here.
+            Configure manual payment notes, optional card payments, and the workspace plan.
           </p>
         </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          <Card>
-            <CardHeader>
-              <CardTitle>Stripe Payments</CardTitle>
-              <p className="text-sm text-slate-500">Card payments are optional. Bank transfer and Swiss QR bills work without Stripe.</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg border border-slate-200 p-4">
-                <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <CreditCard className="h-4 w-4 text-slate-600" />
-                      <p className="font-semibold text-slate-900">
-                        {usesPlatformStripe
-                          ? "Platform Stripe account"
-                          : stripeAccountId
-                            ? "Stripe account connected"
-                            : "Optional card payments"}
-                      </p>
-                    </div>
-                    <p className="max-w-2xl text-sm text-slate-600">
-                      Connect Stripe only if this business wants to accept card payments online.
-                      Bank transfers and Swiss QR bills work without it.
-                    </p>
-                    <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${stripeStatusTone}`}>
-                      {stripeStatusLabel}
-                    </div>
-                    <p className="max-w-2xl text-sm text-slate-600">{stripeStatusDescription}</p>
-                    {stripePendingSteps.length > 0 ? (
-                      <p className="text-xs text-slate-500">
-                        Still pending in Stripe: {stripePendingSteps.join(", ")}.
-                      </p>
-                    ) : null}
-                    {!usesPlatformStripe && !stripeAccountId ? (
-                      <p className="text-xs text-slate-500">
-                        You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
-                      </p>
-                    ) : null}
-                    {usesPlatformStripe ? (
-                      <p className="text-xs text-slate-500">
-                        This workspace uses the app-wide platform Stripe account, so disconnecting is not available here.
-                      </p>
-                    ) : null}
-                    {stripeAccountId ? (
-                      <p className="text-xs text-slate-500">
-                        {usesPlatformStripe ? "Platform" : "Connected"} account ID:{" "}
-                        <span className="font-mono">{stripeAccountId}</span>
-                      </p>
-                    ) : null}
-                  </div>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Manual payment note</CardTitle>
+                <p className="text-sm text-slate-500">
+                  Let invoices prefill a TWINT payment note with your own phone number.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                    checked={acceptsTwintPayments}
+                    onChange={(event) => setAcceptsTwintPayments(event.target.checked)}
+                  />
+                  <span>
+                    <span className="block font-medium text-slate-900">Accept TWINT payments</span>
+                    <span className="mt-1 block text-slate-500">
+                      New invoices can prefill a payment note with your TWINT phone number.
+                    </span>
+                  </span>
+                </label>
 
-                  <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
-                    {!usesPlatformStripe && !isStripeFullyEnabled ? (
-                      <Button
-                        onClick={() => void handleConnectStripe()}
-                        disabled={isConnectingStripe}
-                        className="w-full sm:w-auto"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                        {isConnectingStripe
-                          ? "Opening Stripe..."
-                          : stripeAccountId
-                            ? "Continue Stripe setup"
-                            : "Connect Stripe"}
-                      </Button>
-                    ) : null}
-                    {(usesPlatformStripe || stripeAccountId) ? (
-                      <Button
-                        variant="secondary"
-                        onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
-                        disabled={isRefreshingStripe || isDisconnectingStripe}
-                        className="w-full sm:w-auto"
-                      >
-                        <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
-                        {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
-                      </Button>
-                    ) : null}
+                <div className="space-y-2">
+                  <Label htmlFor="twintPhoneNumber">TWINT phone number</Label>
+                  <Input
+                    id="twintPhoneNumber"
+                    value={twintPhoneNumber}
+                    onChange={(event) => setTwintPhoneNumber(event.target.value)}
+                    placeholder="+41 79 123 45 67"
+                    disabled={!acceptsTwintPayments}
+                  />
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoice note preview</p>
+                  <p className="mt-2 text-sm text-slate-700">
+                    {twintPreviewMessage ?? "TWINT is currently disabled for new invoices."}
+                  </p>
+                </div>
+
+                <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save payment settings"}
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Stripe Payments</CardTitle>
+                <p className="text-sm text-slate-500">Card payments are optional. Bank transfer and Swiss QR bills work without Stripe.</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="rounded-lg border border-slate-200 p-4">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4 text-slate-600" />
+                        <p className="font-semibold text-slate-900">
+                          {usesPlatformStripe
+                            ? "Platform Stripe account"
+                            : stripeAccountId
+                              ? "Stripe account connected"
+                              : "Optional card payments"}
+                        </p>
+                      </div>
+                      <p className="max-w-2xl text-sm text-slate-600">
+                        Connect Stripe only if this business wants to accept card payments online.
+                        Bank transfers and Swiss QR bills work without it.
+                      </p>
+                      <div className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium ${stripeStatusTone}`}>
+                        {stripeStatusLabel}
+                      </div>
+                      <p className="max-w-2xl text-sm text-slate-600">{stripeStatusDescription}</p>
+                      {stripePendingSteps.length > 0 ? (
+                        <p className="text-xs text-slate-500">
+                          Still pending in Stripe: {stripePendingSteps.join(", ")}.
+                        </p>
+                      ) : null}
+                      {!usesPlatformStripe && !stripeAccountId ? (
+                        <p className="text-xs text-slate-500">
+                          You can skip this for now and keep using invoices with bank transfer details or Swiss QR bills.
+                        </p>
+                      ) : null}
+                      {usesPlatformStripe ? (
+                        <p className="text-xs text-slate-500">
+                          This workspace uses the app-wide platform Stripe account, so disconnecting is not available here.
+                        </p>
+                      ) : null}
+                      {stripeAccountId ? (
+                        <p className="text-xs text-slate-500">
+                          {usesPlatformStripe ? "Platform" : "Connected"} account ID:{" "}
+                          <span className="font-mono">{stripeAccountId}</span>
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap">
+                      {!usesPlatformStripe && !isStripeFullyEnabled ? (
+                        <Button
+                          onClick={() => void handleConnectStripe()}
+                          disabled={isConnectingStripe}
+                          className="w-full sm:w-auto"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          {isConnectingStripe
+                            ? "Opening Stripe..."
+                            : stripeAccountId
+                              ? "Continue Stripe setup"
+                              : "Connect Stripe"}
+                        </Button>
+                      ) : null}
+                      {(usesPlatformStripe || stripeAccountId) ? (
+                        <Button
+                          variant="secondary"
+                          onClick={() => void refreshStripeStatus({ showSuccessToast: true })}
+                          disabled={isRefreshingStripe || isDisconnectingStripe}
+                          className="w-full sm:w-auto"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${isRefreshingStripe ? "animate-spin" : ""}`} />
+                          {isRefreshingStripe ? "Refreshing..." : "Refresh status"}
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
 
           <BillingStatusCard
             title="Plan & Billing"

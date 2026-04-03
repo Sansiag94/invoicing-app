@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CreditCard, Download } from "lucide-react";
-import { calculateInvoiceTotals, parsePostalAddress } from "@/lib/invoice";
+import { calculateInvoiceTotals, getInvoiceVatLabel, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
 import {
   buildInvoiceAdditionalInformation,
@@ -211,6 +211,7 @@ export default function PublicInvoicePage() {
     );
   const invoiceLanguage = normalizeInvoiceLanguage(invoice?.client.language);
   const strings = getInvoiceStrings(invoiceLanguage);
+  const vatLabel = useMemo(() => getInvoiceVatLabel(lineItems, strings.vat), [lineItems, strings.vat]);
   const defaultMessage = useMemo(() => {
     return buildDefaultInvoiceMessage(
       invoiceLanguage,
@@ -670,7 +671,7 @@ export default function PublicInvoicePage() {
             </div>
             {taxAmount > 0 ? (
               <div className="mb-3 flex items-center justify-between text-slate-700">
-                <span>{strings.vat}</span>
+                <span>{vatLabel}</span>
                 <span>
                   {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
                 </span>

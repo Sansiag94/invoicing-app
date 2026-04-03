@@ -31,6 +31,7 @@ function shouldHideShell(pathname: string): boolean {
     pathname === "/privacy" ||
     pathname === "/terms" ||
     pathname === "/help" ||
+    pathname === "/verify-email" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password" ||
     pathname === "/settings/password" ||
@@ -67,14 +68,14 @@ export default function AppFrame({ children }: AppFrameProps) {
     let mounted = true;
     let unsubscribe = () => {};
 
-    function redirectToLogin() {
+    function redirectToLogin(destination = "/login") {
       setBusinessBrand(null);
       startClientLogout();
       void clearPwaAppCache();
 
       if (mounted) {
         setAuthStatus("unauthenticated");
-        window.location.replace("/login");
+        window.location.replace(destination);
       }
     }
 
@@ -97,9 +98,23 @@ export default function AppFrame({ children }: AppFrameProps) {
       }
 
       if (session?.access_token) {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!mounted) {
+          return;
+        }
+
+        if (userData.user && !userData.user.email_confirmed_at) {
+          const email = userData.user.email?.trim();
+          setAuthStatus("unauthenticated");
+          window.location.replace(
+            email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email"
+          );
+          return;
+        }
+
         setAuthStatus("authenticated");
       } else {
-        redirectToLogin();
+        redirectToLogin("/login");
       }
 
       const {
@@ -113,17 +128,35 @@ export default function AppFrame({ children }: AppFrameProps) {
           if (isClientLogoutInProgress()) {
             setBusinessBrand(null);
             setAuthStatus("unauthenticated");
-            window.location.replace("/login");
+            window.location.replace("/");
             return;
           }
 
           setBusinessBrand(null);
           setAuthStatus("checking");
-          redirectToLogin();
+          redirectToLogin("/login");
           return;
         }
 
-        setAuthStatus("authenticated");
+        if (nextSession?.access_token) {
+          void supabase.auth.getUser().then(({ data: userData }) => {
+            if (!mounted) {
+              return;
+            }
+
+            if (userData.user && !userData.user.email_confirmed_at) {
+              const email = userData.user.email?.trim();
+              setAuthStatus("unauthenticated");
+              window.location.replace(
+                email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email"
+              );
+              return;
+            }
+
+            setAuthStatus("authenticated");
+          });
+          return;
+        }
       });
 
       unsubscribe = () => {

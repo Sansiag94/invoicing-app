@@ -31,6 +31,11 @@ type LineItemAmounts = {
   taxRate: number;
 };
 
+function normalizeTaxRateLabel(value: number): string {
+  const rounded = Number(value.toFixed(2));
+  return `${rounded}%`;
+}
+
 function normalizeLine(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
@@ -105,6 +110,31 @@ export function calculateInvoiceTotals(lineItems: LineItemAmounts[]) {
     taxAmount,
     totalAmount: subtotal + taxAmount,
   };
+}
+
+export function getInvoiceVatRateLabels(lineItems: LineItemAmounts[]): string[] {
+  const uniqueRates = Array.from(
+    new Set(
+      lineItems
+        .map((item) => item.taxRate)
+        .filter((rate) => Number.isFinite(rate) && rate >= 0)
+        .map((rate) => Number(rate.toFixed(2)))
+    )
+  ).sort((left, right) => left - right);
+
+  return uniqueRates.map((rate) => normalizeTaxRateLabel(rate));
+}
+
+export function getInvoiceVatLabel(
+  lineItems: LineItemAmounts[],
+  baseLabel = "VAT"
+): string {
+  const rateLabels = getInvoiceVatRateLabels(lineItems);
+  if (rateLabels.length === 0) {
+    return baseLabel;
+  }
+
+  return `${baseLabel} (${rateLabels.join(", ")})`;
 }
 
 export function deriveClientInvoicePrefix(value: string | null | undefined): string {

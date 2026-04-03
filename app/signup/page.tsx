@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { setRememberSession, supabase } from "@/utils/supabase";
 import AuthSplitShell from "@/components/AuthSplitShell";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
+import { buildVerifyEmailPath, isEmailConfirmationRequiredMessage } from "@/lib/authClient";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,14 @@ export default function SignupPage() {
 
         if (!signInResult.error) {
           accessToken = signInResult.data.session?.access_token ?? null;
+        } else if (isEmailConfirmationRequiredMessage(signInResult.error.message)) {
+          toast({
+            title: "Check your inbox",
+            description: "Confirm your email before opening the workspace.",
+            variant: "info",
+          });
+          router.replace(buildVerifyEmailPath(email));
+          return;
         }
       }
 
@@ -108,10 +117,10 @@ export default function SignupPage() {
 
       toast({
         title: "Account created",
-        description: "Account created. If email confirmation is enabled, verify your inbox before your first login.",
-        variant: "success",
+        description: "Confirm your email before you enter the workspace.",
+        variant: "info",
       });
-      router.push("/login");
+      router.replace(buildVerifyEmailPath(email));
     } finally {
       setIsLoading(false);
     }
@@ -209,8 +218,8 @@ export default function SignupPage() {
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
               <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-                If email confirmation is enabled, we&apos;ll send a verification email before your
-                first login.
+                If verification is enabled for this project, we&apos;ll ask you to confirm the email
+                before opening the workspace.
               </p>
             </div>
           </div>

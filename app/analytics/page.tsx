@@ -280,6 +280,16 @@ export default function AnalyticsPage() {
 
     return (chartData.totals.profit / chartData.totals.revenue) * 100;
   }, [chartData.totals.profit, chartData.totals.revenue]);
+  const monthlyReport = useMemo(() => {
+    const series = analytics?.monthlySeries ?? [];
+    const currentMonth = series.at(-1) ?? null;
+    const lastClosedMonth = series.length >= 2 ? series.at(-2) ?? null : null;
+
+    return {
+      currentMonth,
+      lastClosedMonth,
+    };
+  }, [analytics?.monthlySeries]);
 
   const chartWidth = 760;
   const chartHeight = 280;
@@ -433,6 +443,57 @@ export default function AnalyticsPage() {
                 {analytics.currency} {formatMoney(analytics.monthProgress.overdueAmount)}
               </p>
               <p className="mt-1 text-sm text-slate-600">Already overdue among this month&apos;s issued invoices</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card id="monthly-report">
+        <CardHeader>
+          <CardTitle>Monthly Report</CardTitle>
+          <p className="text-sm text-slate-500">
+            Use this section as the month-by-month summary for what closed last month and what is
+            happening this month so far.
+          </p>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last closed month</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {monthlyReport.lastClosedMonth?.label ?? "Not available yet"}
+            </p>
+            {monthlyReport.lastClosedMonth ? (
+              <div className="mt-3 space-y-2 text-sm text-slate-600">
+                <p>
+                  Revenue: {analytics.currency} {formatMoney(monthlyReport.lastClosedMonth.revenue)}
+                </p>
+                <p>
+                  Costs: {analytics.currency} {formatMoney(monthlyReport.lastClosedMonth.expenses)}
+                </p>
+                <p>
+                  Net result: {analytics.currency} {formatMoney(monthlyReport.lastClosedMonth.profit)}
+                </p>
+              </div>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">The report becomes available once you have a prior month on the books.</p>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current month so far</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+              {monthlyReport.currentMonth?.label ?? "This month"}
+            </p>
+            <div className="mt-3 space-y-2 text-sm text-slate-600">
+              <p>
+                Revenue: {analytics.currency} {formatMoney(analytics.revenueThisMonth)}
+              </p>
+              <p>
+                Costs: {analytics.currency} {formatMoney(analytics.expensesThisMonth)}
+              </p>
+              <p>
+                Net result: {analytics.currency} {formatMoney(analytics.netProfitThisMonth)}
+              </p>
             </div>
           </div>
         </CardContent>

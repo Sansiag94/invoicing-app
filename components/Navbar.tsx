@@ -300,7 +300,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
       startClientLogout();
       void clearPwaAppCache();
       setUserEmail(null);
-      window.location.replace("/login");
+      window.location.replace("/");
     } finally {
       setIsSigningOut(false);
     }
@@ -342,6 +342,32 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
       variant: "info",
     });
   }
+
+  useEffect(() => {
+    let cancelled = false;
+    let intervalId: number | null = null;
+
+    const load = async () => {
+      const loadedNotifications = await loadNotifications();
+      if (cancelled) {
+        return;
+      }
+
+      setNotifications(loadedNotifications);
+    };
+
+    void load();
+    intervalId = window.setInterval(() => {
+      void load();
+    }, 60_000);
+
+    return () => {
+      cancelled = true;
+      if (intervalId !== null) {
+        window.clearInterval(intervalId);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!isSearchOpen) {
