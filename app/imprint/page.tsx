@@ -5,8 +5,11 @@ import { APP_NAME } from "@/lib/appBrand";
 import { getLegalProfile } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: `Imprint | ${APP_NAME}`,
+  title: "Imprint",
   description: `Imprint and legal notice for ${APP_NAME}`,
+  alternates: {
+    canonical: "/imprint",
+  },
 };
 
 function Section({

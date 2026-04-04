@@ -17,8 +17,11 @@ import LegalLinks from "@/components/LegalLinks";
 import { getLegalProfile } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: `Help & Onboarding | ${APP_NAME}`,
+  title: "Help & Onboarding",
   description: `Getting started help and onboarding information for ${APP_NAME}`,
+  alternates: {
+    canonical: "/help",
+  },
 };
 
 type HelpSource = "public" | "app" | "settings";

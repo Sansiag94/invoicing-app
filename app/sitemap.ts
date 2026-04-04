@@ -3,7 +3,7 @@ import { getPublicInvoiceBaseUrl } from "@/lib/publicInvoiceLink";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = getPublicInvoiceBaseUrl();
-  const lastModified = new Date("2026-03-21T00:00:00.000Z");
+  const lastModified = new Date("2026-04-04T00:00:00.000Z");
 
   return [
     {
@@ -11,6 +11,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "weekly",
       priority: 1,
+    },
+    {
+      url: `${baseUrl}/help`,
+      lastModified,
+      changeFrequency: "monthly",
+      priority: 0.6,
     },
     {
       url: `${baseUrl}/imprint`,

@@ -5,8 +5,11 @@ import { APP_NAME } from "@/lib/appBrand";
 import { getLegalProfile } from "@/lib/legal";
 
 export const metadata: Metadata = {
-  title: `Terms of Service | ${APP_NAME}`,
+  title: "Terms of Service",
   description: `Terms of Service for ${APP_NAME}`,
+  alternates: {
+    canonical: "/terms",
+  },
 };
 
 function Section({

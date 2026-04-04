@@ -7,7 +7,7 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/imprint", "/privacy", "/terms"],
+      allow: ["/", "/help", "/imprint", "/privacy", "/terms"],
       disallow: [
         "/api/",
         "/analytics",
@@ -15,14 +15,10 @@ export default function robots(): MetadataRoute.Robots {
         "/dashboard",
         "/dev/",
         "/expenses",
-        "/forgot-password",
         "/i/",
         "/invoice/pay/",
         "/invoices",
-        "/login",
-        "/reset-password",
         "/settings",
-        "/signup",
       ],
     },
     sitemap: `${baseUrl}/sitemap.xml`,

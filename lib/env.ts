@@ -100,6 +100,10 @@ export function getSupabaseServiceRoleKey(): string | null {
   return readEnv("SUPABASE_SERVICE_ROLE_KEY") ?? null;
 }
 
+export function getGoogleSiteVerification(): string | null {
+  return readEnv("GOOGLE_SITE_VERIFICATION") ?? null;
+}
+
 export function validateRequiredEnv() {
   if (validated) {
     return;

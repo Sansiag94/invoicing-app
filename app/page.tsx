@@ -1,4 +1,6 @@
 import Link from "next/link";
+import Script from "next/script";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   CheckCircle2,
@@ -8,6 +10,29 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
 import { APP_NAME } from "@/lib/appBrand";
+import { getPublicInvoiceBaseUrl } from "@/lib/publicInvoiceLink";
+
+const baseUrl = getPublicInvoiceBaseUrl();
+
+export const metadata: Metadata = {
+  title: "Swiss-ready invoicing for freelancers and small businesses",
+  description:
+    "Create Swiss-ready invoices with QR-bill support, payment links, reminders, expenses, and a free plan with 3 issued invoices per month.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: `${APP_NAME} | Swiss-ready invoicing for freelancers and small businesses`,
+    description:
+      "Create Swiss-ready invoices with QR-bill support, payment links, reminders, expenses, and a free plan with 3 issued invoices per month.",
+    url: baseUrl,
+  },
+  twitter: {
+    title: `${APP_NAME} | Swiss-ready invoicing for freelancers and small businesses`,
+    description:
+      "Create Swiss-ready invoices with QR-bill support, payment links, reminders, expenses, and a free plan with 3 issued invoices per month.",
+  },
+};
 
 const heroHighlights = [
   "Swiss-ready invoices with QR-bill support",
@@ -62,8 +87,38 @@ const pricingTiers = [
 ];
 
 export default function LandingPage() {
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: APP_NAME,
+    url: baseUrl,
+    applicationCategory: "BusinessApplication",
+    operatingSystem: "Web",
+    description:
+      "Swiss-ready invoicing for freelancers and small businesses with QR-bill support, payment links, reminders, expenses, and analytics.",
+    offers: [
+      {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "CHF",
+        description: "Free plan with 3 issued invoices per calendar month",
+      },
+      {
+        "@type": "Offer",
+        price: "19",
+        priceCurrency: "CHF",
+        description: "Pro plan with unlimited invoices",
+      },
+    ],
+  };
+
   return (
     <>
+      <Script
+        id="sierra-invoices-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <RedirectIfAuthenticated />
       <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-6xl flex-col justify-center gap-8 py-8">
         <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_30px_90px_rgba(15,23,42,0.08)] dark:border-slate-800 dark:bg-slate-900">
