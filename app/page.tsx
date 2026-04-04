@@ -3,8 +3,16 @@ import Script from "next/script";
 import type { Metadata } from "next";
 import {
   ArrowRight,
+  Building2,
   CheckCircle2,
+  CircleHelp,
+  CreditCard,
+  FileText,
+  Landmark,
+  ReceiptText,
   ShieldCheck,
+  Users,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,6 +94,91 @@ const pricingTiers = [
   },
 ];
 
+const useCases = [
+  {
+    icon: FileText,
+    title: "Send Swiss-ready invoices",
+    description:
+      "Create invoice PDFs with QR-bill support, clean numbering, VAT breakdowns, and public payment pages.",
+  },
+  {
+    icon: CreditCard,
+    title: "Track payments clearly",
+    description:
+      "See which invoices are draft, sent, paid, overdue, viewed online, or cancelled without stitching together several tools.",
+  },
+  {
+    icon: ReceiptText,
+    title: "Keep admin in one workspace",
+    description:
+      "Manage clients, expenses, reminders, and monthly progress inside one focused invoicing workspace.",
+  },
+];
+
+const fitSegments = [
+  {
+    title: "Freelancers and consultants",
+    description:
+      "A good fit if you invoice clients regularly and want a straightforward workflow without accounting-suite complexity.",
+  },
+  {
+    title: "Small agencies and studios",
+    description:
+      "Useful when you need client records, branded invoices, reminders, and visibility into what is still unpaid.",
+  },
+  {
+    title: "Small businesses in Switzerland",
+    description:
+      "Built for Swiss-ready billing with QR-bills, optional online card payments, and manual bank-transfer workflows.",
+  },
+];
+
+const workflowSteps = [
+  {
+    title: "1. Set up your workspace",
+    description:
+      "Add business details, logo, IBAN, invoice numbering, and payment preferences once in Settings.",
+  },
+  {
+    title: "2. Add clients and draft invoices",
+    description:
+      "Create clients manually or import them if you already keep a spreadsheet, then draft invoices before sending.",
+  },
+  {
+    title: "3. Send, track, and follow up",
+    description:
+      "Share invoices, monitor payment status, send reminders, and keep monthly revenue and expense visibility in one place.",
+  },
+];
+
+const faqItems = [
+  {
+    question: "Is Sierra Invoices built for Switzerland?",
+    answer:
+      "Yes. The app is positioned around Swiss-ready invoicing, including QR-bill support, VAT visibility, bank-transfer workflows, and optional online card payments.",
+  },
+  {
+    question: "Can I start for free?",
+    answer:
+      "Yes. The free plan includes 3 issued invoices per calendar month. Draft invoices stay free, so you can prepare and review them before sending.",
+  },
+  {
+    question: "Do I need Stripe to use the app?",
+    answer:
+      "No. Stripe is optional and only needed if you want clients to pay invoices online by card. You can still use bank transfer and Swiss QR payment without Stripe.",
+  },
+  {
+    question: "Who is the app best for?",
+    answer:
+      "It is best for freelancers, consultants, agencies, and small businesses that want simpler billing, payment tracking, reminders, and client visibility in one focused workspace.",
+  },
+  {
+    question: "Can I get help setting up my workspace?",
+    answer:
+      "Yes. Sierra Invoices offers an optional CHF 99 onboarding service if you want help with business details, invoice numbering, Stripe setup, or your first clients and invoices.",
+  },
+];
+
 export default function LandingPage() {
   const structuredData = {
     "@context": "https://schema.org",
@@ -112,12 +205,30 @@ export default function LandingPage() {
     ],
   };
 
+  const faqStructuredData = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: faqItems.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: item.answer,
+      },
+    })),
+  };
+
   return (
     <>
       <Script
         id="sierra-invoices-structured-data"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <Script
+        id="sierra-invoices-faq-structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqStructuredData) }}
       />
       <RedirectIfAuthenticated />
       <div className="mx-auto flex min-h-[calc(100vh-8rem)] w-full max-w-6xl flex-col justify-center gap-8 py-8">
@@ -331,6 +442,176 @@ export default function LandingPage() {
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+          <Card className="rounded-[28px] border-slate-200 dark:border-slate-800">
+            <CardHeader className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">What it helps with</p>
+              <CardTitle className="text-3xl text-slate-950 dark:text-slate-50">
+                Built for the real invoicing workflow, not just invoice creation
+              </CardTitle>
+              <p className="max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
+                Sierra Invoices is designed for the full billing loop: creating Swiss-ready invoices,
+                tracking what has been paid, following up on unpaid invoices, and keeping expenses visible.
+              </p>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-3">
+              {useCases.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <div
+                    key={item.title}
+                    className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60"
+                  >
+                    <div className="inline-flex rounded-2xl bg-slate-900 p-2 text-white dark:bg-slate-100 dark:text-slate-950">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <p className="mt-4 text-lg font-semibold text-slate-950 dark:text-slate-50">{item.title}</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{item.description}</p>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[28px] border-slate-200 dark:border-slate-800">
+            <CardHeader className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Best fit</p>
+              <CardTitle className="text-3xl text-slate-950 dark:text-slate-50">
+                A focused invoicing app for freelancers and small businesses
+              </CardTitle>
+              <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
+                If you need a simpler way to invoice clients in Switzerland without taking on a full accounting platform, this is the use case the app is built around.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {fitSegments.map((segment, index) => {
+                const icons = [Users, Building2, Landmark];
+                const Icon = icons[index] ?? Users;
+
+                return (
+                  <div
+                    key={segment.title}
+                    className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60"
+                  >
+                    <div className="mt-0.5 inline-flex rounded-xl bg-white p-2 text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-slate-950 dark:text-slate-50">{segment.title}</p>
+                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{segment.description}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+          <Card className="rounded-[28px] border-slate-200 dark:border-slate-800">
+            <CardHeader className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">How it works</p>
+              <CardTitle className="text-3xl text-slate-950 dark:text-slate-50">
+                Get started without a heavy setup project
+              </CardTitle>
+              <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
+                Most users can start by filling in business details, adding a few clients, and sending the first invoice as a draft before going live.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {workflowSteps.map((step) => (
+                <div
+                  key={step.title}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60"
+                >
+                  <p className="font-medium text-slate-950 dark:text-slate-50">{step.title}</p>
+                  <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{step.description}</p>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="rounded-[28px] border-slate-200 dark:border-slate-800">
+            <CardHeader className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Trust and support</p>
+              <CardTitle className="text-3xl text-slate-950 dark:text-slate-50">
+                Clear public pages, simple pricing, and optional human help
+              </CardTitle>
+              <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
+                The public app pages explain the pricing, legal terms, and first-setup process so new users can understand the product before creating an account.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
+                <div className="flex items-start gap-3">
+                  <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-600" />
+                  <div>
+                    <p className="font-medium text-slate-950 dark:text-slate-50">Public legal and support pages</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                      Review the app homepage, help guide, imprint, privacy policy, and terms before signing up.
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-3 text-sm">
+                      <Link href="/help" className="font-medium text-slate-700 underline underline-offset-4 dark:text-slate-200">
+                        Help guide
+                      </Link>
+                      <Link href="/terms" className="font-medium text-slate-700 underline underline-offset-4 dark:text-slate-200">
+                        Terms
+                      </Link>
+                      <Link href="/privacy" className="font-medium text-slate-700 underline underline-offset-4 dark:text-slate-200">
+                        Privacy
+                      </Link>
+                      <Link href="/imprint" className="font-medium text-slate-700 underline underline-offset-4 dark:text-slate-200">
+                        Imprint
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60">
+                <div className="flex items-start gap-3">
+                  <Wallet className="mt-0.5 h-5 w-5 text-sky-600" />
+                  <div>
+                    <p className="font-medium text-slate-950 dark:text-slate-50">Transparent plan logic</p>
+                    <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                      Drafts stay free, the free plan includes 3 issued invoices per month, and Pro removes the issuing limit when the business needs it.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section>
+          <Card className="rounded-[28px] border-slate-200 dark:border-slate-800">
+            <CardHeader className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">FAQ</p>
+              <CardTitle className="text-3xl text-slate-950 dark:text-slate-50">
+                Common questions about Sierra Invoices
+              </CardTitle>
+              <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
+                These are the questions new users usually ask before trying the app.
+              </p>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              {faqItems.map((item) => (
+                <div
+                  key={item.question}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/60"
+                >
+                  <div className="flex items-start gap-3">
+                    <CircleHelp className="mt-1 h-5 w-5 text-slate-500 dark:text-slate-400" />
+                    <div>
+                      <p className="font-medium text-slate-950 dark:text-slate-50">{item.question}</p>
+                      <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">{item.answer}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         </section>
