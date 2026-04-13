@@ -124,6 +124,7 @@ function buildLinePath(
   paddingRight: number,
   paddingTop: number,
   paddingBottom: number,
+  minValue: number,
   maxValue: number
 ): string {
   if (values.length === 0) return "";
@@ -131,11 +132,12 @@ function buildLinePath(
   const usableWidth = width - paddingLeft - paddingRight;
   const usableHeight = height - paddingTop - paddingBottom;
   const stepX = values.length === 1 ? 0 : usableWidth / (values.length - 1);
+  const valueRange = Math.max(1, maxValue - minValue);
 
   return values
     .map((value, index) => {
       const x = paddingLeft + index * stepX;
-      const y = paddingTop + usableHeight - (value / maxValue) * usableHeight;
+      const y = paddingTop + usableHeight - ((value - minValue) / valueRange) * usableHeight;
       return `${index === 0 ? "M" : "L"} ${x} ${y}`;
     })
     .join(" ");
@@ -149,6 +151,7 @@ function buildPoints(
   paddingRight: number,
   paddingTop: number,
   paddingBottom: number,
+  minValue: number,
   maxValue: number
 ) {
   if (values.length === 0) return [];
@@ -156,10 +159,11 @@ function buildPoints(
   const usableWidth = width - paddingLeft - paddingRight;
   const usableHeight = height - paddingTop - paddingBottom;
   const stepX = values.length === 1 ? 0 : usableWidth / (values.length - 1);
+  const valueRange = Math.max(1, maxValue - minValue);
 
   return values.map((value, index) => ({
     x: paddingLeft + index * stepX,
-    y: paddingTop + usableHeight - (value / maxValue) * usableHeight,
+    y: paddingTop + usableHeight - ((value - minValue) / valueRange) * usableHeight,
     value,
   }));
 }
@@ -176,7 +180,7 @@ export default function AnalyticsPage() {
 
     (async () => {
       try {
-        const response = await authenticatedFetch("/api/analytics");
+        const response = await authenticatedFetch("/api/analytics", { cache: "no-store" });
         const data = (await response.json()) as AnalyticsOverview | { error?: string };
 
         if (!response.ok || ("error" in data && data.error)) {
@@ -213,13 +217,15 @@ export default function AnalyticsPage() {
   const chartData = useMemo(() => {
     const revenueValues = visibleSeries.map((entry) => entry.revenue);
     const expenseValues = visibleSeries.map((entry) => entry.expenses);
-    const profitValues = visibleSeries.map((entry) => Math.max(0, entry.profit));
+    const profitValues = visibleSeries.map((entry) => entry.profit);
+    const plottedValues = [...revenueValues, ...expenseValues, ...profitValues];
 
     return {
       revenueValues,
       expenseValues,
       profitValues,
-      maxValue: Math.max(1, ...revenueValues, ...expenseValues, ...profitValues),
+      minValue: Math.min(0, ...plottedValues),
+      maxValue: Math.max(1, ...plottedValues),
       totals: {
         revenue: revenueValues.reduce((sum, value) => sum + value, 0),
         expenses: expenseValues.reduce((sum, value) => sum + value, 0),
@@ -309,6 +315,7 @@ export default function AnalyticsPage() {
     chartPadding.right,
     chartPadding.top,
     chartPadding.bottom,
+    chartData.minValue,
     chartData.maxValue
   );
   const expensePath = buildLinePath(
@@ -319,6 +326,7 @@ export default function AnalyticsPage() {
     chartPadding.right,
     chartPadding.top,
     chartPadding.bottom,
+    chartData.minValue,
     chartData.maxValue
   );
   const profitPath = buildLinePath(
@@ -329,6 +337,7 @@ export default function AnalyticsPage() {
     chartPadding.right,
     chartPadding.top,
     chartPadding.bottom,
+    chartData.minValue,
     chartData.maxValue
   );
   const revenuePoints = buildPoints(
@@ -339,6 +348,7 @@ export default function AnalyticsPage() {
     chartPadding.right,
     chartPadding.top,
     chartPadding.bottom,
+    chartData.minValue,
     chartData.maxValue
   );
   const expensePoints = buildPoints(
@@ -349,6 +359,7 @@ export default function AnalyticsPage() {
     chartPadding.right,
     chartPadding.top,
     chartPadding.bottom,
+    chartData.minValue,
     chartData.maxValue
   );
   const profitPoints = buildPoints(
@@ -359,8 +370,15 @@ export default function AnalyticsPage() {
     chartPadding.right,
     chartPadding.top,
     chartPadding.bottom,
+    chartData.minValue,
     chartData.maxValue
   );
+  const chartValueRange = Math.max(1, chartData.maxValue - chartData.minValue);
+  const zeroLineY =
+    chartPadding.top +
+    (chartHeight - chartPadding.top - chartPadding.bottom) -
+    ((0 - chartData.minValue) / chartValueRange) *
+      (chartHeight - chartPadding.top - chartPadding.bottom);
   const chartColors = theme === "dark"
     ? {
         grid: "#334155",
@@ -578,6 +596,14 @@ export default function AnalyticsPage() {
                     />
                   );
                 })}
+                <line
+                  x1={chartPadding.left}
+                  x2={chartWidth - chartPadding.right}
+                  y1={zeroLineY}
+                  y2={zeroLineY}
+                  stroke={chartColors.grid}
+                  strokeWidth="1.5"
+                />
 
                 <path d={revenuePath} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
                 <path d={expensePath} fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />

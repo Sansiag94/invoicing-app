@@ -19,6 +19,9 @@ function getMonthRange(today: Date): { startOfMonth: Date; startOfNextMonth: Dat
   return { startOfMonth, startOfNextMonth };
 }
 
+const SETTLED_PAYMENT_STATUSES = ["manual_paid", "paid", "succeeded"];
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
+
 export async function GET(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -53,16 +56,20 @@ export async function GET(request: Request) {
       clientCount,
       invoiceCount,
     ] = await prisma.$transaction([
-      prisma.invoice.aggregate({
+      prisma.payment.aggregate({
         where: {
-          businessId: business.id,
-          status: "paid",
-          issueDate: {
+          invoice: {
+            businessId: business.id,
+          },
+          status: {
+            in: SETTLED_PAYMENT_STATUSES,
+          },
+          createdAt: {
             gte: startOfMonth,
             lt: startOfNextMonth,
           },
         },
-        _sum: { totalAmount: true },
+        _sum: { amount: true },
       }),
       prisma.expense.aggregate({
         where: {
@@ -74,12 +81,16 @@ export async function GET(request: Request) {
         },
         _sum: { amount: true },
       }),
-      prisma.invoice.aggregate({
+      prisma.payment.aggregate({
         where: {
-          businessId: business.id,
-          status: "paid",
+          invoice: {
+            businessId: business.id,
+          },
+          status: {
+            in: SETTLED_PAYMENT_STATUSES,
+          },
         },
-        _sum: { totalAmount: true },
+        _sum: { amount: true },
       }),
       prisma.expense.aggregate({
         where: {
@@ -194,24 +205,24 @@ export async function GET(request: Request) {
         WHERE i."businessId" = ${business.id}
       ) AS ranked
       ORDER BY
+        COALESCE(ranked."issuedAt", ranked."createdAt") DESC,
+        ranked."createdAt" DESC,
         ranked."sortGroup" ASC,
         ranked."sortYear" DESC NULLS LAST,
-        ranked."sortSequence" DESC NULLS LAST,
-        COALESCE(ranked."issuedAt", ranked."createdAt") DESC,
-        ranked."createdAt" DESC
+        ranked."sortSequence" DESC NULLS LAST
       LIMIT 5
     `;
 
     return NextResponse.json({
       currency: business.currency,
-      revenueThisMonth: revenueThisMonthAggregate._sum.totalAmount ?? 0,
+      revenueThisMonth: revenueThisMonthAggregate._sum.amount ?? 0,
       expensesThisMonth: expensesThisMonthAggregate._sum.amount ?? 0,
       netProfitThisMonth:
-        (revenueThisMonthAggregate._sum.totalAmount ?? 0) - (expensesThisMonthAggregate._sum.amount ?? 0),
-      totalRevenue: totalRevenueAggregate._sum.totalAmount ?? 0,
+        (revenueThisMonthAggregate._sum.amount ?? 0) - (expensesThisMonthAggregate._sum.amount ?? 0),
+      totalRevenue: totalRevenueAggregate._sum.amount ?? 0,
       totalExpenses: totalExpensesAggregate._sum.amount ?? 0,
       totalProfit:
-        (totalRevenueAggregate._sum.totalAmount ?? 0) - (totalExpensesAggregate._sum.amount ?? 0),
+        (totalRevenueAggregate._sum.amount ?? 0) - (totalExpensesAggregate._sum.amount ?? 0),
       prospectRevenue: prospectRevenueAggregate._sum.totalAmount ?? 0,
       overdueAmount: overdueAmountAggregate._sum.totalAmount ?? 0,
       openInvoices,
@@ -223,7 +234,7 @@ export async function GET(request: Request) {
       clientCount,
       invoiceCount,
       recentInvoices,
-    });
+    }, { headers: NO_STORE_HEADERS });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);

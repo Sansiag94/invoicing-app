@@ -6,6 +6,9 @@ import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 import { AnalyticsOverview, ExpenseCategory, InvoiceCurrency } from "@/lib/types";
 import { normalizeExpenseCurrency } from "@/lib/expenses";
 
+const SETTLED_PAYMENT_STATUSES = ["manual_paid", "paid", "succeeded"];
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
+
 function getMonthKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
@@ -36,6 +39,10 @@ function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
+function isSettledPaymentStatus(status: string): boolean {
+  return SETTLED_PAYMENT_STATUSES.includes(status);
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -61,7 +68,7 @@ export async function GET(request: Request) {
     );
 
     const [
-      paidInvoicesRaw,
+      settledPaymentsRaw,
       openInvoicesRaw,
       issuedThisMonthRaw,
       expensesRaw,
@@ -69,29 +76,37 @@ export async function GET(request: Request) {
       unpaidInvoicesCount,
     ] =
       await prisma.$transaction([
-        prisma.invoice.findMany({
+        prisma.payment.findMany({
           where: {
-            businessId: business.id,
-            status: "paid",
+            invoice: {
+              businessId: business.id,
+            },
+            status: {
+              in: SETTLED_PAYMENT_STATUSES,
+            },
           },
           select: {
             id: true,
-            issueDate: true,
-            totalAmount: true,
-            client: {
+            amount: true,
+            status: true,
+            createdAt: true,
+            invoice: {
               select: {
                 id: true,
-                companyName: true,
-                contactName: true,
-                email: true,
+                issueDate: true,
+                client: {
+                  select: {
+                    id: true,
+                    companyName: true,
+                    contactName: true,
+                    email: true,
+                  },
+                },
               },
             },
-            payments: {
-              orderBy: { createdAt: "asc" },
-              select: {
-                createdAt: true,
-              },
-            },
+          },
+          orderBy: {
+            createdAt: "asc",
           },
         }),
         prisma.invoice.findMany({
@@ -123,6 +138,7 @@ export async function GET(request: Request) {
             payments: {
               select: {
                 amount: true,
+                status: true,
                 createdAt: true,
               },
             },
@@ -157,36 +173,39 @@ export async function GET(request: Request) {
     let revenueThisMonth = 0;
     let totalRevenue = 0;
     const monthlyRevenue = new Map<string, number>(months.map((month) => [month.key, 0]));
-    const topClientMap = new Map<string, { clientId: string; clientName: string; revenue: number; invoiceCount: number }>();
+    const topClientMap = new Map<string, { clientId: string; clientName: string; revenue: number; invoiceIds: Set<string> }>();
     const paymentDelays: number[] = [];
 
-    for (const invoice of paidInvoicesRaw) {
-      totalRevenue += invoice.totalAmount;
+    for (const payment of settledPaymentsRaw) {
+      totalRevenue += payment.amount;
 
-      const revenueDate = invoice.payments[0]?.createdAt ?? invoice.issueDate;
-      if (revenueDate >= currentMonthStart) {
-        revenueThisMonth += invoice.totalAmount;
+      const revenueDate = payment.createdAt;
+      if (revenueDate >= currentMonthStart && revenueDate < nextMonthStart) {
+        revenueThisMonth += payment.amount;
       }
 
       const revenueMonthKey = getMonthKey(revenueDate);
       if (monthlyRevenue.has(revenueMonthKey)) {
-        monthlyRevenue.set(revenueMonthKey, (monthlyRevenue.get(revenueMonthKey) ?? 0) + invoice.totalAmount);
+        monthlyRevenue.set(revenueMonthKey, (monthlyRevenue.get(revenueMonthKey) ?? 0) + payment.amount);
       }
 
-      const clientId = invoice.client.id;
-      const clientName = invoice.client.companyName || invoice.client.contactName || invoice.client.email;
+      const clientId = payment.invoice.client.id;
+      const clientName =
+        payment.invoice.client.companyName ||
+        payment.invoice.client.contactName ||
+        payment.invoice.client.email;
       const existingClient = topClientMap.get(clientId);
+      const invoiceIds = existingClient?.invoiceIds ?? new Set<string>();
+      invoiceIds.add(payment.invoice.id);
       topClientMap.set(clientId, {
         clientId,
         clientName,
-        revenue: (existingClient?.revenue ?? 0) + invoice.totalAmount,
-        invoiceCount: (existingClient?.invoiceCount ?? 0) + 1,
+        revenue: (existingClient?.revenue ?? 0) + payment.amount,
+        invoiceIds,
       });
 
-      if (invoice.payments[0]?.createdAt) {
-        const diffMs = invoice.payments[0].createdAt.getTime() - invoice.issueDate.getTime();
-        paymentDelays.push(Math.max(0, diffMs / (1000 * 60 * 60 * 24)));
-      }
+      const diffMs = payment.createdAt.getTime() - payment.invoice.issueDate.getTime();
+      paymentDelays.push(Math.max(0, diffMs / (1000 * 60 * 60 * 24)));
     }
 
     let expensesThisMonth = 0;
@@ -197,7 +216,7 @@ export async function GET(request: Request) {
     for (const expense of expensesRaw) {
       totalExpenses += expense.amount;
 
-      if (expense.expenseDate >= currentMonthStart) {
+      if (expense.expenseDate >= currentMonthStart && expense.expenseDate < nextMonthStart) {
         expensesThisMonth += expense.amount;
       }
 
@@ -218,12 +237,17 @@ export async function GET(request: Request) {
         summary.issuedAmount += invoice.totalAmount;
         summary.issuedCount += 1;
 
-        summary.collectedAmount += invoice.payments
+        const settledInvoicePayments = invoice.payments.filter((payment) =>
+          isSettledPaymentStatus(payment.status)
+        );
+        const collectedOnInvoice = settledInvoicePayments.reduce((sum, payment) => sum + payment.amount, 0);
+
+        summary.collectedAmount += settledInvoicePayments
           .filter((payment) => payment.createdAt >= currentMonthStart && payment.createdAt < nextMonthStart)
           .reduce((sum, payment) => sum + payment.amount, 0);
 
         if (invoice.status !== "paid") {
-          summary.openAmount += invoice.totalAmount;
+          summary.openAmount += Math.max(0, invoice.totalAmount - collectedOnInvoice);
         }
 
         if (invoice.status === "overdue") {
@@ -253,6 +277,12 @@ export async function GET(request: Request) {
     });
 
     const topClients = Array.from(topClientMap.values())
+      .map((client) => ({
+        clientId: client.clientId,
+        clientName: client.clientName,
+        revenue: client.revenue,
+        invoiceCount: client.invoiceIds.size,
+      }))
       .sort((left, right) => right.revenue - left.revenue)
       .slice(0, 5);
 
@@ -285,7 +315,7 @@ export async function GET(request: Request) {
       expenseBreakdown,
     };
 
-    return NextResponse.json(payload);
+    return NextResponse.json(payload, { headers: NO_STORE_HEADERS });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);

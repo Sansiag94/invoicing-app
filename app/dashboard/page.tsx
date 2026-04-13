@@ -183,7 +183,7 @@ export default function DashboardPage() {
 
     (async () => {
       try {
-        const response = await authenticatedFetch("/api/dashboard");
+        const response = await authenticatedFetch("/api/dashboard", { cache: "no-store" });
         const data = (await response.json()) as DashboardOverview | { error?: string };
 
         if (!response.ok || ("error" in data && data.error)) {

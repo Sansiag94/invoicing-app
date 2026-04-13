@@ -1,5 +1,6 @@
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/utils/supabase";
+import { clearPrivatePageCache } from "@/utils/privatePageCache";
 
 export const AUTH_REQUIRED_EVENT = "sierra-invoices-auth-required";
 const AUTH_TOKEN_REFRESH_BUFFER_MS = 30_000;
@@ -86,6 +87,18 @@ async function performAuthenticatedRequest(
   });
 }
 
+function getRequestMethod(input: RequestInfo | URL, init: RequestInit): string {
+  if (typeof init.method === "string") {
+    return init.method.toUpperCase();
+  }
+
+  if (typeof Request !== "undefined" && input instanceof Request) {
+    return input.method.toUpperCase();
+  }
+
+  return "GET";
+}
+
 export function resetAuthenticatedFetchCache() {
   clearTokenCache();
 }
@@ -94,6 +107,7 @@ export async function authenticatedFetch(
   input: RequestInfo | URL,
   init: RequestInit = {}
 ) {
+  const requestMethod = getRequestMethod(input, init);
   const token = await loadAccessToken();
   if (!token) {
     notifyAuthenticationRequired();
@@ -113,6 +127,10 @@ export async function authenticatedFetch(
 
   if (response.status === 401) {
     notifyAuthenticationRequired();
+  }
+
+  if (response.ok && requestMethod !== "GET" && requestMethod !== "HEAD") {
+    clearPrivatePageCache();
   }
 
   return response;
