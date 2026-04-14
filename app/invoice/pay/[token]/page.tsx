@@ -188,6 +188,8 @@ export default function PublicInvoicePage() {
     const ownerName = invoice.business.ownerName?.trim() || null;
     return ownerName && ownerName !== businessDisplayName ? ownerName : null;
   }, [businessDisplayName, invoice]);
+  const businessVatNumber = invoice?.business.vatNumber?.trim() || null;
+  const clientVatNumber = invoice?.client.vatNumber?.trim() || null;
 
   const onlinePaymentLink = useMemo(() => {
     if (!token) return null;
@@ -606,6 +608,7 @@ export default function PublicInvoicePage() {
             ))}
             {invoice.business.email ? <p>{invoice.business.email}</p> : null}
             {invoice.business.phone ? <p>{invoice.business.phone}</p> : null}
+            {businessVatNumber ? <p>VAT No. {businessVatNumber}</p> : null}
           </div>
 
           <div className="w-full text-[11px] sm:mt-1 sm:max-w-[36%]">
@@ -613,6 +616,7 @@ export default function PublicInvoicePage() {
             {clientAddress.displayLines.map((line, index) => (
               <p key={`client-address-${index}`}>{line}</p>
             ))}
+            {clientVatNumber ? <p>VAT No. {clientVatNumber}</p> : null}
           </div>
         </header>
 

@@ -145,7 +145,39 @@ export default async function PrivacyPage({
         </ul>
       </Section>
 
-      <Section title="5. How Data Is Shared">
+      <Section title="5. Legal Bases">
+        <p>
+          Where Swiss data-protection law, the GDPR, or similar laws require a legal basis, we rely
+          on the basis that fits the specific processing activity.
+        </p>
+        <ul className="space-y-2">
+          <li>
+            <strong>Contract performance</strong> for account setup, authentication, invoice and
+            expense features, public invoice pages, payment workflows, and support requested by
+            users.
+          </li>
+          <li>
+            <strong>Legal obligations</strong> for tax, bookkeeping, accounting retention,
+            sanctions, fraud-prevention, dispute, and regulatory requirements.
+          </li>
+          <li>
+            <strong>Legitimate interests</strong> for service security, abuse prevention,
+            troubleshooting, product reliability, basic business administration, and defending legal
+            claims, balanced against the rights and expectations of affected individuals.
+          </li>
+          <li>
+            <strong>Consent</strong> where the service asks for consent, such as optional legal
+            acknowledgements or future non-essential tracking if it is introduced.
+          </li>
+        </ul>
+        <p>
+          If processing relies on consent, you may withdraw that consent for future processing by
+          contacting us at <strong>{legalProfile.contactEmail}</strong>, without affecting
+          processing that was lawful before withdrawal.
+        </p>
+      </Section>
+
+      <Section title="6. How Data Is Shared">
         <p>
           We share personal data only when needed to operate the service, comply with law, or
           protect our rights.
@@ -179,7 +211,7 @@ export default async function PrivacyPage({
         </p>
       </Section>
 
-      <Section title="6. Public Invoice Links and Online Payment">
+      <Section title="7. Public Invoice Links and Online Payment">
         <p>
           If a business user shares a public invoice link, the invoice details needed to review or
           pay that invoice may be visible to anyone with that link. Public links should therefore be
@@ -191,7 +223,7 @@ export default async function PrivacyPage({
         </p>
       </Section>
 
-      <Section title="7. Cookies, Local Storage, and Similar Technologies">
+      <Section title="8. Cookies, Local Storage, and Similar Technologies">
         <p>
           We use session technologies, cookies, and local storage for essential features such as
           authentication, session persistence, theme preferences, PWA behavior, security, and
@@ -204,7 +236,7 @@ export default async function PrivacyPage({
         </p>
       </Section>
 
-      <Section title="8. International Transfers">
+      <Section title="9. International Transfers">
         <p>
           Our service providers may process data in Switzerland, the European Economic Area, the
           United Kingdom, the United States, and other countries where they operate.
@@ -215,11 +247,26 @@ export default async function PrivacyPage({
         </p>
       </Section>
 
-      <Section title="9. Retention and Deletion">
+      <Section title="10. Retention and Deletion">
         <p>
           We retain personal data for as long as needed to provide the service, protect the
           platform, resolve disputes, enforce agreements, and comply with legal obligations.
         </p>
+        <ul className="space-y-2">
+          <li>
+            Account and workspace records are usually kept while the account is active and for a
+            reasonable period afterward for security, dispute, and business-continuity reasons.
+          </li>
+          <li>
+            Invoice, payment, receipt, expense, bookkeeping, and audit-related records may need to
+            be retained for the legal retention period that applies to the relevant business records.
+          </li>
+          <li>
+            Transactional emails, support messages, logs, and security records are retained for the
+            period needed to operate, secure, and evidence the service, then deleted or anonymized
+            when no longer needed.
+          </li>
+        </ul>
         <p>
           Invoice, expense, payment, bookkeeping, and audit-related records may need to be kept
           even after account access ends. Because of those obligations, we do not promise immediate
@@ -227,7 +274,7 @@ export default async function PrivacyPage({
         </p>
       </Section>
 
-      <Section title="10. Your Rights">
+      <Section title="11. Your Rights">
         <p>
           Depending on the laws that apply to you, you may have rights to access, correct, export,
           restrict, object to, or request deletion of your personal data, and to complain to a data
@@ -239,9 +286,22 @@ export default async function PrivacyPage({
           customers, we may need to direct your request to that customer where they act as the
           primary controller.
         </p>
+        <p>
+          You may also have the right to complain to a competent data-protection authority. In
+          Switzerland, that authority is the Federal Data Protection and Information Commissioner
+          (FDPIC). If you are in the EEA or UK, you may contact your local supervisory authority.
+        </p>
       </Section>
 
-      <Section title="11. Security">
+      <Section title="12. Automated Decision-Making">
+        <p>
+          We do not use the current service to make decisions based solely on automated processing
+          that produce legal or similarly significant effects for individuals. If that changes, this
+          policy will be updated before that processing is relied on.
+        </p>
+      </Section>
+
+      <Section title="13. Security">
         <p>
           We use technical and organizational measures designed to protect personal data. No method
           of storage, transmission, or security control is completely foolproof, so we cannot
@@ -249,7 +309,7 @@ export default async function PrivacyPage({
         </p>
       </Section>
 
-      <Section title="12. Changes to This Policy">
+      <Section title="14. Changes to This Policy">
         <p>
           We may update this Privacy Policy from time to time. When we do, we will post the updated
           version at <strong>{legalProfile.privacyUrl}</strong> and change the last-updated date at

@@ -89,6 +89,7 @@ export default function ExpensesPage() {
   const [isSavingEdit, setIsSavingEdit] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [uploadingReceiptId, setUploadingReceiptId] = useState<string | null>(null);
+  const [viewingReceiptId, setViewingReceiptId] = useState<string | null>(null);
   const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ExpenseRecord | null>(null);
   const [createReceiptFile, setCreateReceiptFile] = useState<File | null>(null);
@@ -398,6 +399,44 @@ export default function ExpensesPage() {
     }
   };
 
+  const handleViewReceipt = async (expense: ExpenseRecord) => {
+    if (!expense.receiptUrl) return;
+
+    setViewingReceiptId(expense.id);
+    const receiptWindow = window.open("", "_blank", "noopener,noreferrer");
+
+    try {
+      const response = await authenticatedFetch(`/api/expenses/${expense.id}/receipt`);
+      const result = (await response.json()) as { url?: string; error?: string };
+
+      if (!response.ok || !result.url) {
+        toast({
+          title: "Unable to open receipt",
+          description: result.error ?? "Receipt access is unavailable.",
+          variant: "error",
+        });
+        receiptWindow?.close();
+        return;
+      }
+
+      if (receiptWindow) {
+        receiptWindow.location.href = result.url;
+      } else {
+        window.location.assign(result.url);
+      }
+    } catch (error) {
+      console.error("Error opening receipt:", error);
+      receiptWindow?.close();
+      toast({
+        title: "Unable to open receipt",
+        description: "Receipt access is unavailable.",
+        variant: "error",
+      });
+    } finally {
+      setViewingReceiptId(null);
+    }
+  };
+
   if (isLoading) {
     return <div>Loading expenses...</div>;
   }
@@ -597,11 +636,14 @@ export default function ExpensesPage() {
                         <TableCell>
                           <div className="flex flex-wrap gap-2">
                             {expense.receiptUrl ? (
-                              <Button asChild size="sm" variant="outline">
-                                <a href={expense.receiptUrl} target="_blank" rel="noreferrer">
-                                  <LinkIcon className="h-4 w-4" />
-                                  Receipt
-                                </a>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => void handleViewReceipt(expense)}
+                                disabled={viewingReceiptId === expense.id}
+                              >
+                                <LinkIcon className="h-4 w-4" />
+                                {viewingReceiptId === expense.id ? "Opening..." : "Receipt"}
                               </Button>
                             ) : null}
                             <Button size="sm" variant="outline" onClick={() => openEditExpense(expense)}>
@@ -635,15 +677,15 @@ export default function ExpensesPage() {
                         <p className="text-sm text-slate-600 dark:text-slate-300">{getExpenseCategoryLabel(expense.category)}</p>
                         {expense.vendor ? <p className="text-sm text-slate-600 dark:text-slate-300">{expense.vendor}</p> : null}
                         {expense.receiptUrl ? (
-                          <a
-                            href={expense.receiptUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="mt-2 inline-flex items-center gap-1 text-sm text-slate-700 underline-offset-2 hover:underline dark:text-slate-200"
+                          <button
+                            type="button"
+                            onClick={() => void handleViewReceipt(expense)}
+                            disabled={viewingReceiptId === expense.id}
+                            className="mt-2 inline-flex items-center gap-1 text-sm text-slate-700 underline-offset-2 hover:underline disabled:cursor-wait disabled:opacity-70 dark:text-slate-200"
                           >
                             <LinkIcon className="h-3.5 w-3.5" />
-                            Receipt
-                          </a>
+                            {viewingReceiptId === expense.id ? "Opening..." : "Receipt"}
+                          </button>
                         ) : null}
                       </div>
                       <p className="font-semibold text-slate-900 dark:text-slate-100">
@@ -720,11 +762,14 @@ export default function ExpensesPage() {
                     </label>
                   </Button>
                   {editingExpense?.receiptUrl ? (
-                    <Button asChild variant="outline">
-                      <a href={editingExpense.receiptUrl} target="_blank" rel="noreferrer">
-                        <LinkIcon className="h-4 w-4" />
-                        View Receipt
-                      </a>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void handleViewReceipt(editingExpense)}
+                      disabled={viewingReceiptId === editingExpense.id}
+                    >
+                      <LinkIcon className="h-4 w-4" />
+                      {viewingReceiptId === editingExpense.id ? "Opening..." : "View Receipt"}
                     </Button>
                   ) : null}
                 </div>

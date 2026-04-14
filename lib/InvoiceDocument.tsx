@@ -843,11 +843,17 @@ const InvoiceDocument = ({
 
   const businessEmail = normalizeLine(invoice.business.email);
   const businessPhone = normalizeLine(invoice.business.phone);
+  const businessVatNumber = normalizeLine(invoice.business.vatNumber);
+  const clientVatNumber = normalizeLine(invoice.client.vatNumber);
   const headerPrimaryName = senderBusinessName;
   const headerSecondaryName = sellerSecondaryName;
 
   const businessHeaderLines = collectLines(...toCompactAddressLines(businessAddress));
-  const sellerContactLines = collectLines(businessEmail, businessPhone);
+  const sellerContactLines = collectLines(
+    businessEmail,
+    businessPhone,
+    businessVatNumber ? `VAT No. ${businessVatNumber}` : null
+  );
   const creditorLines =
     senderType === "owner"
       ? collectLines(paymentRecipientName, ...toPaymentAddressLines(businessAddress))
@@ -900,7 +906,7 @@ const InvoiceDocument = ({
   const closingLines = buildMessageLines(messageText);
   const paymentNote = normalizeLine(invoice.paymentNote);
   const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
-  const recipientLineCount = toCompactAddressLines(clientAddress).length;
+  const recipientLineCount = toCompactAddressLines(clientAddress).length + (clientVatNumber ? 1 : 0);
   const sellerHeaderHeight =
     mm(27.5) +
     16 +
@@ -977,6 +983,7 @@ const InvoiceDocument = ({
                   {toCompactAddressLines(clientAddress).map((line, index) => (
                     <Text key={`client-${index}`} style={styles.bodyLine}>{line}</Text>
                   ))}
+                  {clientVatNumber ? <Text style={styles.bodyLine}>VAT No. {clientVatNumber}</Text> : null}
                 </View>
 
                 <View style={[styles.fixedHeroBlock, { top: heroTop }]} wrap={false}>

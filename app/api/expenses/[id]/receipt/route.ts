@@ -7,6 +7,10 @@ import {
   getSupabaseAdminClient,
   isSupabaseAdminConfigurationError,
 } from "@/lib/supabase-admin";
+import {
+  buildStoredReceiptPath,
+  resolveReceiptStorageLocation,
+} from "@/lib/receiptStorage";
 
 export const runtime = "nodejs";
 
@@ -54,32 +58,89 @@ function getFileExtension(file: File): string {
 async function uploadReceiptWithAutoBucketCreate(bucket: string, path: string, file: File) {
   const supabaseAdmin = getSupabaseAdminClient();
 
-  let uploadResult = await supabaseAdmin.storage.from(bucket).upload(path, file, {
-    upsert: true,
-    cacheControl: "3600",
-    contentType: file.type || undefined,
-  });
-
-  if (!uploadResult.error || !isBucketNotFoundError(uploadResult.error)) {
-    return uploadResult;
-  }
-
-  const createBucketResult = await supabaseAdmin.storage.createBucket(bucket, {
-    public: true,
+  const updateBucketResult = await supabaseAdmin.storage.updateBucket(bucket, {
+    public: false,
     fileSizeLimit: `${MAX_RECEIPT_BYTES}`,
   });
 
-  if (createBucketResult.error) {
-    return uploadResult;
+  if (updateBucketResult.error && isBucketNotFoundError(updateBucketResult.error)) {
+    const createBucketResult = await supabaseAdmin.storage.createBucket(bucket, {
+      public: false,
+      fileSizeLimit: `${MAX_RECEIPT_BYTES}`,
+    });
+
+    if (createBucketResult.error) {
+      return {
+        data: null,
+        error: createBucketResult.error,
+      };
+    }
   }
 
-  uploadResult = await supabaseAdmin.storage.from(bucket).upload(path, file, {
+  return supabaseAdmin.storage.from(bucket).upload(path, file, {
     upsert: true,
     cacheControl: "3600",
     contentType: file.type || undefined,
   });
+}
 
-  return uploadResult;
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await getAuthenticatedUser(request);
+    const { id } = await params;
+
+    const business = await prisma.business.findFirst({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+
+    if (!business) {
+      return apiError("Business not found", 404);
+    }
+
+    const expense = await prisma.expense.findFirst({
+      where: { id, businessId: business.id },
+      select: { id: true, receiptUrl: true },
+    });
+
+    if (!expense) {
+      return apiError("Expense not found", 404);
+    }
+
+    const location = resolveReceiptStorageLocation(expense.receiptUrl, getBucketName());
+    if (!location) {
+      return apiError("Receipt not found", 404);
+    }
+
+    const signedUrlResult = await getSupabaseAdminClient()
+      .storage
+      .from(location.bucket)
+      .createSignedUrl(location.path, 60);
+
+    if (signedUrlResult.error || !signedUrlResult.data?.signedUrl) {
+      return apiError("Could not create receipt access link", 502);
+    }
+
+    return NextResponse.json({ url: signedUrlResult.data.signedUrl });
+  } catch (error) {
+    if (isAuthenticationError(error)) {
+      return apiError(error.message, 401);
+    }
+
+    if (isSupabaseAdminConfigurationError(error)) {
+      console.error("Receipt access configuration error:", error);
+      return apiError(
+        "Receipt access is not configured. Set SUPABASE_SERVICE_ROLE_KEY in server env.",
+        500
+      );
+    }
+
+    console.error("Error creating receipt access link:", error);
+    return apiError("Server error", 500);
+  }
 }
 
 export async function POST(
@@ -127,7 +188,11 @@ export async function POST(
 
     const bucket = getBucketName();
     const extension = getFileExtension(fileEntry);
-    const receiptPath = `${business.id}/${expense.id}/${crypto.randomUUID()}.${extension}`;
+    const receiptPath = buildStoredReceiptPath(
+      business.id,
+      expense.id,
+      `${crypto.randomUUID()}.${extension}`
+    );
 
     const uploadResult = await uploadReceiptWithAutoBucketCreate(bucket, receiptPath, fileEntry);
 
@@ -139,19 +204,15 @@ export async function POST(
       );
     }
 
-    const publicUrlResult = getSupabaseAdminClient().storage.from(bucket).getPublicUrl(receiptPath);
-    const receiptUrl = publicUrlResult.data.publicUrl;
-
-    if (!receiptUrl) {
-      return apiError("Receipt uploaded but no public URL was returned", 500);
-    }
-
     await prisma.expense.update({
       where: { id: expense.id },
-      data: { receiptUrl },
+      data: { receiptUrl: receiptPath },
     });
 
-    return NextResponse.json({ success: true, receiptUrl });
+    return NextResponse.json({
+      success: true,
+      receiptUrl: receiptPath,
+    });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);

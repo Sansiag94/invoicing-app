@@ -81,12 +81,22 @@ export default async function ImprintPage({
         <p>
           <strong>Website:</strong> {legalProfile.websiteUrl}
         </p>
+        {legalProfile.registrationNumber ? (
+          <p>
+            <strong>Registration / UID:</strong> {legalProfile.registrationNumber}
+          </p>
+        ) : null}
       </Section>
 
       <Section title="2. Contact">
         <p>
           <strong>Email:</strong> {legalProfile.contactEmail}
         </p>
+        {legalProfile.phoneNumber ? (
+          <p>
+            <strong>Phone:</strong> {legalProfile.phoneNumber}
+          </p>
+        ) : null}
         <p>
           <strong>Correspondence address:</strong> {legalProfile.postalAddress}
         </p>

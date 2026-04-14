@@ -40,6 +40,8 @@ export type LegalProfile = {
   tradingName: string | null;
   contactEmail: string;
   supportEmail: string;
+  phoneNumber: string | null;
+  registrationNumber: string | null;
   postalAddress: string;
   governingLaw: string;
   jurisdiction: string;
@@ -73,6 +75,8 @@ export function getLegalProfile(): LegalProfile {
     tradingName,
     contactEmail,
     supportEmail: readOptionalEnv("LEGAL_SUPPORT_EMAIL") ?? contactEmail,
+    phoneNumber: readOptionalEnv("LEGAL_PHONE_NUMBER"),
+    registrationNumber: readOptionalEnv("LEGAL_REGISTRATION_NUMBER"),
     postalAddress,
     governingLaw: readOptionalEnv("LEGAL_GOVERNING_LAW") ?? DEFAULT_GOVERNING_LAW,
     jurisdiction: readOptionalEnv("LEGAL_JURISDICTION") ?? DEFAULT_JURISDICTION,

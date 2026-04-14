@@ -13,7 +13,6 @@ type UpdateExpenseBody = {
   currency?: unknown;
   expenseDate?: unknown;
   notes?: unknown;
-  receiptUrl?: unknown;
   isRecurring?: unknown;
   taxDeductible?: unknown;
   vatReclaimable?: unknown;
@@ -87,8 +86,6 @@ export async function PATCH(
     const expenseDate = body.expenseDate === undefined ? existingExpense.expenseDate : asDate(body.expenseDate);
     const category = body.category === undefined ? existingExpense.category : body.category;
     const rawCurrency = body.currency === undefined ? existingExpense.currency : asString(body.currency);
-    const receiptUrl =
-      body.receiptUrl === undefined ? existingExpense.receiptUrl : asString(body.receiptUrl);
     const isRecurring =
       body.isRecurring === undefined ? existingExpense.isRecurring : asBoolean(body.isRecurring);
     const taxDeductible =
@@ -124,7 +121,6 @@ export async function PATCH(
         currency,
         expenseDate,
         notes,
-        receiptUrl,
         isRecurring,
         taxDeductible,
         vatReclaimable,
