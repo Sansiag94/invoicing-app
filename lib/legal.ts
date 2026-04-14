@@ -11,6 +11,7 @@ const DEFAULT_CONTACT_EMAIL = "santiago@sierraservices.ch";
 const DEFAULT_POSTAL_ADDRESS = "8136 Gattikon - Zurich";
 const DEFAULT_GOVERNING_LAW = "Switzerland";
 const DEFAULT_JURISDICTION = "Zurich, Switzerland";
+const DEFAULT_LEGAL_FORM = "Sole proprietorship";
 
 function readOptionalEnv(key: string): string | null {
   const value = process.env[key];
@@ -38,6 +39,7 @@ export type LegalProfile = {
   serviceName: string;
   legalEntityName: string;
   tradingName: string | null;
+  legalForm: string | null;
   contactEmail: string;
   supportEmail: string;
   phoneNumber: string | null;
@@ -73,6 +75,7 @@ export function getLegalProfile(): LegalProfile {
     serviceName: readOptionalEnv("LEGAL_SERVICE_NAME") ?? DEFAULT_SERVICE_NAME,
     legalEntityName,
     tradingName,
+    legalForm: readOptionalEnv("LEGAL_FORM") ?? DEFAULT_LEGAL_FORM,
     contactEmail,
     supportEmail: readOptionalEnv("LEGAL_SUPPORT_EMAIL") ?? contactEmail,
     phoneNumber: readOptionalEnv("LEGAL_PHONE_NUMBER"),

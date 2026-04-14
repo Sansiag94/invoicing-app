@@ -6,6 +6,7 @@ This checklist helps turn the in-app legal pages into a production-ready complia
 
 - Replace the placeholder legal profile values by setting:
   - `LEGAL_ENTITY_NAME`
+  - `LEGAL_FORM`
   - `LEGAL_CONTACT_EMAIL`
   - `LEGAL_PHONE_NUMBER`
   - `LEGAL_POSTAL_ADDRESS`

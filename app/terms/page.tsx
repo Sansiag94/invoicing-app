@@ -73,9 +73,12 @@ export default async function TermsPage({
     >
       <Section title="1. Service Provider">
         <p>
-          {legalProfile.legalEntityName} provides and operates {legalProfile.serviceName}. For
-          legal notices, you can contact us at <strong>{legalProfile.contactEmail}</strong> or by
-          post at <strong>{legalProfile.postalAddress}</strong>.
+          {legalProfile.legalEntityName}
+          {legalProfile.legalForm ? `, ${legalProfile.legalForm},` : ""} provides and operates{" "}
+          {legalProfile.serviceName}
+          {legalProfile.tradingName ? ` and uses ${legalProfile.tradingName} as a trading name or brand` : ""}.
+          For legal notices, you can contact us at <strong>{legalProfile.contactEmail}</strong> or
+          by post at <strong>{legalProfile.postalAddress}</strong>.
         </p>
       </Section>
 

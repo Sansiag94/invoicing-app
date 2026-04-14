@@ -47,7 +47,7 @@ export default async function ImprintPage({
         {
           title: "Operator",
           description: legalProfile.tradingName
-            ? `${legalProfile.legalEntityName} operates ${legalProfile.serviceName} under the trading name ${legalProfile.tradingName}.`
+            ? `${legalProfile.legalEntityName} operates ${legalProfile.serviceName} as ${legalProfile.legalForm ?? "the legal operator"} and uses ${legalProfile.tradingName} as a trading name or brand.`
             : `${legalProfile.legalEntityName} operates ${legalProfile.serviceName}.`,
         },
         {
@@ -70,9 +70,14 @@ export default async function ImprintPage({
         <p>
           <strong>Operator:</strong> {legalProfile.legalEntityName}
         </p>
+        {legalProfile.legalForm ? (
+          <p>
+            <strong>Legal form:</strong> {legalProfile.legalForm}
+          </p>
+        ) : null}
         {legalProfile.tradingName ? (
           <p>
-            <strong>Trading name:</strong> {legalProfile.tradingName}
+            <strong>Trading name / brand:</strong> {legalProfile.tradingName}
           </p>
         ) : null}
         <p>
@@ -104,9 +109,11 @@ export default async function ImprintPage({
 
       <Section title="3. Legal Notice">
         <p>
-          This website and app are operated from Switzerland. The public legal pages are intended
-          to make it clear who operates the service, how to get in touch, and where to find the
-          governing Privacy Policy and Terms of Service.
+          {legalProfile.tradingName
+            ? `${legalProfile.tradingName} is used as a trading name or brand. It is not presented here as a separate legal entity from ${legalProfile.legalEntityName}.`
+            : "This website and app are operated from Switzerland."}{" "}
+          The public legal pages are intended to make it clear who operates the service, how to get
+          in touch, and where to find the governing Privacy Policy and Terms of Service.
         </p>
       </Section>
 

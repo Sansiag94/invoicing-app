@@ -68,9 +68,12 @@ export default async function PrivacyPage({
     >
       <Section title="1. Who We Are">
         <p>
-          {legalProfile.legalEntityName} operates {legalProfile.serviceName}. You can contact us
-          about privacy matters at <strong>{legalProfile.contactEmail}</strong> or by post at{" "}
-          <strong>{legalProfile.postalAddress}</strong>.
+          {legalProfile.legalEntityName}
+          {legalProfile.legalForm ? `, ${legalProfile.legalForm},` : ""} operates{" "}
+          {legalProfile.serviceName}
+          {legalProfile.tradingName ? ` and uses ${legalProfile.tradingName} as a trading name or brand` : ""}.
+          You can contact us about privacy matters at <strong>{legalProfile.contactEmail}</strong>{" "}
+          or by post at <strong>{legalProfile.postalAddress}</strong>.
         </p>
         <p>
           This notice applies to account holders, team members, business contacts, invoice
