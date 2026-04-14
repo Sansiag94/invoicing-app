@@ -37,6 +37,7 @@ model Business {
   bic            String?
   country        String
   currency       String
+  vatRegistered  Boolean   @default(false)
   vatNumber      String?
   iban           String?
   logoUrl        String?

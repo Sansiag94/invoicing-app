@@ -81,6 +81,7 @@ export interface BusinessSettingsData {
   city?: string | null;
   country: string;
   currency: InvoiceCurrency;
+  vatRegistered: boolean;
   vatNumber: string | null;
   iban: string | null;
   phone?: string | null;
@@ -379,6 +380,7 @@ export interface PublicInvoiceBusinessData {
   postalCode?: string | null;
   city?: string | null;
   country: string;
+  vatRegistered: boolean;
   vatNumber: string | null;
   currency: InvoiceCurrency;
   iban: string | null;

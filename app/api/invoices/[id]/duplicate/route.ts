@@ -9,6 +9,7 @@ import {
   formatDraftInvoiceNumber,
 } from "@/lib/invoice";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
+import { getInvoiceVatConfigurationError } from "@/lib/vat";
 
 function addDays(date: Date, days: number): Date {
   const next = new Date(date);
@@ -28,6 +29,8 @@ export async function POST(
       where: { userId: user.id },
       select: {
         id: true,
+        vatRegistered: true,
+        vatNumber: true,
       },
     });
 
@@ -69,7 +72,15 @@ export async function POST(
     );
     const dueDate = addDays(issueDate, dayDelta);
 
-    const totals = calculateInvoiceTotals(sourceInvoice.lineItems);
+    const duplicatedLineItems = business.vatRegistered
+      ? sourceInvoice.lineItems
+      : sourceInvoice.lineItems.map((item) => ({ ...item, taxRate: 0 }));
+    const vatConfigurationError = getInvoiceVatConfigurationError(duplicatedLineItems, business);
+    if (vatConfigurationError) {
+      return apiError(vatConfigurationError, 400);
+    }
+
+    const totals = calculateInvoiceTotals(duplicatedLineItems);
 
     const duplicatedInvoice = await prisma.$transaction(async (tx) => {
       return tx.invoice.create({
@@ -90,7 +101,7 @@ export async function POST(
           paymentNote: sourceInvoice.paymentNote,
           publicToken: crypto.randomUUID(),
           lineItems: {
-            create: sourceInvoice.lineItems.map((item, index) => ({
+            create: duplicatedLineItems.map((item, index) => ({
               position: typeof item.position === "number" ? item.position : index,
               description: item.description,
               quantity: item.quantity,

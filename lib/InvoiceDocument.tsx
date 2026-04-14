@@ -16,6 +16,7 @@ import {
 } from "@/lib/invoiceLanguage";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { buildPublicInvoiceLinkFromToken } from "@/lib/publicInvoiceLink";
+import { getNonVatRegisteredInvoiceNote } from "@/lib/vat";
 
 type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
@@ -843,7 +844,7 @@ const InvoiceDocument = ({
 
   const businessEmail = normalizeLine(invoice.business.email);
   const businessPhone = normalizeLine(invoice.business.phone);
-  const businessVatNumber = normalizeLine(invoice.business.vatNumber);
+  const businessVatNumber = invoice.business.vatRegistered ? normalizeLine(invoice.business.vatNumber) : null;
   const clientVatNumber = normalizeLine(invoice.client.vatNumber);
   const headerPrimaryName = senderBusinessName;
   const headerSecondaryName = sellerSecondaryName;
@@ -903,7 +904,8 @@ const InvoiceDocument = ({
 
   const messageText =
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
-  const closingLines = buildMessageLines(messageText);
+  const invoiceVatNote = getNonVatRegisteredInvoiceNote(invoice.business);
+  const closingLines = buildMessageLines([messageText, invoiceVatNote].filter(Boolean).join("\n\n"));
   const paymentNote = normalizeLine(invoice.paymentNote);
   const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
   const recipientLineCount = toCompactAddressLines(clientAddress).length + (clientVatNumber ? 1 : 0);

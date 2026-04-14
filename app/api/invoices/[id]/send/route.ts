@@ -28,6 +28,7 @@ import {
   createRateLimitErrorResponse,
   isRateLimitError,
 } from "@/lib/rateLimit";
+import { getInvoiceVatConfigurationError } from "@/lib/vat";
 
 export const runtime = "nodejs";
 
@@ -76,6 +77,14 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
 
   if (existingInvoice.status === "cancelled") {
     return apiError("Cancelled invoices cannot be sent. Reopen the invoice first.", 400);
+  }
+
+  const vatConfigurationError = getInvoiceVatConfigurationError(
+    existingInvoice.lineItems,
+    existingInvoice.business
+  );
+  if (vatConfigurationError) {
+    return apiError(vatConfigurationError, 400);
   }
 
   if (existingInvoice.status === "draft") {

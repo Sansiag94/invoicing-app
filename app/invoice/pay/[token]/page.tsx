@@ -18,6 +18,7 @@ import {
 import { getInvoiceSenderName } from "@/lib/business";
 import { PublicInvoiceDetails } from "@/lib/types";
 import { buildPublicInvoiceLinkFromToken } from "@/lib/publicInvoiceLink";
+import { getNonVatRegisteredInvoiceNote } from "@/lib/vat";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -188,7 +189,7 @@ export default function PublicInvoicePage() {
     const ownerName = invoice.business.ownerName?.trim() || null;
     return ownerName && ownerName !== businessDisplayName ? ownerName : null;
   }, [businessDisplayName, invoice]);
-  const businessVatNumber = invoice?.business.vatNumber?.trim() || null;
+  const businessVatNumber = invoice?.business.vatRegistered ? invoice.business.vatNumber?.trim() || null : null;
   const clientVatNumber = invoice?.client.vatNumber?.trim() || null;
 
   const onlinePaymentLink = useMemo(() => {
@@ -699,7 +700,9 @@ export default function PublicInvoicePage() {
         </section>
 
         <section className="mt-6 max-w-[120mm] text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
-          {invoice.notes?.trim() ? invoice.notes.trim() : defaultMessage}
+          {[invoice.notes?.trim() ? invoice.notes.trim() : defaultMessage, invoice ? getNonVatRegisteredInvoiceNote(invoice.business) : null]
+            .filter(Boolean)
+            .join("\n\n")}
         </section>
 
         {invoice.paymentNote?.trim() ? (

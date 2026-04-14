@@ -16,6 +16,13 @@ import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { getInvoiceSenderName } from "@/lib/business";
 import { getDefaultDueDate, getTodayDateInputValue } from "@/lib/invoiceDates";
+import {
+  isSupportedSwissVatRate,
+  NON_VAT_REGISTERED_INVOICE_NOTE,
+  SWISS_VAT_RATES,
+  SWISS_VAT_THRESHOLD_WARNING,
+  VAT_COMPLIANCE_DISCLAIMER,
+} from "@/lib/vat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -66,6 +73,10 @@ function parseNumber(value: string): number {
 }
 
 const MIN_QUANTITY = 0.01;
+const SWISS_VAT_RATE_OPTIONS = SWISS_VAT_RATES.map((rate) => ({
+  value: String(rate),
+  label: `${rate}%`,
+}));
 
 function handleNumberInputFocus(event: FocusEvent<HTMLInputElement>) {
   event.target.select();
@@ -201,6 +212,7 @@ function InvoicePageContent() {
   const { toast } = useToast();
   const searchQuery = (searchParams.get("q") ?? "").trim().toLowerCase();
   const statusFilter = (searchParams.get("status") ?? "").trim().toLowerCase();
+  const vatRegistered = Boolean(businessData?.vatRegistered);
 
   const selectedClient = useMemo(
     () => clients.find((client) => client.id === clientId) ?? null,
@@ -477,6 +489,16 @@ function InvoicePageContent() {
     setPaymentNote(buildInvoicePaymentNoteTemplate(selectedClient, acceptsTwintPayments, twintPhoneNumber));
   }, [acceptsTwintPayments, paymentNoteManuallyEdited, selectedClient, twintPhoneNumber]);
 
+  useEffect(() => {
+    if (vatRegistered) {
+      return;
+    }
+
+    setLineItems((current) =>
+      current.map((item) => (item.taxRate === 0 ? item : { ...item, taxRate: 0 }))
+    );
+  }, [vatRegistered]);
+
   const totals = useMemo(() => {
     const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
     const taxAmount = lineItems.reduce(
@@ -550,6 +572,7 @@ function InvoicePageContent() {
     const normalizedLineItems = lineItems.map((item) => ({
       ...item,
       quantity: item.quantity > 0 ? item.quantity : MIN_QUANTITY,
+      taxRate: vatRegistered ? item.taxRate : 0,
     }));
 
     const hasAdjustedQuantities = normalizedLineItems.some(
@@ -565,7 +588,8 @@ function InvoicePageContent() {
         !item.description.trim() ||
         item.quantity <= 0 ||
         item.unitPrice < 0 ||
-        item.taxRate < 0
+        item.taxRate < 0 ||
+        (vatRegistered && !isSupportedSwissVatRate(item.taxRate))
     );
 
     if (hasInvalidLineItems) {
@@ -1352,6 +1376,11 @@ function InvoicePageContent() {
 
                 <div className="space-y-3">
                   <Label>Line Items</Label>
+                  {!vatRegistered ? (
+                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-100">
+                      {NON_VAT_REGISTERED_INVOICE_NOTE} {SWISS_VAT_THRESHOLD_WARNING} {VAT_COMPLIANCE_DISCLAIMER}
+                    </div>
+                  ) : null}
 
                   <div className="space-y-3 lg:hidden">
                     {lineItems.map((item, index) => (
@@ -1438,17 +1467,20 @@ function InvoicePageContent() {
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
                               <Label htmlFor={`tax-rate-${index}`}>Tax %</Label>
-                              <Input
+                              <Select
                                 id={`tax-rate-${index}`}
-                                type="number"
-                                min={0}
-                                step="0.1"
-                                value={item.taxRate}
-                                onFocus={handleNumberInputFocus}
+                                value={String(vatRegistered ? item.taxRate : 0)}
+                                disabled={!vatRegistered}
                                 onChange={(event) =>
-                                  updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
+                                  updateLineItem(index, "taxRate", Number(event.target.value))
                                 }
-                              />
+                              >
+                                {SWISS_VAT_RATE_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
                             </div>
 
                             <div className="space-y-2">
@@ -1558,16 +1590,19 @@ function InvoicePageContent() {
                               />
                             </TableCell>
                             <TableCell className="px-2">
-                              <Input
-                                type="number"
-                                min={0}
-                                step="0.1"
-                                value={item.taxRate}
-                                onFocus={handleNumberInputFocus}
+                              <Select
+                                value={String(vatRegistered ? item.taxRate : 0)}
+                                disabled={!vatRegistered}
                                 onChange={(event) =>
-                                  updateLineItem(index, "taxRate", Math.max(0, parseNumber(event.target.value)))
+                                  updateLineItem(index, "taxRate", Number(event.target.value))
                                 }
-                              />
+                              >
+                                {SWISS_VAT_RATE_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </Select>
                             </TableCell>
                             <TableCell className="px-2">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
                             <TableCell className="px-2">

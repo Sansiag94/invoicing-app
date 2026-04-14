@@ -9,6 +9,7 @@ import { normalizeInvoiceSenderType } from "@/lib/business";
 import { loadResolvedBusinessStripeStatus } from "@/lib/stripeConnect";
 import { isValidBic, isValidEmail, isValidIban, normalizeBic, normalizeIban } from "@/lib/validation";
 import { assertWorkspaceOpen, isWorkspaceClosedError } from "@/lib/workspaceClosure";
+import { normalizeSwissVatNumber } from "@/lib/vat";
 
 type UpdateBusinessBody = {
   name: unknown;
@@ -26,6 +27,7 @@ type UpdateBusinessBody = {
   bic?: unknown;
   country: unknown;
   currency: unknown;
+  vatRegistered?: unknown;
   vatNumber?: unknown;
   iban?: unknown;
   logoUrl?: unknown;
@@ -35,6 +37,10 @@ type UpdateBusinessBody = {
 
 function asString(value: unknown): string | null {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+}
+
+function asBoolean(value: unknown): boolean {
+  return value === true || value === "true";
 }
 
 function asPositiveInteger(value: unknown): number | null {
@@ -178,6 +184,15 @@ export async function PATCH(request: Request) {
 
     const business = await ensureBusiness(user.id);
     await assertWorkspaceOpen(business.id);
+    const vatRegistered =
+      body.vatRegistered === undefined ? Boolean(business.vatRegistered) : asBoolean(body.vatRegistered);
+    const normalizedVatNumber = vatRegistered
+      ? normalizeSwissVatNumber(asString(body.vatNumber) ?? business.vatNumber)
+      : null;
+
+    if (vatRegistered && !normalizedVatNumber) {
+      return apiError("Enter a Swiss VAT number in the format CHE-123.456.789 MWST, TVA, or IVA", 400);
+    }
 
     if (
       requestedNextOfficialInvoiceSequence !== null &&
@@ -203,7 +218,8 @@ export async function PATCH(request: Request) {
         bankName: asString(body.bankName),
         country,
         currency: normalizedCurrency,
-        vatNumber: asString(body.vatNumber),
+        vatRegistered,
+        vatNumber: normalizedVatNumber,
         iban: normalizedIban,
         logoUrl: body.logoUrl === undefined ? business.logoUrl : asString(body.logoUrl),
         invoiceCounter:

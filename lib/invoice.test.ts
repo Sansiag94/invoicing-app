@@ -108,6 +108,13 @@ describe("invoice helpers", () => {
   it("builds a VAT label from the tax rates on the invoice", () => {
     expect(
       getInvoiceVatLabel([
+        { quantity: 1, unitPrice: 100, taxRate: 0 },
+      ])
+    ).toBe("VAT");
+
+    expect(
+      getInvoiceVatLabel([
+        { quantity: 1, unitPrice: 100, taxRate: 0 },
         { quantity: 1, unitPrice: 100, taxRate: 8.1 },
         { quantity: 2, unitPrice: 50, taxRate: 8.1 },
       ])

@@ -5,6 +5,7 @@ import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 import { calculateInvoiceTotals } from "@/lib/invoice";
 import { listInvoiceEvents, logInvoiceEvent } from "@/lib/invoiceActivity";
+import { getInvoiceVatConfigurationError } from "@/lib/vat";
 
 type UpdateLineItemInput = {
   id?: unknown;
@@ -220,6 +221,21 @@ export async function PATCH(
 
     if (parsedLineItems.length !== body.lineItems.length) {
       return apiError("Invalid lineItems payload", 400);
+    }
+
+    const businessVatProfile = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: {
+        vatRegistered: true,
+        vatNumber: true,
+      },
+    });
+    const vatConfigurationError = getInvoiceVatConfigurationError(
+      parsedLineItems,
+      businessVatProfile ?? { vatRegistered: false, vatNumber: null }
+    );
+    if (vatConfigurationError) {
+      return apiError(vatConfigurationError, 400);
     }
 
     const lineItemsWithPosition = parsedLineItems.map((item, index) => ({

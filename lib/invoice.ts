@@ -117,7 +117,7 @@ export function getInvoiceVatRateLabels(lineItems: LineItemAmounts[]): string[] 
     new Set(
       lineItems
         .map((item) => item.taxRate)
-        .filter((rate) => Number.isFinite(rate) && rate >= 0)
+        .filter((rate) => Number.isFinite(rate) && rate > 0)
         .map((rate) => Number(rate.toFixed(2)))
     )
   ).sort((left, right) => left - right);

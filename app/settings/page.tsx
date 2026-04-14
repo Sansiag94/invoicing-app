@@ -14,6 +14,11 @@ import { buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
 import { BillingStatus, BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
+import {
+  isValidSwissVatNumber,
+  SWISS_VAT_THRESHOLD_WARNING,
+  VAT_COMPLIANCE_DISCLAIMER,
+} from "@/lib/vat";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { startClientLogout } from "@/utils/supabase";
@@ -103,6 +108,7 @@ export default function SettingsPage() {
   const [bic, setBic] = useState(initialBusiness?.bic ?? "");
   const [country, setCountry] = useState(initialBusiness?.country ?? "");
   const [currency, setCurrency] = useState(initialBusiness?.currency ?? "CHF");
+  const [vatRegistered, setVatRegistered] = useState(Boolean(initialBusiness?.vatRegistered));
   const [vatNumber, setVatNumber] = useState(initialBusiness?.vatNumber ?? "");
   const [iban, setIban] = useState(initialBusiness?.iban ?? "");
   const [logoUrl, setLogoUrl] = useState(initialBusiness?.logoUrl ?? "");
@@ -218,7 +224,8 @@ export default function SettingsPage() {
           bic,
           country,
           currency,
-          vatNumber,
+          vatRegistered,
+          vatNumber: vatRegistered ? vatNumber : null,
           iban,
           logoUrl,
           acceptsTwintPayments,
@@ -355,6 +362,15 @@ export default function SettingsPage() {
       return null;
     }
 
+    if (vatRegistered && !isValidSwissVatNumber(vatNumber)) {
+      toast({
+        title: "Invalid Swiss VAT number",
+        description: "Use the format CHE-123.456.789 MWST, TVA, or IVA. Your UID alone is not a VAT number.",
+        variant: "error",
+      });
+      return null;
+    }
+
     setIsSaving(true);
 
     const response = await authenticatedFetch("/api/business", {
@@ -377,7 +393,8 @@ export default function SettingsPage() {
         bic,
         country,
         currency,
-        vatNumber,
+        vatRegistered,
+        vatNumber: vatRegistered ? vatNumber : "",
         iban,
         acceptsTwintPayments,
         twintPhoneNumber,
@@ -413,6 +430,7 @@ export default function SettingsPage() {
     setBic(updatedBusiness.bic || "");
     setCountry(updatedBusiness.country || "");
     setCurrency(updatedBusiness.currency || "CHF");
+    setVatRegistered(Boolean(updatedBusiness.vatRegistered));
     setVatNumber(updatedBusiness.vatNumber || "");
     setIban(updatedBusiness.iban || "");
     setLogoUrl(updatedBusiness.logoUrl || "");
@@ -745,6 +763,7 @@ export default function SettingsPage() {
           setBic(data?.bic || "");
           setCountry(data?.country || "");
           setCurrency(data?.currency || "CHF");
+          setVatRegistered(Boolean(data?.vatRegistered));
           setVatNumber(data?.vatNumber || "");
           setIban(data?.iban || "");
           setLogoUrl(data?.logoUrl || "");
@@ -969,8 +988,30 @@ export default function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vatNumber">VAT Number</Label>
-                <Input id="vatNumber" value={vatNumber} onChange={(event) => setVatNumber(event.target.value)} />
+                <Label htmlFor="vatRegistered">Swiss VAT Registration</Label>
+                <Select
+                  id="vatRegistered"
+                  value={vatRegistered ? "yes" : "no"}
+                  onChange={(event) => setVatRegistered(event.target.value === "yes")}
+                >
+                  <option value="no">No, not VAT registered</option>
+                  <option value="yes">Yes, VAT registered</option>
+                </Select>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{SWISS_VAT_THRESHOLD_WARNING}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{VAT_COMPLIANCE_DISCLAIMER}</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vatNumber">Swiss VAT Number</Label>
+                <Input
+                  id="vatNumber"
+                  value={vatNumber}
+                  onChange={(event) => setVatNumber(event.target.value)}
+                  disabled={!vatRegistered}
+                  placeholder={vatRegistered ? "CHE-123.456.789 MWST" : "Only if VAT registered"}
+                />
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Use MWST, TVA, or IVA. A UID without that suffix is not a VAT number.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="iban">IBAN</Label>

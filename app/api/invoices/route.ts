@@ -16,6 +16,7 @@ import {
   isDraftInvoiceNumber,
   normalizeInvoiceCurrency,
 } from "@/lib/invoice";
+import { getInvoiceVatConfigurationError } from "@/lib/vat";
 
 type LineItemInput = {
   description: unknown;
@@ -184,11 +185,18 @@ export async function POST(request: Request) {
       select: {
         id: true,
         currency: true,
+        vatRegistered: true,
+        vatNumber: true,
       },
     });
 
     if (!business) {
       return apiError("Business not found", 404);
+    }
+
+    const vatConfigurationError = getInvoiceVatConfigurationError(parsedLineItems, business);
+    if (vatConfigurationError) {
+      return apiError(vatConfigurationError, 400);
     }
 
     const client = await prisma.client.findFirst({

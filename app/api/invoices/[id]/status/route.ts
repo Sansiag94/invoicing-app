@@ -10,6 +10,7 @@ import {
   formatSequentialInvoiceNumber,
   isDraftInvoiceNumber,
 } from "@/lib/invoice";
+import { getInvoiceVatConfigurationError } from "@/lib/vat";
 
 type UpdateInvoiceStatusBody = {
   status?: unknown;
@@ -30,7 +31,7 @@ export async function PATCH(
     const user = await getAuthenticatedUser(request);
     const business = await prisma.business.findFirst({
       where: { userId: user.id },
-      select: { id: true },
+      select: { id: true, vatRegistered: true, vatNumber: true },
     });
     const businessId = business?.id ?? null;
 
@@ -63,6 +64,11 @@ export async function PATCH(
             reference: true,
           },
         },
+        lineItems: {
+          select: {
+            taxRate: true,
+          },
+        },
       },
     });
 
@@ -76,6 +82,11 @@ export async function PATCH(
       }
 
       if (invoice.status === "draft") {
+        const vatConfigurationError = getInvoiceVatConfigurationError(invoice.lineItems, business!);
+        if (vatConfigurationError) {
+          return apiError(vatConfigurationError, 400);
+        }
+
         await assertBusinessCanIssueInvoice(businessId);
       }
 

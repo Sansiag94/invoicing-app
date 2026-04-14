@@ -1,0 +1,2 @@
+ALTER TABLE "Business"
+ADD COLUMN "vatRegistered" BOOLEAN NOT NULL DEFAULT false;

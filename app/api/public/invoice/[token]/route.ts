@@ -72,6 +72,7 @@ export async function GET(
             bankName: true,
             bic: true,
             country: true,
+            vatRegistered: true,
             vatNumber: true,
             currency: true,
             iban: true,
