@@ -11,45 +11,12 @@ import {
   createRateLimitErrorResponse,
   isRateLimitError,
 } from "@/lib/rateLimit";
-import { LEGAL_LAST_UPDATED_ISO } from "@/lib/legal";
+import {
+  getLegalAcceptanceFromMetadata,
+  hasCurrentLegalAcceptance,
+  hasStoredLegalAcceptance,
+} from "@/lib/legalAcceptance";
 import { assertWorkspaceOpen, isWorkspaceClosedError } from "@/lib/workspaceClosure";
-
-function parseAcceptedAt(value: unknown): Date | null {
-  if (typeof value !== "string" || !value.trim()) {
-    return null;
-  }
-
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function getLegalAcceptance(authUser: Awaited<ReturnType<typeof getAuthenticatedUser>>) {
-  const metadata =
-    authUser.user_metadata && typeof authUser.user_metadata === "object"
-      ? authUser.user_metadata
-      : {};
-
-  const acceptedTermsAt = parseAcceptedAt(
-    (metadata as Record<string, unknown>).accepted_terms_at
-  );
-  const acceptedPrivacyAt = parseAcceptedAt(
-    (metadata as Record<string, unknown>).accepted_privacy_at
-  );
-  const acceptedLegalVersionRaw = (metadata as Record<string, unknown>).accepted_legal_version;
-  const acceptedLegalVersion =
-    typeof acceptedLegalVersionRaw === "string" && acceptedLegalVersionRaw.trim()
-      ? acceptedLegalVersionRaw.trim()
-      : null;
-
-  const hasRecordedAcceptance = Boolean(acceptedTermsAt && acceptedPrivacyAt);
-
-  return {
-    acceptedTermsAt,
-    acceptedPrivacyAt,
-    acceptedLegalVersion:
-      acceptedLegalVersion ?? (hasRecordedAcceptance ? LEGAL_LAST_UPDATED_ISO : null),
-  };
-}
 
 export async function POST(request: Request) {
   try {
@@ -67,7 +34,7 @@ export async function POST(request: Request) {
       return apiError("Authenticated email is required", 400);
     }
 
-    const legalAcceptance = getLegalAcceptance(authUser);
+    const legalAcceptance = getLegalAcceptanceFromMetadata(authUser.user_metadata);
 
     const existingUser = await prisma.user.findUnique({
       where: { id: authUser.id },
@@ -78,6 +45,16 @@ export async function POST(request: Request) {
         acceptedLegalVersion: true,
       },
     });
+
+    if (
+      !hasCurrentLegalAcceptance(legalAcceptance) &&
+      (!existingUser || !hasStoredLegalAcceptance(existingUser))
+    ) {
+      return apiError(
+        "Terms of Service and Privacy Policy acceptance is required before account setup can continue.",
+        422
+      );
+    }
 
     const user = existingUser
       ? await prisma.user.update({
