@@ -43,6 +43,19 @@ function isSettledPaymentStatus(status: string): boolean {
   return SETTLED_PAYMENT_STATUSES.includes(status);
 }
 
+function getSettledPaymentAmount(payments: Array<{ amount: number; status: string }>): number {
+  return payments
+    .filter((payment) => isSettledPaymentStatus(payment.status))
+    .reduce((sum, payment) => sum + payment.amount, 0);
+}
+
+function getInvoiceOutstandingAmount(invoice: {
+  totalAmount: number;
+  payments: Array<{ amount: number; status: string }>;
+}): number {
+  return Math.max(0, invoice.totalAmount - getSettledPaymentAmount(invoice.payments));
+}
+
 export async function GET(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
@@ -119,6 +132,12 @@ export async function GET(request: Request) {
           select: {
             status: true,
             totalAmount: true,
+            payments: {
+              select: {
+                amount: true,
+                status: true,
+              },
+            },
           },
         }),
         prisma.invoice.findMany({
@@ -228,42 +247,30 @@ export async function GET(request: Request) {
       expenseCategoryMap.set(expense.category, (expenseCategoryMap.get(expense.category) ?? 0) + expense.amount);
     }
 
-    const prospectRevenue = openInvoicesRaw.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
+    const prospectRevenue = openInvoicesRaw.reduce(
+      (sum, invoice) => sum + getInvoiceOutstandingAmount(invoice),
+      0
+    );
     const overdueAmount = openInvoicesRaw
       .filter((invoice) => invoice.status === "overdue")
-      .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-    const monthProgress = issuedThisMonthRaw.reduce(
-      (summary, invoice) => {
-        summary.issuedAmount += invoice.totalAmount;
-        summary.issuedCount += 1;
-
-        const settledInvoicePayments = invoice.payments.filter((payment) =>
-          isSettledPaymentStatus(payment.status)
-        );
-        const collectedOnInvoice = settledInvoicePayments.reduce((sum, payment) => sum + payment.amount, 0);
-
-        summary.collectedAmount += settledInvoicePayments
-          .filter((payment) => payment.createdAt >= currentMonthStart && payment.createdAt < nextMonthStart)
-          .reduce((sum, payment) => sum + payment.amount, 0);
-
-        if (invoice.status !== "paid") {
-          summary.openAmount += Math.max(0, invoice.totalAmount - collectedOnInvoice);
-        }
-
-        if (invoice.status === "overdue") {
-          summary.overdueAmount += invoice.totalAmount;
-        }
-
-        return summary;
-      },
+      .reduce((sum, invoice) => sum + getInvoiceOutstandingAmount(invoice), 0);
+    const issuedThisMonthSummary = issuedThisMonthRaw.reduce(
+      (summary, invoice) => ({
+        issuedAmount: summary.issuedAmount + invoice.totalAmount,
+        issuedCount: summary.issuedCount + 1,
+      }),
       {
         issuedAmount: 0,
         issuedCount: 0,
-        collectedAmount: 0,
-        openAmount: 0,
-        overdueAmount: 0,
       }
     );
+    const monthProgress = {
+      issuedAmount: issuedThisMonthSummary.issuedAmount,
+      issuedCount: issuedThisMonthSummary.issuedCount,
+      collectedAmount: revenueThisMonth,
+      openAmount: prospectRevenue,
+      overdueAmount,
+    };
 
     const monthlySeries = months.map((month) => {
       const revenue = monthlyRevenue.get(month.key) ?? 0;

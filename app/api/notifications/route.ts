@@ -10,6 +10,7 @@ const RECENT_EVENT_DAYS = 30;
 const WELCOME_WINDOW_DAYS = 14;
 const MAX_NOTIFICATION_CANDIDATES = 24;
 const MAX_NOTIFICATIONS = 8;
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 
 type NotificationCandidate = WorkspaceNotification & {
   sortValue: number;
@@ -359,7 +360,7 @@ export async function GET(request: Request) {
         priority: notification.priority,
       }));
 
-    return NextResponse.json(orderedNotifications);
+    return NextResponse.json(orderedNotifications, { headers: NO_STORE_HEADERS });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);

@@ -447,8 +447,8 @@ export default function AnalyticsPage() {
         <CardHeader>
           <CardTitle>Month In Progress</CardTitle>
           <p className="text-sm text-slate-500">
-            Focus on invoices officially issued this month so you can see what has already been
-            billed, what has been collected, and what is still open.
+            Track what has been issued this month, what cash came in this month, and what is still
+            open right now.
           </p>
         </CardHeader>
         <CardContent>
@@ -468,21 +468,21 @@ export default function AnalyticsPage() {
               <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.collectedAmount)}
               </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Cash received this month from this month&apos;s invoices</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Cash received this month from all invoices</p>
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/70 dark:bg-amber-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Still open</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Open now</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.openAmount)}
               </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Issued this month but not fully paid yet</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Unpaid amount across draft, sent, and overdue invoices</p>
             </div>
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/70 dark:bg-red-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Overdue from this month</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Overdue now</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.overdueAmount)}
               </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Already overdue among this month&apos;s issued invoices</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Currently overdue unpaid amount</p>
             </div>
           </div>
         </CardContent>

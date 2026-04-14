@@ -3,8 +3,12 @@ import prisma from "@/lib/prisma";
 export const OPEN_INVOICE_STATUSES = ["draft", "sent", "overdue"] as const;
 export const COLLECTIBLE_INVOICE_STATUSES = ["sent", "overdue"] as const;
 
-export function getOpenInvoiceStatus(dueDate: Date): "sent" | "overdue" {
-  return dueDate.getTime() < Date.now() ? "overdue" : "sent";
+export function startOfLocalDay(date = new Date()): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function getOpenInvoiceStatus(dueDate: Date, today = new Date()): "sent" | "overdue" {
+  return dueDate.getTime() < startOfLocalDay(today).getTime() ? "overdue" : "sent";
 }
 
 export function isOpenInvoiceStatus(
@@ -29,17 +33,34 @@ export async function markOverdueInvoicesForBusiness(
   businessId: string,
   invoiceId?: string
 ): Promise<void> {
-  await prisma.invoice.updateMany({
-    where: {
-      businessId,
-      ...(invoiceId ? { id: invoiceId } : {}),
-      status: "sent",
-      dueDate: {
-        lt: new Date(),
+  const todayStart = startOfLocalDay();
+
+  await prisma.$transaction([
+    prisma.invoice.updateMany({
+      where: {
+        businessId,
+        ...(invoiceId ? { id: invoiceId } : {}),
+        status: "sent",
+        dueDate: {
+          lt: todayStart,
+        },
       },
-    },
-    data: {
-      status: "overdue",
-    },
-  });
+      data: {
+        status: "overdue",
+      },
+    }),
+    prisma.invoice.updateMany({
+      where: {
+        businessId,
+        ...(invoiceId ? { id: invoiceId } : {}),
+        status: "overdue",
+        dueDate: {
+          gte: todayStart,
+        },
+      },
+      data: {
+        status: "sent",
+      },
+    }),
+  ]);
 }
