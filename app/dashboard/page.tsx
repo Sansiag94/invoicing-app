@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 import {
   Circle,
   Clock3,
-  TrendingUp,
   Wallet,
-  TrendingDown,
+  AlertTriangle,
+  Send,
 } from "lucide-react";
 
 function DashboardLoadingSkeleton() {
@@ -283,36 +283,56 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Revenue this month"
+          label="Collected this month"
           value={`${dashboard.currency} ${formatMoney(dashboard.revenueThisMonth)}`}
           helper="Cash collected this calendar month"
           icon={<Wallet className="h-5 w-5" />}
           href="/invoices?status=paid"
         />
         <StatCard
-          label="Expenses this month"
-          value={`${dashboard.currency} ${formatMoney(dashboard.expensesThisMonth)}`}
-          helper="Booked costs in the current month"
-          icon={<TrendingDown className="h-5 w-5" />}
-          tone="warning"
-          href="/expenses"
-        />
-        <StatCard
-          label="Net this month"
-          value={`${dashboard.currency} ${formatMoney(dashboard.netProfitThisMonth)}`}
-          helper="Collected revenue minus expenses"
-          icon={<TrendingUp className="h-5 w-5" />}
-          tone={dashboard.netProfitThisMonth >= 0 ? "success" : "danger"}
-          href="/analytics"
-        />
-        <StatCard
-          label="Unpaid invoices"
-          value={dashboard.unpaidInvoices}
-          helper={`${dashboard.draftInvoices} draft / ${dashboard.sentInvoices} sent / ${dashboard.overdueInvoices} overdue`}
+          label="Unpaid pipeline"
+          value={`${dashboard.currency} ${formatMoney(dashboard.prospectRevenue)}`}
+          helper={`${dashboard.unpaidInvoices} draft, sent, or overdue invoice${dashboard.unpaidInvoices === 1 ? "" : "s"}`}
           icon={<Clock3 className="h-5 w-5" />}
           tone="warning"
           href="/invoices?status=unpaid"
         />
+        <StatCard
+          label="Overdue now"
+          value={dashboard.overdueInvoices}
+          helper={`${dashboard.currency} ${formatMoney(dashboard.overdueAmount)} needs follow-up`}
+          icon={<AlertTriangle className="h-5 w-5" />}
+          tone={dashboard.overdueInvoices > 0 ? "danger" : "success"}
+          href="/invoices?status=overdue"
+        />
+        <StatCard
+          label="Awaiting payment"
+          value={dashboard.sentInvoices}
+          helper="Sent invoices not paid or overdue yet"
+          icon={<Send className="h-5 w-5" />}
+          href="/invoices?status=sent"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="font-medium text-slate-900 dark:text-slate-100">Quick actions</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">Create, follow up, or jump into the full performance view.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button asChild size="sm">
+            <Link href="/invoices">Create invoice</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/clients">Add client</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/expenses">Record expense</Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/analytics">Open analytics</Link>
+          </Button>
+        </div>
       </div>
 
       <Card>
