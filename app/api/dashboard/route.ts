@@ -205,11 +205,11 @@ export async function GET(request: Request) {
         WHERE i."businessId" = ${business.id}
       ) AS ranked
       ORDER BY
-        COALESCE(ranked."issuedAt", ranked."createdAt") DESC,
-        ranked."createdAt" DESC,
         ranked."sortGroup" ASC,
         ranked."sortYear" DESC NULLS LAST,
-        ranked."sortSequence" DESC NULLS LAST
+        ranked."sortSequence" DESC NULLS LAST,
+        COALESCE(ranked."issuedAt", ranked."createdAt") DESC,
+        ranked."createdAt" DESC
       LIMIT 5
     `;
 
