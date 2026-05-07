@@ -408,7 +408,12 @@ export default function ExpensesPage() {
     if (!expense.receiptUrl) return;
 
     setViewingReceiptId(expense.id);
-    const receiptWindow = window.open("", "_blank", "noopener,noreferrer");
+    const receiptWindow = window.open("about:blank", "_blank");
+    if (receiptWindow) {
+      receiptWindow.document.title = "Opening receipt...";
+      receiptWindow.document.body.innerHTML =
+        '<div style="font-family: system-ui, -apple-system, Segoe UI, sans-serif; padding: 24px; color: #334155;">Opening receipt...</div>';
+    }
 
     try {
       const response = await authenticatedFetch(`/api/expenses/${expense.id}/receipt`);
@@ -424,10 +429,14 @@ export default function ExpensesPage() {
         return;
       }
 
-      if (receiptWindow) {
-        receiptWindow.location.href = result.url;
+      if (receiptWindow && !receiptWindow.closed) {
+        receiptWindow.location.replace(result.url);
+        receiptWindow.opener = null;
       } else {
-        window.location.assign(result.url);
+        const openedWindow = window.open(result.url, "_blank", "noopener,noreferrer");
+        if (!openedWindow) {
+          window.location.assign(result.url);
+        }
       }
     } catch (error) {
       console.error("Error opening receipt:", error);
