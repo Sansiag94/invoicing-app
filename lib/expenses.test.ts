@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getExpenseCategoryLabel, normalizeExpenseCurrency, toExpenseRecord } from "@/lib/expenses";
+import {
+  getExpenseCategoryLabel,
+  getExpenseDisplayCategoryLabel,
+  normalizeExpenseCurrency,
+  toExpenseRecord,
+} from "@/lib/expenses";
 
 describe("expense helpers", () => {
   it("normalizes expense currency with CHF fallback", () => {
@@ -10,6 +15,8 @@ describe("expense helpers", () => {
   it("maps categories to user-facing labels", () => {
     expect(getExpenseCategoryLabel("software")).toBe("Software");
     expect(getExpenseCategoryLabel("subcontractor")).toBe("Subcontractor");
+    expect(getExpenseDisplayCategoryLabel("other", "Parking")).toBe("Parking");
+    expect(getExpenseDisplayCategoryLabel("other", "")).toBe("Other");
   });
 
   it("serializes expense records for the client", () => {
@@ -19,6 +26,7 @@ describe("expense helpers", () => {
         vendor: "Swisscom",
         description: "Phone",
         category: "software",
+        otherCategoryName: null,
         amount: 99,
         currency: "CHF",
         expenseDate: new Date("2026-03-15T00:00:00Z"),
@@ -35,6 +43,7 @@ describe("expense helpers", () => {
       currency: "CHF",
       receiptUrl: "https://example.com/receipt.pdf",
       isRecurring: true,
+      otherCategoryName: null,
     });
   });
 });

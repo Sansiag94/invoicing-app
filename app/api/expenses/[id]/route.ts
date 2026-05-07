@@ -9,6 +9,7 @@ type UpdateExpenseBody = {
   vendor?: unknown;
   description?: unknown;
   category?: unknown;
+  otherCategoryName?: unknown;
   amount?: unknown;
   currency?: unknown;
   expenseDate?: unknown;
@@ -82,6 +83,8 @@ export async function PATCH(
     const description = body.description === undefined ? existingExpense.description : asString(body.description);
     const vendor = body.vendor === undefined ? existingExpense.vendor : asString(body.vendor);
     const notes = body.notes === undefined ? existingExpense.notes : asString(body.notes);
+    const otherCategoryName =
+      body.otherCategoryName === undefined ? existingExpense.otherCategoryName : asString(body.otherCategoryName);
     const amount = body.amount === undefined ? existingExpense.amount : asNumber(body.amount);
     const expenseDate = body.expenseDate === undefined ? existingExpense.expenseDate : asDate(body.expenseDate);
     const category = body.category === undefined ? existingExpense.category : body.category;
@@ -105,6 +108,10 @@ export async function PATCH(
       return apiError("Missing or invalid expense fields", 400);
     }
 
+    if (category === "other" && !otherCategoryName) {
+      return apiError("Other category name is required", 400);
+    }
+
     if (vatAmount !== null && vatAmount < 0) {
       return apiError("VAT amount must be 0 or higher", 400);
     }
@@ -117,6 +124,7 @@ export async function PATCH(
         vendor,
         description,
         category,
+        otherCategoryName: category === "other" ? otherCategoryName : null,
         amount,
         currency,
         expenseDate,

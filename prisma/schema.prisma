@@ -11,6 +11,7 @@ model User {
   id                   String     @id @default(uuid()) @map("uuid")
   email                String     @unique
   name                 String
+  appLanguage          String     @default("en")
   acceptedPrivacyAt    DateTime?
   acceptedTermsAt      DateTime?
   acceptedLegalVersion String?
@@ -62,6 +63,8 @@ model Business {
   clients        Client[]  @relation("BusinessClients")
   invoices       Invoice[] @relation("BusinessInvoices")
   expenses       Expense[] @relation("BusinessExpenses")
+  portfolioItems PortfolioItem[] @relation("BusinessPortfolioItems")
+  monthlyReports MonthlyReport[] @relation("BusinessMonthlyReports")
 }
 
 model Client {
@@ -149,6 +152,23 @@ model Payment {
   @@index([invoiceId, createdAt])
 }
 
+model PortfolioItem {
+  id              String   @id @default(uuid()) @map("uuid")
+  businessId      String
+  name            String
+  description     String
+  unitPrice       Float
+  defaultQuantity Float    @default(1)
+  taxRate         Float    @default(0)
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  business        Business @relation("BusinessPortfolioItems", fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, active])
+  @@index([businessId, name])
+}
+
 model InvoiceReminder {
   id        String              @id @default(uuid()) @map("uuid")
   invoiceId String
@@ -192,6 +212,7 @@ model Expense {
   vendor      String?
   description String
   category    ExpenseCategory
+  otherCategoryName String?
   amount      Float
   currency    String
   expenseDate DateTime
@@ -207,6 +228,23 @@ model Expense {
 
   @@index([businessId, expenseDate])
   @@index([businessId, category])
+}
+
+model MonthlyReport {
+  id              String   @id @default(uuid()) @map("uuid")
+  businessId      String
+  month           String
+  currency        String
+  metrics         Json
+  emailStatus     String   @default("pending")
+  emailSentAt     DateTime?
+  generatedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  business        Business @relation("BusinessMonthlyReports", fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, month])
+  @@index([businessId, generatedAt])
 }
 
 enum InvoiceStatus {

@@ -6,11 +6,10 @@ import { Clock3, TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { AnalyticsOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
-import { getExpenseCategoryLabel } from "@/lib/expenses";
+import { getExpenseDisplayCategoryLabel } from "@/lib/expenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/ui/theme";
-import { cn } from "@/lib/utils";
 
 function formatMoney(value: number): string {
   return new Intl.NumberFormat("de-CH", {
@@ -113,8 +112,22 @@ function AnalyticsPageSkeleton() {
   );
 }
 
-type TimeRange = 3 | 6 | 12;
 const ANALYTICS_CACHE_KEY = "analytics-overview";
+
+function getDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function getDefaultAnalyticsDateRange() {
+  const now = new Date();
+  return {
+    startDate: getDateInputValue(new Date(now.getFullYear(), now.getMonth() - 5, 1)),
+    endDate: getDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+  };
+}
 
 function buildLinePath(
   values: number[],
@@ -173,14 +186,16 @@ export default function AnalyticsPage() {
   const initialAnalyticsRef = useRef(readPrivatePageCache<AnalyticsOverview>(ANALYTICS_CACHE_KEY));
   const [analytics, setAnalytics] = useState<AnalyticsOverview | null>(initialAnalyticsRef.current);
   const [isLoading, setIsLoading] = useState(() => !initialAnalyticsRef.current);
-  const [timeRange, setTimeRange] = useState<TimeRange>(6);
+  const initialRange = initialAnalyticsRef.current?.dateRange ?? getDefaultAnalyticsDateRange();
+  const [startDate, setStartDate] = useState(initialRange.startDate);
+  const [endDate, setEndDate] = useState(initialRange.endDate);
 
   useEffect(() => {
     let mounted = true;
 
     (async () => {
       try {
-        const response = await authenticatedFetch("/api/analytics", { cache: "no-store" });
+        const response = await authenticatedFetch(`/api/analytics?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`, { cache: "no-store" });
         const data = (await response.json()) as AnalyticsOverview | { error?: string };
 
         if (!response.ok || ("error" in data && data.error)) {
@@ -207,12 +222,12 @@ export default function AnalyticsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [endDate, startDate]);
 
   const visibleSeries = useMemo(() => {
     const series = analytics?.monthlySeries ?? [];
-    return series.slice(-timeRange);
-  }, [analytics?.monthlySeries, timeRange]);
+    return series;
+  }, [analytics?.monthlySeries]);
 
   const chartData = useMemo(() => {
     const revenueValues = visibleSeries.map((entry) => entry.revenue);
@@ -236,7 +251,7 @@ export default function AnalyticsPage() {
 
   const comparisonData = useMemo(() => {
     const series = analytics?.monthlySeries ?? [];
-    const previousSeries = series.slice(-timeRange * 2, -timeRange);
+    const previousSeries = series.slice(-visibleSeries.length * 2, -visibleSeries.length);
 
     const total = (values: Array<{ revenue: number; expenses: number; profit: number }>) =>
       values.reduce(
@@ -260,7 +275,7 @@ export default function AnalyticsPage() {
       currentTotals,
       bestMonth,
     };
-  }, [analytics?.monthlySeries, timeRange, visibleSeries]);
+  }, [analytics?.monthlySeries, visibleSeries]);
 
   const maxBreakdownValue = useMemo(() => {
     const breakdown = analytics?.expenseBreakdown ?? [];
@@ -293,17 +308,6 @@ export default function AnalyticsPage() {
 
     return (chartData.totals.profit / chartData.totals.revenue) * 100;
   }, [chartData.totals.profit, chartData.totals.revenue]);
-  const monthlyReport = useMemo(() => {
-    const series = analytics?.monthlySeries ?? [];
-    const currentMonth = series.at(-1) ?? null;
-    const lastClosedMonth = series.length >= 2 ? series.at(-2) ?? null : null;
-
-    return {
-      currentMonth,
-      lastClosedMonth,
-    };
-  }, [analytics?.monthlySeries]);
-
   const chartWidth = 760;
   const chartHeight = 280;
   const chartPadding = { left: 24, right: 20, top: 20, bottom: 34 };
@@ -416,14 +420,14 @@ export default function AnalyticsPage() {
         <MetricCard
           label="Revenue (selected range)"
           value={`${analytics.currency} ${formatMoney(chartData.totals.revenue)}`}
-          helper={`Revenue across the ${timeRange}-month view shown below`}
+          helper={`${startDate} to ${endDate}`}
           tone="default"
           icon={<Wallet className="h-5 w-5" />}
         />
         <MetricCard
           label="Costs (selected range)"
           value={`${analytics.currency} ${formatMoney(chartData.totals.expenses)}`}
-          helper={`Booked expenses across the same ${timeRange}-month view`}
+          helper="Booked expenses in the selected dates"
           tone="warning"
           icon={<TrendingDown className="h-5 w-5" />}
         />
@@ -445,30 +449,29 @@ export default function AnalyticsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Month In Progress</CardTitle>
+          <CardTitle>Selected Date Range</CardTitle>
           <p className="text-sm text-slate-500">
-            Track what has been issued this month, what cash came in this month, and what is still
-            open right now.
+            Track what has been issued, collected, and left open for the exact dates selected.
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Issued this month</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Issued in range</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.issuedAmount)}
               </p>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
                 {analytics.monthProgress.issuedCount} official invoice
-                {analytics.monthProgress.issuedCount === 1 ? "" : "s"} issued this month
+                {analytics.monthProgress.issuedCount === 1 ? "" : "s"} issued in range
               </p>
             </div>
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/70 dark:bg-emerald-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Collected this month</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Collected in range</p>
               <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {analytics.currency} {formatMoney(analytics.monthProgress.collectedAmount)}
               </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Cash received this month from all invoices</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Cash received in the selected dates</p>
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/70 dark:bg-amber-950/30">
               <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Open now</p>
@@ -492,49 +495,54 @@ export default function AnalyticsPage() {
         <CardHeader>
           <CardTitle>Monthly Report</CardTitle>
           <p className="text-sm text-slate-500">
-            Use this section as the month-by-month summary for what closed last month and what is
-            happening this month so far.
+            Saved monthly report history is generated automatically and emailed on the 1st of each month at 08:00 Europe/Zurich.
           </p>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Last closed month</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest saved report</p>
             <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
-              {monthlyReport.lastClosedMonth?.label ?? "Not available yet"}
+              {analytics.monthlyReports[0]?.month ?? "Not available yet"}
             </p>
-            {monthlyReport.lastClosedMonth ? (
+            {analytics.monthlyReports[0] ? (
               <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                 <p>
-                  Revenue: {analytics.currency} {formatMoney(monthlyReport.lastClosedMonth.revenue)}
+                  Revenue: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.revenue)}
                 </p>
                 <p>
-                  Costs: {analytics.currency} {formatMoney(monthlyReport.lastClosedMonth.expenses)}
+                  Costs: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.expenses)}
                 </p>
                 <p>
-                  Net result: {analytics.currency} {formatMoney(monthlyReport.lastClosedMonth.profit)}
+                  Net result: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.profit)}
                 </p>
+                <p>Email status: {analytics.monthlyReports[0].emailStatus}</p>
               </div>
             ) : (
-              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">The report becomes available once you have a prior month on the books.</p>
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">The first saved report appears after the next monthly automation run.</p>
             )}
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Current month so far</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
-              {monthlyReport.currentMonth?.label ?? "This month"}
-            </p>
-            <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-              <p>
-                Revenue: {analytics.currency} {formatMoney(analytics.revenueThisMonth)}
-              </p>
-              <p>
-                Costs: {analytics.currency} {formatMoney(analytics.expensesThisMonth)}
-              </p>
-              <p>
-                Net result: {analytics.currency} {formatMoney(analytics.netProfitThisMonth)}
-              </p>
-            </div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Report history</p>
+            {analytics.monthlyReports.length === 0 ? (
+              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">No saved reports yet.</p>
+            ) : (
+              <div className="mt-3 max-h-56 space-y-2 overflow-y-auto text-sm text-slate-600 dark:text-slate-300">
+                {analytics.monthlyReports.map((report) => (
+                  <div key={report.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 dark:bg-slate-900">
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{report.month}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                        Generated {new Date(report.generatedAt).toLocaleDateString()} - {report.emailStatus}
+                      </p>
+                    </div>
+                    <p className="font-semibold text-slate-900 dark:text-slate-100">
+                      {report.currency} {formatMoney(report.metrics.profit)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -544,24 +552,27 @@ export default function AnalyticsPage() {
           <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle>Revenue, costs, and net result</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">Interactive view of the last {timeRange} months.</p>
+              <p className="mt-1 text-sm text-slate-500">Interactive view for {startDate} to {endDate}.</p>
             </div>
-            <div className="flex gap-2">
-              {[3, 6, 12].map((range) => (
-                <button
-                  key={range}
-                  type="button"
-                  onClick={() => setTimeRange(range as TimeRange)}
-                  className={cn(
-                    "rounded-md border px-3 py-2 text-sm font-medium transition-colors",
-                    timeRange === range
-                      ? "border-slate-300 bg-slate-100 text-slate-900 dark:border-slate-600 dark:bg-slate-100 dark:text-slate-950"
-                      : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
-                  )}
-                >
-                  {range}M
-                </button>
-              ))}
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <label className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                <span>Start date</span>
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+              </label>
+              <label className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                <span>End date</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
+                />
+              </label>
             </div>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -789,7 +800,9 @@ export default function AnalyticsPage() {
               analytics.expenseBreakdown.map((entry) => (
                 <div key={entry.category} className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-slate-900 dark:text-slate-100">{getExpenseCategoryLabel(entry.category)}</p>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                      {getExpenseDisplayCategoryLabel(entry.category, entry.otherCategoryName)}
+                    </p>
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                       {analytics.currency} {formatMoney(entry.amount)}
                     </p>

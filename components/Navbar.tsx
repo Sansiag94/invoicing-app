@@ -8,6 +8,7 @@ import { Bell, Download, LifeBuoy, LogOut, Menu, Search, Settings } from "lucide
 import { WorkspaceNotification } from "@/lib/types";
 import { usePwa } from "@/components/PwaProvider";
 import { Input } from "@/components/ui/input";
+import { useAppLanguage } from "@/components/ui/i18n";
 import { useToast } from "@/components/ui/toast";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
@@ -88,6 +89,7 @@ function getBrandInitials(name: string): string {
 }
 
 export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
+  const { t } = useAppLanguage();
   const seenNotificationsStorageKey = "sierra-invoices-seen-notifications";
   const pathname = usePathname();
   const router = useRouter();
@@ -122,36 +124,36 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     () => [
       {
         id: "create-invoice",
-        label: "Create invoice",
+        label: t("createInvoice"),
         description: "Open the invoice builder",
         href: "/invoices",
       },
       {
         id: "add-client",
-        label: "Add client",
+        label: t("addClient"),
         description: "Create a new client profile",
         href: "/clients",
       },
       {
         id: "add-expense",
-        label: "Add expense",
+        label: t("addExpense"),
         description: "Track a new business cost",
         href: "/expenses",
       },
       {
         id: "overdue",
-        label: "Review overdue invoices",
+        label: t("reviewOverdue"),
         description: "Jump straight to collections work",
         href: "/invoices?status=overdue",
       },
       {
         id: "analytics",
-        label: "Open analytics",
+        label: t("openAnalytics"),
         description: "Review performance and profitability",
         href: "/analytics",
       },
     ],
-    []
+    [t]
   );
 
   useEffect(() => {
@@ -486,7 +488,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                     : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 )}
               >
-                {link.label}
+                  {t(link.label.toLowerCase() as "dashboard" | "clients" | "invoices" | "expenses" | "analytics")}
               </Link>
             );
           })}
@@ -499,7 +501,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
               <Input
                 ref={searchInputRef}
                 value={searchQuery}
-                placeholder="Search or jump to..."
+                placeholder={t("search")}
                 className="pl-9"
                 onFocus={() => {
                   setIsSearchOpen(true);
@@ -516,7 +518,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                 {normalizedSearchQuery.length < 2 ? (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between px-2 py-1">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Quick Actions</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{t("quickActions")}</p>
                       <span className="text-[11px] text-slate-400 dark:text-slate-500">Ctrl/Cmd + K</span>
                     </div>
                     {quickActions.map((action) => (
@@ -572,8 +574,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                           >
                             <p className="font-medium text-slate-900 dark:text-slate-100">{invoice.invoiceNumber}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">
-                              {(invoice.client && getClientDisplayName(invoice.client)) || "Client"} - due{" "}
-                              {formatShortDate(invoice.dueDate)}
+                              {formatShortDate(invoice.issueDate)} - {(invoice.client && getClientDisplayName(invoice.client)) || "Client"}
                             </p>
                           </button>
                         ))}
@@ -614,7 +615,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
             {isNotificationsOpen ? (
               <div className="absolute right-0 z-30 mt-2 w-80 rounded-md border border-slate-200 bg-white p-2 shadow-lg dark:border-slate-700 dark:bg-slate-900">
                 <p className="px-2 pb-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                  Notifications
+                  {t("notifications")}
                 </p>
 
                 {isNotificationsLoading ? (
@@ -622,7 +623,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                 ) : notificationsError ? (
                   <p className="px-2 py-1.5 text-xs text-red-600">{notificationsError}</p>
                 ) : notifications.length === 0 ? (
-                  <p className="px-2 py-1.5 text-xs text-slate-500 dark:text-slate-400">No new notifications.</p>
+                  <p className="px-2 py-1.5 text-xs text-slate-500 dark:text-slate-400">{t("noNotifications")}</p>
                 ) : (
                   <div className="space-y-1">
                     {notifications.map((notification) => (
@@ -674,7 +675,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                     onClick={() => void handleInstallApp()}
                   >
                     <Download className="h-4 w-4" />
-                    Install App
+                    {t("installApp")}
                   </button>
                 ) : null}
                 <button
@@ -683,7 +684,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                   onClick={() => handleNavigate("/settings")}
                 >
                   <Settings className="h-4 w-4" />
-                  Settings
+                  {t("settings")}
                 </button>
                 <button
                   type="button"
@@ -691,7 +692,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                   onClick={() => handleNavigate("/help?from=app")}
                 >
                   <LifeBuoy className="h-4 w-4" />
-                  Help & onboarding
+                  {t("help")}
                 </button>
                 <button
                   type="button"
@@ -700,7 +701,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                   disabled={isSigningOut}
                 >
                   <LogOut className="h-4 w-4" />
-                  {isSigningOut ? "Signing out..." : "Sign out"}
+                  {isSigningOut ? "Signing out..." : t("signOut")}
                 </button>
               </div>
             ) : null}

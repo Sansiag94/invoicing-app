@@ -9,6 +9,7 @@ type CreateExpenseBody = {
   vendor?: unknown;
   description: unknown;
   category: unknown;
+  otherCategoryName?: unknown;
   amount: unknown;
   currency?: unknown;
   expenseDate: unknown;
@@ -149,6 +150,7 @@ export async function POST(request: Request) {
     const description = asString(body.description);
     const vendor = asString(body.vendor);
     const notes = asString(body.notes);
+    const otherCategoryName = asString(body.otherCategoryName);
     const amount = asNumber(body.amount);
     const expenseDate = asDate(body.expenseDate);
     const rawCurrency = asString(body.currency);
@@ -159,6 +161,10 @@ export async function POST(request: Request) {
 
     if (!description || amount === null || amount <= 0 || !expenseDate || !isExpenseCategory(body.category)) {
       return apiError("Missing or invalid expense fields", 400);
+    }
+
+    if (body.category === "other" && !otherCategoryName) {
+      return apiError("Other category name is required", 400);
     }
 
     if (vatAmount !== null && vatAmount < 0) {
@@ -182,6 +188,7 @@ export async function POST(request: Request) {
         vendor,
         description,
         category: body.category,
+        otherCategoryName: body.category === "other" ? otherCategoryName : null,
         amount,
         currency,
         expenseDate,

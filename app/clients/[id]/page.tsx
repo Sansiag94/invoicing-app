@@ -518,10 +518,10 @@ export default function ClientDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Issue Date</TableHead>
                       <TableHead>Invoice Number</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Total</TableHead>
-                      <TableHead>Issue Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -539,6 +539,7 @@ export default function ClientDetailPage() {
                           }
                         }}
                       >
+                        <TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
                         <TableCell className="font-medium">
                           <Link
                             href={`/invoices/${invoice.id}`}
@@ -554,7 +555,6 @@ export default function ClientDetailPage() {
                         <TableCell>
                           {invoice.currency} {invoice.totalAmount.toFixed(2)}
                         </TableCell>
-                        <TableCell>{new Date(invoice.issueDate).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>

@@ -89,6 +89,17 @@ function formatMoney(value: number): string {
   }).format(value);
 }
 
+function formatShortDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 function StatCard(props: {
   label: string;
   value: string | number;
@@ -385,7 +396,8 @@ export default function DashboardPage() {
           <div className="hidden md:block">
             <Table>
               <TableHeader>
-                <TableRow>
+                  <TableRow>
+                  <TableHead>Date</TableHead>
                   <TableHead>Invoice</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Total</TableHead>
@@ -395,7 +407,7 @@ export default function DashboardPage() {
               <TableBody>
                 {dashboard.recentInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4}>
+                    <TableCell colSpan={5}>
                       <div className="flex flex-col items-center justify-center gap-3 rounded-md border border-dashed border-slate-200 bg-slate-50 px-6 py-8 text-center dark:border-slate-800 dark:bg-slate-950/60">
                         <p className="text-base font-medium text-slate-900 dark:text-slate-100">No invoice activity yet</p>
                         <p className="text-sm text-slate-600 dark:text-slate-300">Create an invoice or add a client to start building revenue.</p>
@@ -427,6 +439,9 @@ export default function DashboardPage() {
                         }
                       }}
                     >
+                      <TableCell>
+                        {formatShortDate(invoice.issueDate)}
+                      </TableCell>
                       <TableCell>
                         <Link
                           href={`/invoices/${invoice.id}`}
@@ -474,6 +489,7 @@ export default function DashboardPage() {
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-slate-900 dark:text-slate-100">{invoice.invoiceNumber}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatShortDate(invoice.issueDate)}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-300">{invoice.clientName}</p>
                       <p className="mt-1 text-sm text-slate-700 dark:text-slate-200">
                         {invoice.currency} {formatMoney(invoice.totalAmount)}

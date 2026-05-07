@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/appBrand";
+import { useAppLanguage } from "@/components/ui/i18n";
 
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -31,6 +32,7 @@ function getBrandInitials(name: string): string {
 export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
   const pathname = usePathname();
   const brandName = businessBrand?.name || APP_NAME;
+  const { t } = useAppLanguage();
 
   return (
     <div className="h-full overflow-y-auto bg-white dark:bg-slate-950">
@@ -74,7 +76,7 @@ export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  <span>{link.label}</span>
+                  <span>{t(link.label.toLowerCase() as "dashboard" | "clients" | "invoices" | "expenses" | "analytics")}</span>
                 </Link>
               </li>
             );

@@ -2,6 +2,7 @@ import type { InvoiceLanguage } from "@/lib/invoiceLanguage";
 
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 export type InvoiceCurrency = "CHF" | "EUR";
+export type AppLanguage = "en" | "de" | "es" | "fr" | "it";
 export type InvoiceSenderType = "company" | "owner";
 export type BusinessPlanTier = "free" | "pro";
 export type BillingEntitlementSource = "free" | "stripe" | "complimentary";
@@ -158,6 +159,7 @@ export interface DashboardRecentInvoice {
   id: string;
   invoiceNumber: string;
   clientName: string;
+  issueDate: string;
   totalAmount: number;
   status: InvoiceStatus;
   currency: InvoiceCurrency;
@@ -197,6 +199,7 @@ export interface ExpenseRecord {
   vendor: string | null;
   description: string;
   category: ExpenseCategory;
+  otherCategoryName: string | null;
   amount: number;
   currency: InvoiceCurrency;
   expenseDate: string;
@@ -206,6 +209,19 @@ export interface ExpenseRecord {
   taxDeductible: boolean;
   vatReclaimable: boolean;
   vatAmount: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PortfolioItemRecord {
+  id: string;
+  businessId: string;
+  name: string;
+  description: string;
+  unitPrice: number;
+  defaultQuantity: number;
+  taxRate: number;
+  active: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -243,6 +259,7 @@ export interface AnalyticsClientBreakdown {
 
 export interface AnalyticsExpenseBreakdown {
   category: ExpenseCategory;
+  otherCategoryName: string | null;
   amount: number;
 }
 
@@ -256,6 +273,10 @@ export interface AnalyticsMonthProgress {
 
 export interface AnalyticsOverview {
   currency: InvoiceCurrency;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
   revenueThisMonth: number;
   expensesThisMonth: number;
   netProfitThisMonth: number;
@@ -270,6 +291,36 @@ export interface AnalyticsOverview {
   averagePaidInvoiceValue: number;
   monthProgress: AnalyticsMonthProgress;
   monthlySeries: AnalyticsSeriesPoint[];
+  topClients: AnalyticsClientBreakdown[];
+  expenseBreakdown: AnalyticsExpenseBreakdown[];
+  monthlyReports: MonthlyReportRecord[];
+}
+
+export interface MonthlyReportRecord {
+  id: string;
+  month: string;
+  currency: InvoiceCurrency;
+  metrics: MonthlyReportMetrics;
+  emailStatus: string;
+  emailSentAt: string | null;
+  generatedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MonthlyReportMetrics {
+  revenue: number;
+  expenses: number;
+  profit: number;
+  issuedAmount: number;
+  issuedCount: number;
+  collectedAmount: number;
+  openAmount: number;
+  overdueAmount: number;
+  paidInvoices: number;
+  unpaidInvoices: number;
+  averageDaysToPay: number | null;
+  averagePaidInvoiceValue: number;
   topClients: AnalyticsClientBreakdown[];
   expenseBreakdown: AnalyticsExpenseBreakdown[];
 }

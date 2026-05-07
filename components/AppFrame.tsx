@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import LegalFooter from "@/components/LegalFooter";
+import { AppLanguageProvider, StaticAppLanguageProvider } from "@/components/ui/i18n";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch, AUTH_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
@@ -230,12 +231,14 @@ export default function AppFrame({ children }: AppFrameProps) {
 
   if (hideShell) {
     return (
-      <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
-        </main>
-        {showLegalFooter ? <LegalFooter linkSource={legalFooterSource} /> : null}
-      </div>
+      <StaticAppLanguageProvider>
+        <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+          <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          </main>
+          {showLegalFooter ? <LegalFooter linkSource={legalFooterSource} /> : null}
+        </div>
+      </StaticAppLanguageProvider>
     );
   }
 
@@ -252,33 +255,35 @@ export default function AppFrame({ children }: AppFrameProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <button
-        type="button"
-        className={cn(
-          "fixed inset-0 z-30 bg-black/40 transition-opacity md:hidden",
-          mobileSidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        )}
-        onClick={closeMobileSidebar}
-        aria-label="Close navigation"
-      />
+    <AppLanguageProvider>
+      <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
+        <button
+          type="button"
+          className={cn(
+            "fixed inset-0 z-30 bg-black/40 transition-opacity md:hidden",
+            mobileSidebarOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          )}
+          onClick={closeMobileSidebar}
+          aria-label="Close navigation"
+        />
 
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] border-r border-slate-200 bg-white shadow-lg transition-transform dark:border-slate-800 dark:bg-slate-950 md:hidden",
-          mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <Sidebar onNavigate={closeMobileSidebar} businessBrand={businessBrand} />
-      </aside>
+        <aside
+          className={cn(
+            "fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] border-r border-slate-200 bg-white shadow-lg transition-transform dark:border-slate-800 dark:bg-slate-950 md:hidden",
+            mobileSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          )}
+        >
+          <Sidebar onNavigate={closeMobileSidebar} businessBrand={businessBrand} />
+        </aside>
 
-      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-        <Navbar onOpenMenu={openMobileSidebar} businessBrand={businessBrand} />
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
-          <div className="mx-auto w-full max-w-7xl">{children}</div>
-        </main>
-        {showLegalFooter ? <LegalFooter linkSource={legalFooterSource} /> : null}
+        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
+          <Navbar onOpenMenu={openMobileSidebar} businessBrand={businessBrand} />
+          <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+            <div className="mx-auto w-full max-w-7xl">{children}</div>
+          </main>
+          {showLegalFooter ? <LegalFooter linkSource={legalFooterSource} /> : null}
+        </div>
       </div>
-    </div>
+    </AppLanguageProvider>
   );
 }

@@ -11,7 +11,7 @@ import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails, isBillingStatus } from "@/lib/billingClient";
 import { getInvoiceVatLabel } from "@/lib/invoice";
 import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
-import { BillingLimitDetails, BillingStatus, BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData } from "@/lib/types";
+import { BillingLimitDetails, BillingStatus, BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData, PortfolioItemRecord } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -58,6 +58,7 @@ type InvoicePageBootstrap = {
   invoices: InvoiceRow[];
   business: BusinessSettingsData;
   billing: BillingStatus | null;
+  portfolioItems: PortfolioItemRecord[];
 };
 
 function statusVariant(status: string): "default" | "success" | "warning" | "danger" {
@@ -94,6 +95,17 @@ function getClientFirstName(client: ClientSummary | null): string {
   if (!rawName) return "client_first_name";
 
   return rawName.split(/\s+/)[0] || "client_first_name";
+}
+
+function formatShortDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
 }
 
 function buildInvoiceNotesTemplate(client: ClientSummary | null, senderName: string): string {
@@ -170,6 +182,7 @@ function InvoicePageContent() {
   const defaultIssueDate = getTodayDateInputValue();
   const [clients, setClients] = useState<ClientSummary[]>(initialInvoicePageRef.current?.clients ?? []);
   const [invoices, setInvoices] = useState<InvoiceRow[]>(initialInvoicePageRef.current?.invoices ?? []);
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItemRecord[]>(initialInvoicePageRef.current?.portfolioItems ?? []);
   const [businessData, setBusinessData] = useState<BusinessSettingsData | null>(initialBusiness);
   const [invoiceSenderName, setInvoiceSenderName] = useState(
     initialBusiness ? getInvoiceSenderName(initialBusiness) : "User_name"
@@ -186,6 +199,17 @@ function InvoicePageContent() {
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate(null, "User_name"));
   const [paymentNote, setPaymentNote] = useState(buildInvoicePaymentNoteTemplate(null, false, ""));
+  const [portfolioForm, setPortfolioForm] = useState({
+    name: "",
+    description: "",
+    unitPrice: "",
+    defaultQuantity: "1",
+    taxRate: "0",
+    active: true,
+  });
+  const [isPortfolioOpen, setIsPortfolioOpen] = useState(false);
+  const [isSavingPortfolioItem, setIsSavingPortfolioItem] = useState(false);
+  const [editingPortfolioItemId, setEditingPortfolioItemId] = useState<string | null>(null);
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
   const [paymentNoteManuallyEdited, setPaymentNoteManuallyEdited] = useState(false);
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
@@ -288,6 +312,17 @@ function InvoicePageContent() {
     setInvoices(Array.isArray(data) ? data : []);
   }
 
+  async function fetchPortfolioItems() {
+    const response = await authenticatedFetch("/api/portfolio-items");
+    const data = (await response.json()) as PortfolioItemRecord[] | { error?: string };
+
+    if (!response.ok || ("error" in data && data.error)) {
+      throw new Error(("error" in data ? data.error : null) ?? "Failed to load portfolio items");
+    }
+
+    setPortfolioItems(Array.isArray(data) ? data : []);
+  }
+
   async function fetchBillingStatus() {
     const response = await authenticatedFetch("/api/billing/status");
     const result = (await response.json()) as BillingStatus & { error?: string };
@@ -321,8 +356,9 @@ function InvoicePageContent() {
       invoices,
       business: businessData,
       billing: billingStatus,
+      portfolioItems,
     });
-  }, [billingStatus, businessData, clients, invoices]);
+  }, [billingStatus, businessData, clients, invoices, portfolioItems]);
 
   function handleBillingLimitResponse(payload: { code?: string; details?: unknown }): boolean {
     const details = getBillingLimitDetails(payload);
@@ -404,17 +440,19 @@ function InvoicePageContent() {
 
     (async () => {
       try {
-        const [clientsResponse, invoicesResponse, businessResponse, billingResponse] = await Promise.all([
+        const [clientsResponse, invoicesResponse, businessResponse, billingResponse, portfolioResponse] = await Promise.all([
           authenticatedFetch("/api/clients"),
           authenticatedFetch("/api/invoices"),
           authenticatedFetch("/api/business"),
           authenticatedFetch("/api/billing/status"),
+          authenticatedFetch("/api/portfolio-items"),
         ]);
 
         const loadedClients = (await clientsResponse.json()) as ClientSummary[];
         const loadedInvoices = (await invoicesResponse.json()) as InvoiceRow[];
         const loadedBusiness = (await businessResponse.json()) as BusinessSettingsData;
         const loadedBilling = (await billingResponse.json()) as BillingStatus;
+        const loadedPortfolioItems = (await portfolioResponse.json()) as PortfolioItemRecord[];
 
         if (mounted) {
           setClients(Array.isArray(loadedClients) ? loadedClients : []);
@@ -425,6 +463,7 @@ function InvoicePageContent() {
           setAcceptsTwintPayments(Boolean(loadedBusiness?.acceptsTwintPayments));
           setTwintPhoneNumber(loadedBusiness?.twintPhoneNumber || "");
           setBillingStatus(isBillingStatus(loadedBilling) ? loadedBilling : null);
+          setPortfolioItems(Array.isArray(loadedPortfolioItems) ? loadedPortfolioItems : []);
           setLoadError(null);
         }
       } catch (error) {
@@ -533,6 +572,133 @@ function InvoicePageContent() {
 
   const removeLineItem = (index: number) => {
     setLineItems((current) => current.filter((_, i) => i !== index));
+  };
+
+  const applyPortfolioItemToLineItem = (index: number, portfolioItemId: string) => {
+    const item = portfolioItems.find((portfolioItem) => portfolioItem.id === portfolioItemId);
+    if (!item) return;
+
+    setLineItems((current) =>
+      current.map((lineItem, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...lineItem,
+              description: item.description,
+              quantity: item.defaultQuantity,
+              unitPrice: item.unitPrice,
+              taxRate: vatRegistered ? item.taxRate : 0,
+            }
+          : lineItem
+      )
+    );
+  };
+
+  const resetPortfolioForm = () => {
+    setEditingPortfolioItemId(null);
+    setPortfolioForm({
+      name: "",
+      description: "",
+      unitPrice: "",
+      defaultQuantity: "1",
+      taxRate: "0",
+      active: true,
+    });
+  };
+
+  const editPortfolioItem = (item: PortfolioItemRecord) => {
+    setEditingPortfolioItemId(item.id);
+    setPortfolioForm({
+      name: item.name,
+      description: item.description,
+      unitPrice: String(item.unitPrice),
+      defaultQuantity: String(item.defaultQuantity),
+      taxRate: String(item.taxRate),
+      active: item.active,
+    });
+    setIsPortfolioOpen(true);
+  };
+
+  const savePortfolioItem = async () => {
+    if (!portfolioForm.name.trim() || !portfolioForm.description.trim()) {
+      toast({
+        title: "Missing portfolio details",
+        description: "Add a name and description for this service.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setIsSavingPortfolioItem(true);
+
+    try {
+      const response = await authenticatedFetch(
+        editingPortfolioItemId ? `/api/portfolio-items/${editingPortfolioItemId}` : "/api/portfolio-items",
+        {
+          method: editingPortfolioItemId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...portfolioForm,
+            unitPrice: Number(portfolioForm.unitPrice),
+            defaultQuantity: Number(portfolioForm.defaultQuantity),
+            taxRate: Number(portfolioForm.taxRate),
+          }),
+        }
+      );
+      const result = (await response.json()) as PortfolioItemRecord & { error?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Unable to save service",
+          description: result.error ?? "Check the service details and try again.",
+          variant: "error",
+        });
+        return;
+      }
+
+      await fetchPortfolioItems();
+      resetPortfolioForm();
+      setSuccessMessage("Portfolio service saved.");
+    } catch (error) {
+      console.error("Error saving portfolio item:", error);
+      toast({
+        title: "Unable to save service",
+        description: "The service could not be saved.",
+        variant: "error",
+      });
+    } finally {
+      setIsSavingPortfolioItem(false);
+    }
+  };
+
+  const deletePortfolioItem = async (item: PortfolioItemRecord) => {
+    const confirmed = window.confirm(`Delete service "${item.name}"?`);
+    if (!confirmed) return;
+
+    try {
+      const response = await authenticatedFetch(`/api/portfolio-items/${item.id}`, {
+        method: "DELETE",
+      });
+      const result = (await response.json()) as { error?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Unable to delete service",
+          description: result.error ?? "The service could not be deleted.",
+          variant: "error",
+        });
+        return;
+      }
+
+      await fetchPortfolioItems();
+      setSuccessMessage("Portfolio service deleted.");
+    } catch (error) {
+      console.error("Error deleting portfolio item:", error);
+      toast({
+        title: "Unable to delete service",
+        description: "The service could not be deleted.",
+        variant: "error",
+      });
+    }
   };
 
   const moveLineItem = (fromIndex: number, toIndex: number) => {
@@ -982,7 +1148,7 @@ function InvoicePageContent() {
 
     try {
       for (const invoice of selectedInvoices) {
-        if (action === "send" && invoice.status !== "paid" && invoice.status !== "cancelled") {
+        if (action === "send" && invoice.status === "draft") {
           const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" });
           const result = (await response.json()) as { error?: string; code?: string; details?: unknown };
 
@@ -1291,6 +1457,133 @@ function InvoicePageContent() {
         </div>
       ) : null}
 
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-3">
+          <div>
+            <CardTitle>Portfolio Services</CardTitle>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Save repeated services so line items can be filled in one click.</p>
+          </div>
+          <Button type="button" variant="outline" size="sm" onClick={() => setIsPortfolioOpen((current) => !current)}>
+            {isPortfolioOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            {isPortfolioOpen ? "Close" : "Manage"}
+          </Button>
+        </CardHeader>
+        {isPortfolioOpen ? (
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1.5fr_8rem_8rem_7rem_6rem_auto] xl:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="portfolioName">Name</Label>
+                <Input
+                  id="portfolioName"
+                  value={portfolioForm.name}
+                  onChange={(event) => setPortfolioForm((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="Consulting"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="portfolioDescription">Description</Label>
+                <Input
+                  id="portfolioDescription"
+                  value={portfolioForm.description}
+                  onChange={(event) => setPortfolioForm((current) => ({ ...current, description: event.target.value }))}
+                  placeholder="Strategy session"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="portfolioPrice">Unit price</Label>
+                <Input
+                  id="portfolioPrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={portfolioForm.unitPrice}
+                  onChange={(event) => setPortfolioForm((current) => ({ ...current, unitPrice: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="portfolioQuantity">Quantity</Label>
+                <Input
+                  id="portfolioQuantity"
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={portfolioForm.defaultQuantity}
+                  onChange={(event) => setPortfolioForm((current) => ({ ...current, defaultQuantity: event.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="portfolioTax">Tax %</Label>
+                <Input
+                  id="portfolioTax"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={portfolioForm.taxRate}
+                  onChange={(event) => setPortfolioForm((current) => ({ ...current, taxRate: event.target.value }))}
+                  disabled={!vatRegistered}
+                />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={portfolioForm.active}
+                  onChange={(event) => setPortfolioForm((current) => ({ ...current, active: event.target.checked }))}
+                />
+                Active
+              </label>
+              <div className="flex gap-2">
+                <Button type="button" onClick={() => void savePortfolioItem()} disabled={isSavingPortfolioItem}>
+                  {isSavingPortfolioItem ? "Saving..." : editingPortfolioItemId ? "Save" : "Add"}
+                </Button>
+                {editingPortfolioItemId ? (
+                  <Button type="button" variant="outline" onClick={resetPortfolioForm}>
+                    Cancel
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+
+            {portfolioItems.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
+                No saved services yet.
+              </p>
+            ) : (
+              <div className="grid gap-2 md:grid-cols-2">
+                {portfolioItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{item.name}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{item.description}</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {businessCurrency} {item.unitPrice.toFixed(2)} x {item.defaultQuantity}
+                        {vatRegistered ? ` - ${item.taxRate}% tax` : ""} {item.active ? "" : "- inactive"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button type="button" size="sm" variant="outline" onClick={() => editPortfolioItem(item)}>
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
+                        onClick={() => void deletePortfolioItem(item)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        ) : null}
+      </Card>
+
       <Card ref={createInvoiceRef}>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <CardTitle>Create Invoice</CardTitle>
@@ -1418,6 +1711,24 @@ function InvoicePageContent() {
                             </button>
                           </div>
                           <div className="space-y-2">
+                            <Label htmlFor={`portfolio-${index}`}>Use saved service</Label>
+                            <Select
+                              id={`portfolio-${index}`}
+                              defaultValue=""
+                              onChange={(event) => {
+                                applyPortfolioItemToLineItem(index, event.target.value);
+                                event.currentTarget.value = "";
+                              }}
+                            >
+                              <option value="">Choose service</option>
+                              {portfolioItems.filter((portfolioItem) => portfolioItem.active).map((portfolioItem) => (
+                                <option key={portfolioItem.id} value={portfolioItem.id}>
+                                  {portfolioItem.name}
+                                </option>
+                              ))}
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
                             <Label htmlFor={`description-${index}`}>Description</Label>
                             <Input
                               id={`description-${index}`}
@@ -1517,6 +1828,7 @@ function InvoicePageContent() {
                           <TableHead className="w-10 px-1">
                             <span className="sr-only">Reorder</span>
                           </TableHead>
+                          <TableHead className="w-40 px-2">Saved Service</TableHead>
                           <TableHead className="pl-1">Description</TableHead>
                           <TableHead className="w-20 px-2">Qty</TableHead>
                           <TableHead className="w-28 px-2">Unit Price</TableHead>
@@ -1552,6 +1864,22 @@ function InvoicePageContent() {
                               >
                                 <GripVertical className="h-4 w-4" />
                               </button>
+                            </TableCell>
+                            <TableCell className="px-2">
+                              <Select
+                                defaultValue=""
+                                onChange={(event) => {
+                                  applyPortfolioItemToLineItem(index, event.target.value);
+                                  event.currentTarget.value = "";
+                                }}
+                              >
+                                <option value="">Choose</option>
+                                {portfolioItems.filter((portfolioItem) => portfolioItem.active).map((portfolioItem) => (
+                                  <option key={portfolioItem.id} value={portfolioItem.id}>
+                                    {portfolioItem.name}
+                                  </option>
+                                ))}
+                              </Select>
                             </TableCell>
                             <TableCell className="min-w-[14rem] pl-1 pr-2">
                               <Input
@@ -1619,7 +1947,7 @@ function InvoicePageContent() {
                               Add Line Item
                             </Button>
                           </TableCell>
-                          <TableCell colSpan={6} />
+                          <TableCell colSpan={7} />
                         </TableRow>
                       </TableBody>
                     </Table>
@@ -1752,6 +2080,7 @@ function InvoicePageContent() {
                       aria-label="Select all visible invoices"
                     />
                   </TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead>Invoice Number</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Total</TableHead>
@@ -1783,6 +2112,7 @@ function InvoicePageContent() {
                         aria-label={`Select ${invoice.invoiceNumber}`}
                       />
                     </TableCell>
+                    <TableCell>{formatShortDate(invoice.issueDate)}</TableCell>
                     <TableCell>{invoice.invoiceNumber}</TableCell>
                     <TableCell>{getInvoiceClientName(invoice)}</TableCell>
                     <TableCell>
@@ -1860,6 +2190,7 @@ function InvoicePageContent() {
                         />
                         <p className="font-semibold text-slate-900 dark:text-slate-100">{invoice.invoiceNumber}</p>
                       </div>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatShortDate(invoice.issueDate)}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-300">{getInvoiceClientName(invoice)}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-300">
                         {invoice.currency} {invoice.totalAmount.toFixed(2)}

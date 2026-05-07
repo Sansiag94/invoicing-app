@@ -15,7 +15,7 @@ import {
 import { ExpenseRecord, ExpensesPageData, InvoiceCurrency } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
-import { expenseCategoryOptions, getExpenseCategoryLabel } from "@/lib/expenses";
+import { expenseCategoryOptions, getExpenseDisplayCategoryLabel } from "@/lib/expenses";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,6 +53,7 @@ function buildEmptyExpenseForm(currency: InvoiceCurrency): ExpenseFormState {
     vendor: "",
     description: "",
     category: "software",
+    otherCategoryName: "",
     amount: "",
     currency,
     expenseDate: getTodayDateInputValue(),
@@ -162,7 +163,8 @@ export default function ExpensesPage() {
         expense.vendor ?? "",
         expense.description,
         expense.notes ?? "",
-        getExpenseCategoryLabel(expense.category),
+        getExpenseDisplayCategoryLabel(expense.category, expense.otherCategoryName),
+        expense.otherCategoryName ?? "",
       ].join(" ");
 
       return searchable.toLowerCase().includes(normalizedQuery);
@@ -185,6 +187,7 @@ export default function ExpensesPage() {
       vendor: expense.vendor ?? "",
       description: expense.description,
       category: expense.category,
+      otherCategoryName: expense.otherCategoryName ?? "",
       amount: String(expense.amount),
       currency: expense.currency,
       expenseDate: expense.expenseDate.slice(0, 10),
@@ -264,6 +267,7 @@ export default function ExpensesPage() {
           vendor: formState.vendor,
           description: formState.description,
           category: formState.category,
+          otherCategoryName: formState.otherCategoryName,
           amount: Number(formState.amount),
           currency: formState.currency,
           expenseDate: formState.expenseDate,
@@ -322,6 +326,7 @@ export default function ExpensesPage() {
           vendor: formState.vendor,
           description: formState.description,
           category: formState.category,
+          otherCategoryName: formState.otherCategoryName,
           amount: Number(formState.amount),
           currency: formState.currency,
           expenseDate: formState.expenseDate,
@@ -508,21 +513,27 @@ export default function ExpensesPage() {
                 <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                   <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Receipt photo or file</p>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    Optional. On mobile devices you can take a photo directly, or upload an image/PDF later.
+                    Optional. Take a photo from the device camera or choose an existing image/PDF.
                   </p>
-                  <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+                  <div className="mt-3 grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
                     <div className="space-y-2">
-                      <Label htmlFor="createExpenseReceipt">Receipt file</Label>
+                      <Label htmlFor="createExpenseReceiptPhoto">Take photo</Label>
                       <Input
-                        id="createExpenseReceipt"
+                        id="createExpenseReceiptPhoto"
                         type="file"
-                        accept="image/*,application/pdf"
+                        accept="image/*"
                         capture="environment"
                         onChange={(event) => setCreateReceiptFile(event.target.files?.[0] ?? null)}
                       />
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Accepted formats: photo or PDF receipt.
-                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="createExpenseReceiptFile">Choose file</Label>
+                      <Input
+                        id="createExpenseReceiptFile"
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={(event) => setCreateReceiptFile(event.target.files?.[0] ?? null)}
+                      />
                     </div>
                     {createReceiptFile ? (
                       <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
@@ -617,7 +628,7 @@ export default function ExpensesPage() {
                       <TableRow key={expense.id}>
                         <TableCell>{new Date(expense.expenseDate).toLocaleDateString()}</TableCell>
                         <TableCell className="font-medium text-slate-900 dark:text-slate-100">{expense.description}</TableCell>
-                        <TableCell>{getExpenseCategoryLabel(expense.category)}</TableCell>
+                        <TableCell>{getExpenseDisplayCategoryLabel(expense.category, expense.otherCategoryName)}</TableCell>
                         <TableCell>{expense.vendor || "-"}</TableCell>
                         <TableCell>
                           {expense.currency} {formatMoney(expense.amount)}
@@ -674,7 +685,7 @@ export default function ExpensesPage() {
                       <div>
                         <p className="font-semibold text-slate-900 dark:text-slate-100">{expense.description}</p>
                         <p className="text-sm text-slate-600 dark:text-slate-300">{new Date(expense.expenseDate).toLocaleDateString()}</p>
-                        <p className="text-sm text-slate-600 dark:text-slate-300">{getExpenseCategoryLabel(expense.category)}</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-300">{getExpenseDisplayCategoryLabel(expense.category, expense.otherCategoryName)}</p>
                         {expense.vendor ? <p className="text-sm text-slate-600 dark:text-slate-300">{expense.vendor}</p> : null}
                         {expense.receiptUrl ? (
                           <button
@@ -736,7 +747,7 @@ export default function ExpensesPage() {
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                 <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Receipt</p>
                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  Attach an image or PDF so the expense has audit support.
+                  Attach a new camera photo or choose an existing image/PDF.
                 </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Button
@@ -746,7 +757,30 @@ export default function ExpensesPage() {
                   >
                     <label>
                       <Upload className="h-4 w-4" />
-                      {uploadingReceiptId === editingExpense?.id ? "Uploading..." : "Upload Receipt"}
+                      {uploadingReceiptId === editingExpense?.id ? "Uploading..." : "Take Photo"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={(event) => {
+                          const file = event.target.files?.[0] ?? null;
+                          event.target.value = "";
+                          if (editingExpense) {
+                            void handleUploadReceipt(editingExpense.id, file);
+                          }
+                        }}
+                      />
+                    </label>
+                  </Button>
+                  <Button
+                    asChild
+                    variant="outline"
+                    disabled={uploadingReceiptId === editingExpense?.id}
+                  >
+                    <label>
+                      <Upload className="h-4 w-4" />
+                      {uploadingReceiptId === editingExpense?.id ? "Uploading..." : "Choose File"}
                       <input
                         type="file"
                         accept="image/*,application/pdf"

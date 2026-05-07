@@ -23,6 +23,17 @@ export function getExpenseCategoryLabel(category: ExpenseCategory): string {
   return expenseCategoryOptions.find((option) => option.value === category)?.label ?? "Other";
 }
 
+export function getExpenseDisplayCategoryLabel(
+  category: ExpenseCategory,
+  otherCategoryName?: string | null
+): string {
+  if (category === "other" && otherCategoryName?.trim()) {
+    return otherCategoryName.trim();
+  }
+
+  return getExpenseCategoryLabel(category);
+}
+
 export function normalizeExpenseCurrency(value: string | null | undefined, fallback: InvoiceCurrency): InvoiceCurrency {
   return value === "EUR" ? "EUR" : fallback;
 }
@@ -32,6 +43,7 @@ type ExpenseDbRecord = {
   vendor: string | null;
   description: string;
   category: ExpenseCategory;
+  otherCategoryName: string | null;
   amount: number;
   currency: string;
   expenseDate: Date;

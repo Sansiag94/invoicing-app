@@ -6,6 +6,7 @@ import {
   buildPublicInvoiceLink as buildPublicInvoiceLinkValue,
   getPublicInvoiceBaseUrl,
 } from "@/lib/publicInvoiceLink";
+import type { MonthlyReportMetrics } from "@/lib/types";
 
 type SendInvoiceEmailInput = {
   to: string;
@@ -52,6 +53,15 @@ type SendWelcomeEmailInput = {
   to: string;
   appName?: string;
   dashboardLink?: string;
+};
+
+type SendMonthlyReportEmailInput = {
+  to: string;
+  businessName: string;
+  monthLabel: string;
+  currency: string;
+  metrics: MonthlyReportMetrics;
+  analyticsLink: string;
 };
 
 let resendClient: Resend | null = null;
@@ -528,6 +538,103 @@ ${termsUrl}
     dashboardLink: appLink,
     emailId: result.data?.id,
   });
+
+  return result;
+}
+
+export async function sendMonthlyReportEmail({
+  to,
+  businessName,
+  monthLabel,
+  currency,
+  metrics,
+  analyticsLink,
+}: SendMonthlyReportEmailInput) {
+  const from = buildSenderIdentity(businessName);
+  const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
+  const formatMoney = (value: number) => `${currency} ${value.toFixed(2)}`;
+  const safeBusinessName = escapeHtml(businessName);
+  const safeMonthLabel = escapeHtml(monthLabel);
+  const safeAnalyticsLink = escapeHtml(analyticsLink);
+  const { privacyUrl } = getLegalEmailLinks();
+  const safePrivacyUrl = escapeHtml(privacyUrl);
+
+  const text = `${monthLabel} monthly report
+
+Revenue collected: ${formatMoney(metrics.revenue)}
+Expenses booked: ${formatMoney(metrics.expenses)}
+Net result: ${formatMoney(metrics.profit)}
+Issued invoices: ${metrics.issuedCount} for ${formatMoney(metrics.issuedAmount)}
+Open pipeline: ${formatMoney(metrics.openAmount)}
+Overdue exposure: ${formatMoney(metrics.overdueAmount)}
+Average days to pay: ${metrics.averageDaysToPay === null ? "Not enough data" : metrics.averageDaysToPay.toFixed(1)}
+
+Open analytics:
+${analyticsLink}
+
+Privacy notice:
+${privacyUrl}`;
+
+  const result = await getResendClient().emails.send({
+    from,
+    replyTo,
+    to,
+    subject: `${businessName} - ${monthLabel} monthly report`,
+    text,
+    html: `
+      <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
+        <div style="max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 16px; padding: 28px;">
+          <p style="margin: 0 0 12px; color: #64748b; font-size: 13px;">${safeBusinessName}</p>
+          <h2 style="margin: 0 0 10px; color: #0f172a; font-size: 24px;">${safeMonthLabel} monthly report</h2>
+          <p style="margin: 0 0 22px; color: #475569; line-height: 1.6;">
+            Here is the closed-month summary for revenue, expenses, collections, and invoice activity.
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0 0 24px;">
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 16px;">
+              <p style="margin: 0 0 6px; color: #64748b; font-size: 12px;">Revenue collected</p>
+              <p style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700;">${escapeHtml(formatMoney(metrics.revenue))}</p>
+            </div>
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 16px;">
+              <p style="margin: 0 0 6px; color: #64748b; font-size: 12px;">Expenses booked</p>
+              <p style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700;">${escapeHtml(formatMoney(metrics.expenses))}</p>
+            </div>
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 16px;">
+              <p style="margin: 0 0 6px; color: #64748b; font-size: 12px;">Net result</p>
+              <p style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700;">${escapeHtml(formatMoney(metrics.profit))}</p>
+            </div>
+            <div style="border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 16px;">
+              <p style="margin: 0 0 6px; color: #64748b; font-size: 12px;">Invoices issued</p>
+              <p style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700;">${metrics.issuedCount}</p>
+            </div>
+          </div>
+          <div style="margin: 0 0 24px; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px;">
+            <p style="margin: 0 0 8px; color: #475569;">Issued value: <strong style="color:#0f172a;">${escapeHtml(formatMoney(metrics.issuedAmount))}</strong></p>
+            <p style="margin: 0 0 8px; color: #475569;">Open pipeline: <strong style="color:#0f172a;">${escapeHtml(formatMoney(metrics.openAmount))}</strong></p>
+            <p style="margin: 0 0 8px; color: #475569;">Overdue exposure: <strong style="color:#0f172a;">${escapeHtml(formatMoney(metrics.overdueAmount))}</strong></p>
+            <p style="margin: 0; color: #475569;">Average days to pay: <strong style="color:#0f172a;">${metrics.averageDaysToPay === null ? "Not enough data" : metrics.averageDaysToPay.toFixed(1)}</strong></p>
+          </div>
+          <div style="margin: 0 0 18px;">
+            <a href="${safeAnalyticsLink}" style="display: inline-block; padding: 13px 18px; background: #0f172a; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600;">
+              Open Analytics
+            </a>
+          </div>
+          <p style="margin: 14px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.6;">
+            Privacy notice: <a href="${safePrivacyUrl}" style="color: #475569;">${safePrivacyUrl}</a>
+          </p>
+        </div>
+      </div>
+    `,
+  });
+
+  if (result.error) {
+    console.error("[email] Monthly report failed", {
+      to,
+      businessName,
+      monthLabel,
+      error: result.error,
+    });
+    throw new EmailDeliveryError("Failed to send monthly report email");
+  }
 
   return result;
 }

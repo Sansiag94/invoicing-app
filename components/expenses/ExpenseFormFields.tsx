@@ -11,6 +11,7 @@ export type ExpenseFormState = {
   vendor: string;
   description: string;
   category: string;
+  otherCategoryName: string;
   amount: string;
   currency: InvoiceCurrency;
   expenseDate: string;
@@ -66,6 +67,18 @@ export default function ExpenseFormFields({
           ))}
         </Select>
       </div>
+      {formState.category === "other" ? (
+        <div className="space-y-2">
+          <Label htmlFor={`${idPrefix}OtherCategoryName`}>Category Name</Label>
+          <Input
+            id={`${idPrefix}OtherCategoryName`}
+            value={formState.otherCategoryName}
+            onChange={(event) => onChange({ ...formState, otherCategoryName: event.target.value })}
+            placeholder="e.g. Parking"
+            required
+          />
+        </div>
+      ) : null}
       <div className="space-y-2">
         <Label htmlFor={`${idPrefix}Amount`}>Amount</Label>
         <Input

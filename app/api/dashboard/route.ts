@@ -7,6 +7,7 @@ import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
 type RecentInvoiceRow = {
   id: string;
   invoiceNumber: string;
+  issueDate: Date;
   totalAmount: number;
   status: "draft" | "sent" | "paid" | "overdue" | "cancelled";
   currency: "CHF" | "EUR";
@@ -170,6 +171,7 @@ export async function GET(request: Request) {
       SELECT
         ranked."id",
         ranked."invoiceNumber",
+        ranked."issueDate",
         ranked."totalAmount",
         ranked."status",
         ranked."currency",
@@ -178,17 +180,14 @@ export async function GET(request: Request) {
         SELECT
           i."uuid" AS "id",
           i."invoiceNumber",
+          i."issueDate",
           i."totalAmount",
           i."status",
           i."currency",
           i."issuedAt",
           i."createdAt",
           COALESCE(c."companyName", c."contactName", c."email") AS "clientName",
-          CASE
-            WHEN i."invoiceNumber" ~ '^[A-Z0-9]+[0-9]{4}-[0-9]+$' AND i."invoiceNumber" NOT LIKE 'DRAFT-%'
-              THEN 0
-            ELSE 1
-          END AS "sortGroup",
+          CASE WHEN i."status" = 'draft' THEN 0 ELSE 1 END AS "sortGroup",
           CASE
             WHEN i."invoiceNumber" ~ '^[A-Z0-9]+([0-9]{4})-([0-9]+)$' AND i."invoiceNumber" NOT LIKE 'DRAFT-%'
               THEN ((regexp_match(i."invoiceNumber", '^[A-Z0-9]+([0-9]{4})-([0-9]+)$'))[1])::integer
@@ -206,10 +205,10 @@ export async function GET(request: Request) {
       ) AS ranked
       ORDER BY
         ranked."sortGroup" ASC,
-        ranked."sortYear" DESC NULLS LAST,
-        ranked."sortSequence" DESC NULLS LAST,
         COALESCE(ranked."issuedAt", ranked."createdAt") DESC,
-        ranked."createdAt" DESC
+        ranked."createdAt" DESC,
+        ranked."sortYear" DESC NULLS LAST,
+        ranked."sortSequence" DESC NULLS LAST
       LIMIT 5
     `;
 
