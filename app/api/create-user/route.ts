@@ -14,7 +14,6 @@ import {
 import {
   getLegalAcceptanceFromMetadata,
   hasCurrentLegalAcceptance,
-  hasStoredLegalAcceptance,
 } from "@/lib/legalAcceptance";
 import { assertWorkspaceOpen, isWorkspaceClosedError } from "@/lib/workspaceClosure";
 
@@ -46,10 +45,7 @@ export async function POST(request: Request) {
       },
     });
 
-    if (
-      !hasCurrentLegalAcceptance(legalAcceptance) &&
-      (!existingUser || !hasStoredLegalAcceptance(existingUser))
-    ) {
+    if (!existingUser && !hasCurrentLegalAcceptance(legalAcceptance)) {
       return apiError(
         "Terms of Service and Privacy Policy acceptance is required before account setup can continue.",
         422
