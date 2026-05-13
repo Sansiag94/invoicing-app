@@ -871,30 +871,6 @@ export default function SettingsPage() {
             This information appears on invoices, public invoice pages, and payment instructions.
           </p>
         </div>
-        <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 dark:border-slate-800 dark:bg-slate-900">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Plan status</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                {billingStatus
-                  ? `${billingStatus.planTier.toUpperCase()} plan - ${billingStatus.hasUnlimitedInvoices ? "unlimited invoices" : `${billingStatus.remainingInvoices ?? 0} of ${billingStatus.monthlyInvoiceLimit ?? 0} invoices left this month`}`
-                  : "Billing status is loading."}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              {billingStatus?.checkoutAvailable && !billingStatus.hasUnlimitedInvoices ? (
-                <Button size="sm" onClick={() => void openBillingCheckout()} disabled={isOpeningBilling}>
-                  Upgrade
-                </Button>
-              ) : null}
-              {billingStatus?.portalAvailable ? (
-                <Button size="sm" variant="outline" onClick={() => void openBillingPortal()} disabled={isOpeningBilling}>
-                  Manage billing
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        </div>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>Company Information</CardTitle>
