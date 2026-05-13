@@ -254,6 +254,17 @@ export default function PublicInvoicePage() {
     return <div className="mx-auto max-w-[210mm] p-8 text-slate-600">{strings.loadingInvoice}</div>;
   }
 
+  const bankTransferRows = [
+    { label: strings.accountHolder, value: senderName },
+    invoice.business.bankName ? { label: strings.bank, value: invoice.business.bankName } : null,
+    invoice.business.iban ? { label: strings.iban, value: formatIban(invoice.business.iban) } : null,
+    invoice.business.bic ? { label: strings.bicSwift, value: invoice.business.bic } : null,
+    { label: strings.amount, value: `${invoice.currency} ${formatInvoiceMoney(totalAmountDue, invoiceLanguage)}` },
+    paymentReference ? { label: strings.referenceMessage, value: paymentReference } : null,
+  ].filter((row): row is { label: string; value: string } => Boolean(row?.value));
+  const shouldRenderQrBankTransferDetails =
+    canCollectPayment && shouldRenderQRSection && Boolean(invoice.business.bankName || invoice.business.bic);
+
   const qrBillSection = (
     <section className="qr-bill pt-3">
       <div className="relative mb-2">
@@ -708,6 +719,20 @@ export default function PublicInvoicePage() {
         {invoice.paymentNote?.trim() ? (
           <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
             {invoice.paymentNote.trim()}
+          </section>
+        ) : null}
+
+        {shouldRenderQrBankTransferDetails ? (
+          <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-300 bg-white px-4 py-3">
+            <h2 className="mb-2 text-[11px] font-semibold text-slate-900">{strings.internationalBankTransfer}</h2>
+            <dl className="space-y-1.5 text-[10px] leading-[1.35] text-slate-700">
+              {bankTransferRows.map((row) => (
+                <div key={row.label} className="flex items-start justify-between gap-3">
+                  <dt className="font-semibold text-slate-500">{row.label}</dt>
+                  <dd className="text-right text-slate-900">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
         ) : null}
 

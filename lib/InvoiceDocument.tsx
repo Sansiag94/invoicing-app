@@ -15,7 +15,6 @@ import {
   normalizeInvoiceLanguage,
 } from "@/lib/invoiceLanguage";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
-import { buildPublicInvoiceLinkFromToken } from "@/lib/publicInvoiceLink";
 import { getNonVatRegisteredInvoiceNote } from "@/lib/vat";
 
 type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
@@ -119,6 +118,14 @@ function measureNoteBoxHeight(value: string | null): number {
   }
 
   return measureMessageHeight(buildPaymentNoteLines(value)) + mm(6);
+}
+
+function measureBankTransferDetailsHeight(rowCount: number): number {
+  if (rowCount <= 0) {
+    return 0;
+  }
+
+  return mm(10) + rowCount * mm(5);
 }
 
 function measureBlockHeight(lineCount: number, lineHeight: number, gap: number): number {
@@ -659,18 +666,6 @@ function formatIban(value: string | null | undefined): string {
   return compact.match(/.{1,4}/g)?.join(" ") ?? compact;
 }
 
-function buildPublicPaymentLink(publicToken: string | null | undefined): string | null {
-  const normalizedToken = publicToken?.trim();
-  if (!normalizedToken) return null;
-
-  try {
-    return buildPublicInvoiceLinkFromToken(normalizedToken);
-  } catch (error) {
-    console.error("Failed to build public invoice link:", error);
-    return null;
-  }
-}
-
 function normalizeLine(value: string | null | undefined): string | null {
   const normalized = (value ?? "").trim();
   return normalized.length > 0 ? normalized : null;
@@ -895,12 +890,19 @@ const InvoiceDocument = ({
   const additionalInformation =
     qrMetadata?.additionalInformation || buildInvoiceAdditionalInformation(invoice.invoiceNumber, invoiceLanguage);
   const paymentReference = normalizeLine(invoice.reference) ?? invoice.invoiceNumber;
-  const onlinePaymentLink = buildPublicPaymentLink(invoice.publicToken);
   const bankName = normalizeLine(invoice.business.bankName);
   const bic = normalizeLine(invoice.business.bic);
-  const shouldRenderManualTransferSection =
-    !shouldRenderQRSection &&
-    Boolean(onlinePaymentLink || invoice.business.iban || bic || bankName);
+  const bankTransferRows = [
+    { label: strings.accountHolder, value: paymentRecipientName },
+    bankName ? { label: strings.bank, value: bankName } : null,
+    normalizeLine(invoice.business.iban) ? { label: strings.iban, value: paymentAccount } : null,
+    bic ? { label: strings.bicSwift, value: bic } : null,
+    { label: strings.amount, value: `${invoice.currency} ${formatInvoiceMoney(totalAmountDue, invoiceLanguage)}` },
+    paymentReference ? { label: strings.referenceMessage, value: paymentReference } : null,
+  ].filter((row): row is { label: string; value: string } => Boolean(row?.value));
+  const shouldRenderBankTransferDetails = Boolean(
+    bankTransferRows.length > 0 && (bankName || bic || (!shouldRenderQRSection && normalizeLine(invoice.business.iban)))
+  );
 
   const messageText =
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
@@ -932,11 +934,16 @@ const InvoiceDocument = ({
   const firstPageClosingHeight = measureMessageHeight(closingLines);
   const firstPageClosingTop = firstPageTotalsTop + firstPageTotalsHeight + mm(9);
   const firstPagePaymentNoteTop = firstPageClosingTop + firstPageClosingHeight + mm(7);
+  const firstPageBankTransferTop =
+    firstPagePaymentNoteTop + (paymentNote ? measureNoteBoxHeight(paymentNote) + mm(4) : 0);
   const firstPageContentBottom = Math.max(
     firstPageTableTop + firstPageTableHeight,
     firstPageTotalsTop + firstPageTotalsHeight,
     firstPageClosingTop + firstPageClosingHeight,
-    paymentNote ? firstPagePaymentNoteTop + measureNoteBoxHeight(paymentNote) : 0
+    paymentNote ? firstPagePaymentNoteTop + measureNoteBoxHeight(paymentNote) : 0,
+    shouldRenderBankTransferDetails
+      ? firstPageBankTransferTop + measureBankTransferDetailsHeight(bankTransferRows.length)
+      : 0
   );
   const qrTopOnSharedPage = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN - QR_BILL_TOTAL_SPACE;
   const allowQrOnFirstPage = shouldRenderQRSection && firstPageContentBottom + mm(6) <= qrTopOnSharedPage;
@@ -1088,6 +1095,20 @@ const InvoiceDocument = ({
                           {line || " "}
                         </Text>
                       ))}
+                    </View>
+                  ) : null}
+
+                  {shouldRenderBankTransferDetails ? (
+                    <View style={styles.manualPaymentSection}>
+                      <Text style={styles.manualPaymentTitle}>{strings.internationalBankTransfer}</Text>
+                      <View style={styles.manualPaymentDetails}>
+                        {bankTransferRows.map((row) => (
+                          <View key={row.label} style={styles.manualPaymentRow}>
+                            <Text style={styles.manualPaymentLabel}>{row.label}</Text>
+                            <Text style={styles.manualPaymentValue}>{row.value}</Text>
+                          </View>
+                        ))}
+                      </View>
                     </View>
                   ) : null}
                 </>
