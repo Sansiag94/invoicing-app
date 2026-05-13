@@ -23,6 +23,7 @@ import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePage
 import { startClientLogout } from "@/utils/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import BillingPlanChip from "@/components/billing/BillingPlanChip";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -843,9 +844,17 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Workspace details, payments, appearance, and account controls</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Settings</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Workspace details, payments, appearance, and account controls</p>
+        </div>
+        <BillingPlanChip
+          billingStatus={billingStatus}
+          onUpgrade={() => void openBillingCheckout()}
+          onManageBilling={() => void openBillingPortal()}
+          isSubmitting={isOpeningBilling}
+        />
       </div>
 
       {loadError ? (
