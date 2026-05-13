@@ -200,7 +200,6 @@ function InvoicePageContent() {
   const [notes, setNotes] = useState(buildInvoiceNotesTemplate(null, "User_name"));
   const [paymentNote, setPaymentNote] = useState(buildInvoicePaymentNoteTemplate(null, false, ""));
   const [portfolioForm, setPortfolioForm] = useState({
-    name: "",
     description: "",
     unitPrice: "",
     defaultQuantity: "1",
@@ -596,7 +595,6 @@ function InvoicePageContent() {
   const resetPortfolioForm = () => {
     setEditingPortfolioItemId(null);
     setPortfolioForm({
-      name: "",
       description: "",
       unitPrice: "",
       defaultQuantity: "1",
@@ -608,7 +606,6 @@ function InvoicePageContent() {
   const editPortfolioItem = (item: PortfolioItemRecord) => {
     setEditingPortfolioItemId(item.id);
     setPortfolioForm({
-      name: item.name,
       description: item.description,
       unitPrice: String(item.unitPrice),
       defaultQuantity: String(item.defaultQuantity),
@@ -619,10 +616,10 @@ function InvoicePageContent() {
   };
 
   const savePortfolioItem = async () => {
-    if (!portfolioForm.name.trim() || !portfolioForm.description.trim()) {
+    if (!portfolioForm.description.trim()) {
       toast({
         title: "Missing portfolio details",
-        description: "Add a name and description for this service.",
+        description: "Add a description for this service.",
         variant: "error",
       });
       return;
@@ -638,6 +635,7 @@ function InvoicePageContent() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             ...portfolioForm,
+            name: portfolioForm.description,
             unitPrice: Number(portfolioForm.unitPrice),
             defaultQuantity: Number(portfolioForm.defaultQuantity),
             taxRate: Number(portfolioForm.taxRate),
@@ -671,7 +669,7 @@ function InvoicePageContent() {
   };
 
   const deletePortfolioItem = async (item: PortfolioItemRecord) => {
-    const confirmed = window.confirm(`Delete service "${item.name}"?`);
+    const confirmed = window.confirm(`Delete service "${item.description}"?`);
     if (!confirmed) return;
 
     try {
@@ -1460,8 +1458,8 @@ function InvoicePageContent() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
-            <CardTitle>Portfolio Services</CardTitle>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Save repeated services so line items can be filled in one click.</p>
+            <CardTitle>Saved Services</CardTitle>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Save repeated invoice descriptions so line items can be filled in one click.</p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={() => setIsPortfolioOpen((current) => !current)}>
             {isPortfolioOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1470,23 +1468,14 @@ function InvoicePageContent() {
         </CardHeader>
         {isPortfolioOpen ? (
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1.5fr_8rem_8rem_7rem_6rem_auto] xl:items-end">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(18rem,1fr)_8rem_8rem_7rem_6rem_auto] xl:items-end">
               <div className="space-y-2">
-                <Label htmlFor="portfolioName">Name</Label>
-                <Input
-                  id="portfolioName"
-                  value={portfolioForm.name}
-                  onChange={(event) => setPortfolioForm((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="Consulting"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="portfolioDescription">Description</Label>
+                <Label htmlFor="portfolioDescription">Invoice description</Label>
                 <Input
                   id="portfolioDescription"
                   value={portfolioForm.description}
                   onChange={(event) => setPortfolioForm((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Strategy session"
+                  placeholder="Kitchen cleaning"
                 />
               </div>
               <div className="space-y-2">
@@ -1555,8 +1544,7 @@ function InvoicePageContent() {
                     className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">{item.name}</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">{item.description}</p>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{item.description}</p>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                         {businessCurrency} {item.unitPrice.toFixed(2)} x {item.defaultQuantity}
                         {vatRegistered ? ` - ${item.taxRate}% tax` : ""} {item.active ? "" : "- inactive"}
@@ -1723,7 +1711,7 @@ function InvoicePageContent() {
                               <option value="">Choose service</option>
                               {portfolioItems.filter((portfolioItem) => portfolioItem.active).map((portfolioItem) => (
                                 <option key={portfolioItem.id} value={portfolioItem.id}>
-                                  {portfolioItem.name}
+                                  {portfolioItem.description}
                                 </option>
                               ))}
                             </Select>
@@ -1876,7 +1864,7 @@ function InvoicePageContent() {
                                 <option value="">Choose</option>
                                 {portfolioItems.filter((portfolioItem) => portfolioItem.active).map((portfolioItem) => (
                                   <option key={portfolioItem.id} value={portfolioItem.id}>
-                                    {portfolioItem.name}
+                                    {portfolioItem.description}
                                   </option>
                                 ))}
                               </Select>

@@ -18,7 +18,7 @@ export async function GET(request: Request) {
 
     const items = await prisma.portfolioItem.findMany({
       where: { businessId: business.id },
-      orderBy: [{ active: "desc" }, { name: "asc" }],
+      orderBy: [{ active: "desc" }, { description: "asc" }],
     });
 
     return NextResponse.json(items.map(toPortfolioItemRecord));

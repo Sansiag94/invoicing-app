@@ -5,7 +5,6 @@ describe("portfolio helpers", () => {
   it("normalizes service basics", () => {
     expect(
       normalizePortfolioItemInput({
-        name: "Consulting",
         description: "Strategy session",
         unitPrice: "150",
         defaultQuantity: "2",
@@ -13,7 +12,7 @@ describe("portfolio helpers", () => {
         active: false,
       })
     ).toEqual({
-      name: "Consulting",
+      name: "Strategy session",
       description: "Strategy session",
       unitPrice: 150,
       defaultQuantity: 2,
@@ -23,9 +22,9 @@ describe("portfolio helpers", () => {
   });
 
   it("rejects invalid service values", () => {
-    expect(normalizePortfolioItemInput({ name: "", description: "x", unitPrice: 1 })).toBeNull();
-    expect(normalizePortfolioItemInput({ name: "x", description: "x", unitPrice: -1 })).toBeNull();
-    expect(normalizePortfolioItemInput({ name: "x", description: "x", unitPrice: 1, defaultQuantity: 0 })).toBeNull();
+    expect(normalizePortfolioItemInput({ description: "", unitPrice: 1 })).toBeNull();
+    expect(normalizePortfolioItemInput({ description: "x", unitPrice: -1 })).toBeNull();
+    expect(normalizePortfolioItemInput({ description: "x", unitPrice: 1, defaultQuantity: 0 })).toBeNull();
   });
 
   it("serializes portfolio items", () => {

@@ -1,7 +1,7 @@
 import type { PortfolioItemRecord } from "@/lib/types";
 
 export type PortfolioItemInput = {
-  name: unknown;
+  name?: unknown;
   description: unknown;
   unitPrice: unknown;
   defaultQuantity?: unknown;
@@ -52,13 +52,13 @@ function asBoolean(value: unknown, fallback: boolean): boolean {
 }
 
 export function normalizePortfolioItemInput(input: PortfolioItemInput): NormalizedPortfolioItemInput | null {
-  const name = asTrimmedString(input.name);
   const description = asTrimmedString(input.description);
+  const name = asTrimmedString(input.name) ?? description;
   const unitPrice = asNumber(input.unitPrice);
   const defaultQuantity = input.defaultQuantity === undefined ? 1 : asNumber(input.defaultQuantity);
   const taxRate = input.taxRate === undefined ? 0 : asNumber(input.taxRate);
 
-  if (!name || !description || unitPrice === null || defaultQuantity === null || taxRate === null) {
+  if (!description || !name || unitPrice === null || defaultQuantity === null || taxRate === null) {
     return null;
   }
 
