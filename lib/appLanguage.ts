@@ -1,14 +1,10 @@
 import type { AppLanguage } from "@/lib/types";
 
 export const DEFAULT_APP_LANGUAGE: AppLanguage = "en";
-export const SUPPORTED_APP_LANGUAGES: readonly AppLanguage[] = ["en", "de", "es", "fr", "it"] as const;
+export const SUPPORTED_APP_LANGUAGES: readonly AppLanguage[] = ["en"] as const;
 
 export const APP_LANGUAGE_OPTIONS: ReadonlyArray<{ value: AppLanguage; label: string }> = [
   { value: "en", label: "English" },
-  { value: "es", label: "Espanol" },
-  { value: "de", label: "Deutsch" },
-  { value: "fr", label: "Francais" },
-  { value: "it", label: "Italiano" },
 ];
 
 export function isSupportedAppLanguage(value: string | null | undefined): value is AppLanguage {

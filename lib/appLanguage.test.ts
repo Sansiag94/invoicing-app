@@ -6,15 +6,16 @@ import {
 } from "@/lib/appLanguage";
 
 describe("app language helpers", () => {
-  it("normalizes supported app languages", () => {
-    expect(normalizeAppLanguage("ES")).toBe("es");
-    expect(normalizeAppLanguage("de")).toBe("de");
+  it("normalizes app language to English only", () => {
+    expect(normalizeAppLanguage("en")).toBe("en");
+    expect(normalizeAppLanguage("ES")).toBe("en");
+    expect(normalizeAppLanguage("de")).toBe("en");
     expect(normalizeAppLanguage("unknown")).toBe("en");
   });
 
-  it("keeps German labels free of eszett", () => {
+  it("exposes only the English app language option", () => {
     const joinedLabels = APP_LANGUAGE_OPTIONS.map((option) => option.label).join(" ");
-    expect(joinedLabels).not.toContain("ß");
-    expect(SUPPORTED_APP_LANGUAGES).toEqual(["en", "de", "es", "fr", "it"]);
+    expect(joinedLabels).toBe("English");
+    expect(SUPPORTED_APP_LANGUAGES).toEqual(["en"]);
   });
 });

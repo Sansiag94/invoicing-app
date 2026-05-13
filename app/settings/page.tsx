@@ -29,7 +29,6 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
 import { useTheme } from "@/components/ui/theme";
-import { useAppLanguage } from "@/components/ui/i18n";
 import { APP_NAME } from "@/lib/appBrand";
 
 type SettingsPageBootstrap = {
@@ -92,7 +91,6 @@ export default function SettingsPage() {
   const initialBilling = initialSettingsRef.current?.billing ?? null;
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  const { language: appLanguage, setLanguage: setAppLanguage, options: appLanguageOptions, t } = useAppLanguage();
   const { canInstall, install, installHelpText, isInstalled, showInstallInstructions } = usePwa();
   const [businessId, setBusinessId] = useState(initialBusiness?.id ?? "");
   const [name, setName] = useState(initialBusiness?.name ?? "");
@@ -131,7 +129,6 @@ export default function SettingsPage() {
   const [showDisconnectStripeDialog, setShowDisconnectStripeDialog] = useState(false);
   const [showCloseWorkspaceDialog, setShowCloseWorkspaceDialog] = useState(false);
   const [isCompanyInfoOpen, setIsCompanyInfoOpen] = useState(false);
-  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
   const [isLoading, setIsLoading] = useState(() => !initialSettingsRef.current);
   const [loadError, setLoadError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -465,26 +462,6 @@ export default function SettingsPage() {
 
   async function handleSave() {
     await saveBusinessSettings({ successMessage: "Business settings updated" });
-  }
-
-  async function handleAppLanguageChange(nextLanguage: typeof appLanguage) {
-    setIsSavingLanguage(true);
-    try {
-      await setAppLanguage(nextLanguage);
-      toast({
-        title: "Language updated",
-        variant: "success",
-      });
-    } catch (error) {
-      console.error("Unable to update app language:", error);
-      toast({
-        title: "Unable to update language",
-        description: "The app language could not be saved.",
-        variant: "error",
-      });
-    } finally {
-      setIsSavingLanguage(false);
-    }
   }
 
   async function handleInstallApp() {
@@ -1371,32 +1348,6 @@ export default function SettingsPage() {
           <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Device and appearance</h2>
         </div>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("appLanguage")}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                <div className="space-y-2">
-                  <Label htmlFor="appLanguage">{t("appLanguage")}</Label>
-                  <Select
-                    id="appLanguage"
-                    value={appLanguage}
-                    onChange={(event) => void handleAppLanguageChange(event.target.value as typeof appLanguage)}
-                    disabled={isSavingLanguage}
-                  >
-                    {appLanguageOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </Select>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{t("appLanguageHelp")}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card>
             <CardHeader>
               <CardTitle>App Install</CardTitle>
