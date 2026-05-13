@@ -572,9 +572,51 @@ const UI_PHRASES: Record<string, Partial<Record<Exclude<AppLanguage, "en">, stri
   "No matches found.": { es: "Sin resultados.", de: "Keine Treffer gefunden.", fr: "Aucun resultat.", it: "Nessun risultato." },
   "Try a different search term.": { es: "Prueba otro termino de busqueda.", de: "Versuche einen anderen Suchbegriff.", fr: "Essayez un autre terme.", it: "Prova un altro termine." },
   "View": { es: "Ver", de: "Ansehen", fr: "Voir", it: "Vedi" },
+  "Log in": { es: "Iniciar sesion", de: "Anmelden", fr: "Se connecter", it: "Accedi" },
+  "Welcome back": { es: "Bienvenido de nuevo", de: "Willkommen zurueck", fr: "Bon retour", it: "Bentornato" },
+  "Access your workspace and pick up right where your invoicing left off.": { es: "Accede a tu espacio y continua donde dejaste la facturacion.", de: "Greife auf deinen Arbeitsbereich zu und mache dort weiter, wo du aufgehoert hast.", fr: "Accedez a votre espace et reprenez vos factures la ou vous en etiez.", it: "Accedi allo spazio e riprendi dove avevi lasciato." },
+  "Need a new account instead?": { es: "Necesitas una cuenta nueva?", de: "Brauchst du stattdessen ein neues Konto?", fr: "Besoin d'un nouveau compte ?", it: "Serve un nuovo account?" },
+  "Create account": { es: "Crear cuenta", de: "Konto erstellen", fr: "Creer un compte", it: "Crea account" },
+  "Password": { es: "Contrasena", de: "Passwort", fr: "Mot de passe", it: "Password" },
+  "Keep me logged in": { es: "Mantener sesion iniciada", de: "Angemeldet bleiben", fr: "Rester connecte", it: "Resta connesso" },
+  "Stay signed in on this device after you close the browser.": { es: "Mantente conectado en este dispositivo despues de cerrar el navegador.", de: "Auf diesem Geraet angemeldet bleiben, auch nach dem Schliessen des Browsers.", fr: "Restez connecte sur cet appareil apres la fermeture du navigateur.", it: "Rimani connesso su questo dispositivo dopo aver chiuso il browser." },
+  "Logging in...": { es: "Iniciando sesion...", de: "Anmeldung laeuft...", fr: "Connexion...", it: "Accesso..." },
+  "Policy links:": { es: "Enlaces legales:", de: "Rechtliche Links:", fr: "Liens de politique :", it: "Link legali:" },
+  "Terms of Service": { es: "Terminos del servicio", de: "Nutzungsbedingungen", fr: "Conditions de service", it: "Termini di servizio" },
+  "Privacy Policy": { es: "Politica de privacidad", de: "Datenschutzrichtlinie", fr: "Politique de confidentialite", it: "Informativa privacy" },
+  "Create your account": { es: "Crea tu cuenta", de: "Erstelle dein Konto", fr: "Creez votre compte", it: "Crea il tuo account" },
+  "Start with the free plan and upgrade only when your invoicing needs grow.": { es: "Empieza con el plan gratuito y mejora solo cuando crezcan tus necesidades.", de: "Starte mit dem kostenlosen Plan und upgrade erst, wenn dein Bedarf waechst.", fr: "Commencez avec le plan gratuit et evoluez seulement si besoin.", it: "Inizia con il piano gratuito e aggiorna solo quando serve." },
+  "Already have an account?": { es: "Ya tienes una cuenta?", de: "Hast du schon ein Konto?", fr: "Vous avez deja un compte ?", it: "Hai gia un account?" },
+  "Repeat Password": { es: "Repetir contrasena", de: "Passwort wiederholen", fr: "Repeter le mot de passe", it: "Ripeti password" },
+  "I accept the Terms of Service and Privacy Policy.": { es: "Acepto los Terminos del servicio y la Politica de privacidad.", de: "Ich akzeptiere die Nutzungsbedingungen und die Datenschutzrichtlinie.", fr: "J'accepte les Conditions de service et la Politique de confidentialite.", it: "Accetto i Termini di servizio e l'Informativa privacy." },
+  "Creating account...": { es: "Creando cuenta...", de: "Konto wird erstellt...", fr: "Creation du compte...", it: "Creazione account..." },
+  "Forgot your password?": { es: "Olvidaste tu contrasena?", de: "Passwort vergessen?", fr: "Mot de passe oublie ?", it: "Password dimenticata?" },
+  "Enter your email and we will send you a reset link.": { es: "Ingresa tu email y te enviaremos un enlace.", de: "Gib deine E-Mail ein und wir senden dir einen Link.", fr: "Entrez votre email et nous vous enverrons un lien.", it: "Inserisci l'email e ti invieremo un link." },
+  "Back to login": { es: "Volver al inicio de sesion", de: "Zurueck zur Anmeldung", fr: "Retour a la connexion", it: "Torna al login" },
+  "Send reset link": { es: "Enviar enlace", de: "Reset-Link senden", fr: "Envoyer le lien", it: "Invia link" },
+  "Sending reset link...": { es: "Enviando enlace...", de: "Reset-Link wird gesendet...", fr: "Envoi du lien...", it: "Invio link..." },
+  "Reset your password": { es: "Restablece tu contrasena", de: "Passwort zuruecksetzen", fr: "Reinitialiser le mot de passe", it: "Reimposta password" },
+  "Choose a new password for your account.": { es: "Elige una nueva contrasena para tu cuenta.", de: "Waehle ein neues Passwort fuer dein Konto.", fr: "Choisissez un nouveau mot de passe.", it: "Scegli una nuova password." },
+  "Resetting password...": { es: "Restableciendo contrasena...", de: "Passwort wird zurueckgesetzt...", fr: "Reinitialisation...", it: "Reimpostazione password..." },
+  "Confirm your email": { es: "Confirma tu email", de: "E-Mail bestaetigen", fr: "Confirmez votre email", it: "Conferma email" },
+  "Open the verification email, then come back to log in.": { es: "Abre el email de verificacion y vuelve para iniciar sesion.", de: "Oeffne die Bestaetigungs-E-Mail und melde dich danach an.", fr: "Ouvrez l'email de verification puis reconnectez-vous.", it: "Apri l'email di verifica e poi accedi." },
+  "Resend verification email": { es: "Reenviar email de verificacion", de: "Bestaetigungs-E-Mail erneut senden", fr: "Renvoyer l'email de verification", it: "Invia di nuovo email verifica" },
+  "Go to log in": { es: "Ir a iniciar sesion", de: "Zur Anmeldung", fr: "Aller a la connexion", it: "Vai al login" },
+  "This workspace has been closed. Access has been removed, and legally required records may still be retained.": { es: "Este espacio se ha cerrado. El acceso fue eliminado y algunos registros legales pueden conservarse.", de: "Dieser Arbeitsbereich wurde geschlossen. Zugriff wurde entfernt, rechtlich notwendige Daten koennen aufbewahrt werden.", fr: "Cet espace est ferme. L'acces est supprime et certains registres legaux peuvent etre conserves.", it: "Questo spazio e stato chiuso. Accesso rimosso e alcuni record legali possono restare conservati." },
 };
 
 const TRANSLATABLE_ATTRIBUTES = ["placeholder", "aria-label", "title"] as const;
+const APP_LANGUAGE_STORAGE_KEY = "sierra-invoices-app-language";
+
+function readStoredAppLanguage() {
+  if (typeof window === "undefined") return DEFAULT_APP_LANGUAGE;
+  return normalizeAppLanguage(window.localStorage.getItem(APP_LANGUAGE_STORAGE_KEY));
+}
+
+function storeAppLanguage(language: AppLanguage) {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(APP_LANGUAGE_STORAGE_KEY, language);
+}
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -630,32 +672,10 @@ type AppLanguageContextValue = {
 
 const AppLanguageContext = createContext<AppLanguageContextValue | null>(null);
 
-export function AppLanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<AppLanguage>(DEFAULT_APP_LANGUAGE);
+function useUiDomTranslations(language: AppLanguage) {
   const originalTextNodesRef = useRef<WeakMap<Text, string>>(new WeakMap());
   const translatedTextNodesRef = useRef<WeakMap<Text, string>>(new WeakMap());
   const isApplyingTranslationsRef = useRef(false);
-
-  useEffect(() => {
-    let mounted = true;
-
-    (async () => {
-      try {
-        const response = await authenticatedFetch("/api/account", { cache: "no-store" });
-        if (!response.ok) return;
-        const account = (await response.json()) as { appLanguage?: string };
-        if (mounted) {
-          setLanguageState(normalizeAppLanguage(account.appLanguage));
-        }
-      } catch (error) {
-        console.error("Unable to load app language:", error);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (typeof document === "undefined" || !document.body) return;
@@ -786,6 +806,35 @@ export function AppLanguageProvider({ children }: { children: ReactNode }) {
       observer.disconnect();
     };
   }, [language]);
+}
+
+export function AppLanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<AppLanguage>(() => readStoredAppLanguage());
+
+  useUiDomTranslations(language);
+
+  useEffect(() => {
+    let mounted = true;
+
+    (async () => {
+      try {
+        const response = await authenticatedFetch("/api/account", { cache: "no-store" });
+        if (!response.ok) return;
+        const account = (await response.json()) as { appLanguage?: string };
+        const normalized = normalizeAppLanguage(account.appLanguage);
+        storeAppLanguage(normalized);
+        if (mounted) {
+          setLanguageState(normalized);
+        }
+      } catch (error) {
+        console.error("Unable to load app language:", error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const value = useMemo<AppLanguageContextValue>(() => ({
     language,
@@ -794,6 +843,7 @@ export function AppLanguageProvider({ children }: { children: ReactNode }) {
     setLanguage: async (nextLanguage) => {
       const normalized = normalizeAppLanguage(nextLanguage);
       setLanguageState(normalized);
+      storeAppLanguage(normalized);
       const response = await authenticatedFetch("/api/account", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -810,12 +860,27 @@ export function AppLanguageProvider({ children }: { children: ReactNode }) {
 }
 
 export function StaticAppLanguageProvider({ children }: { children: ReactNode }) {
+  const [language, setLanguageState] = useState<AppLanguage>(() => readStoredAppLanguage());
+
+  useUiDomTranslations(language);
+
+  useEffect(() => {
+    function handleStorage(event: StorageEvent) {
+      if (event.key === APP_LANGUAGE_STORAGE_KEY) {
+        setLanguageState(normalizeAppLanguage(event.newValue));
+      }
+    }
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   const value = useMemo<AppLanguageContextValue>(() => ({
-    language: DEFAULT_APP_LANGUAGE,
+    language,
     options: APP_LANGUAGE_OPTIONS,
-    t: (key) => DICTIONARY.en[key],
+    t: (key) => DICTIONARY[language][key] ?? DICTIONARY.en[key],
     setLanguage: async () => {},
-  }), []);
+  }), [language]);
 
   return <AppLanguageContext.Provider value={value}>{children}</AppLanguageContext.Provider>;
 }
