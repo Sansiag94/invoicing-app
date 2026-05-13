@@ -4,8 +4,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, CreditCard, ExternalLink, Moon, RefreshCw, Save, Sun, Trash2, Upload } from "lucide-react";
-import { usePwa } from "@/components/PwaProvider";
+import { ChevronDown, ChevronUp, CreditCard, ExternalLink, RefreshCw, Save, Trash2, Upload } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { formatSequentialInvoiceNumber, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -29,8 +28,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/components/ui/toast";
-import { useTheme } from "@/components/ui/theme";
-import { APP_NAME } from "@/lib/appBrand";
 
 type SettingsPageBootstrap = {
   business: BusinessSettingsData;
@@ -91,8 +88,6 @@ export default function SettingsPage() {
   const initialBusiness = initialSettingsRef.current?.business;
   const initialBilling = initialSettingsRef.current?.billing ?? null;
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
-  const { canInstall, install, installHelpText, isInstalled, showInstallInstructions } = usePwa();
   const [businessId, setBusinessId] = useState(initialBusiness?.id ?? "");
   const [name, setName] = useState(initialBusiness?.name ?? "");
   const [ownerName, setOwnerName] = useState(initialBusiness?.ownerName ?? "");
@@ -463,34 +458,6 @@ export default function SettingsPage() {
 
   async function handleSave() {
     await saveBusinessSettings({ successMessage: "Business settings updated" });
-  }
-
-  async function handleInstallApp() {
-    const outcome = await install();
-
-    if (outcome === "accepted") {
-      toast({
-        title: "App installed",
-        description: `${APP_NAME} is now available from your device home screen.`,
-        variant: "success",
-      });
-      return;
-    }
-
-    if (outcome === "dismissed") {
-      toast({
-        title: "Install dismissed",
-        description: "You can install the app later from the browser menu or prompt.",
-        variant: "info",
-      });
-      return;
-    }
-
-    toast({
-      title: "Install instructions",
-      description: installHelpText,
-      variant: "info",
-    });
   }
 
   async function refreshStripeStatus(options?: { showSuccessToast?: boolean }) {
@@ -1288,124 +1255,6 @@ export default function SettingsPage() {
                     ) : null}
                   </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Help</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Open the guide when you need it</h2>
-        </div>
-        <Card>
-          <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Step-by-step help guide</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Use the guide for setup steps, invoice numbering, Stripe, expenses, and client import questions.
-              </p>
-              {billingStatus?.supportEmail ? (
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Support:{" "}
-                  <a
-                    href={`mailto:${billingStatus.supportEmail}`}
-                    className="font-medium text-slate-700 underline underline-offset-4 dark:text-slate-200"
-                  >
-                    {billingStatus.supportEmail}
-                  </a>
-                </p>
-              ) : null}
-            </div>
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
-              <Button asChild className="w-full sm:w-auto">
-                <Link href="/help?from=settings">Open help guide</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">App preferences</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Device and appearance</h2>
-        </div>
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>App Install</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40">
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                    {isInstalled
-                      ? "Installed on this device"
-                      : canInstall
-                        ? "Ready to install"
-                        : showInstallInstructions
-                          ? "Install from your browser menu"
-                          : "Open in a supported browser to install"}
-                  </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Installing gives {APP_NAME} its own home-screen icon and a cleaner app-like window.
-                    Core pages and the offline screen are cached for weak connections.
-                  </p>
-                  {!isInstalled ? <p className="text-xs text-slate-500 dark:text-slate-400">{installHelpText}</p> : null}
-                </div>
-                {!isInstalled ? (
-                  <Button onClick={() => void handleInstallApp()} className="w-full sm:w-auto">
-                    {canInstall ? "Install App" : "Show Install Steps"}
-                  </Button>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Appearance</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col gap-4 rounded-xl border border-slate-200 p-4 dark:border-slate-800 dark:bg-slate-950/40 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <Label htmlFor="themeToggle">Dark mode</Label>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
-                    Switch the workspace between light and dark.
-                  </p>
-                </div>
-                <button
-                  id="themeToggle"
-                  type="button"
-                  aria-pressed={theme === "dark"}
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                  className="inline-flex w-full items-center justify-between rounded-full border px-3 py-2 text-sm font-medium transition-colors sm:min-w-44 sm:w-auto"
-                  style={{
-                    borderColor: theme === "dark" ? "#475569" : "#cbd5e1",
-                    backgroundColor: theme === "dark" ? "#0f172a" : "#ffffff",
-                    color: theme === "dark" ? "#f8fafc" : "#0f172a",
-                  }}
-                >
-                  <span className="flex items-center gap-2">
-                    {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                    {theme === "dark" ? "Dark mode" : "Light mode"}
-                  </span>
-                  <span
-                    className="relative h-6 w-11 overflow-hidden rounded-full transition-colors"
-                    style={{
-                      backgroundColor: theme === "dark" ? "#334155" : "#cbd5e1",
-                    }}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-5 w-5 rounded-full shadow-sm transition-all ${
-                        theme === "dark" ? "left-0.5" : "left-[22px]"
-                      }`}
-                      style={{ backgroundColor: "#ffffff" }}
-                    />
-                  </span>
-                </button>
               </div>
             </CardContent>
           </Card>

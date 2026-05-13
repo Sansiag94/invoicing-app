@@ -4,11 +4,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Bell, Download, LifeBuoy, LogOut, Menu, Search, Settings } from "lucide-react";
+import { Bell, Download, LifeBuoy, LogOut, Menu, Moon, Search, Settings, Sun } from "lucide-react";
 import { WorkspaceNotification } from "@/lib/types";
 import { usePwa } from "@/components/PwaProvider";
 import { Input } from "@/components/ui/input";
 import { useAppLanguage } from "@/components/ui/i18n";
+import { useTheme } from "@/components/ui/theme";
 import { useToast } from "@/components/ui/toast";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
@@ -98,6 +99,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const accountRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const { canInstall, install, isInstalled, showInstallInstructions } = usePwa();
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -678,6 +680,31 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                     {t("installApp")}
                   </button>
                 ) : null}
+                <button
+                  type="button"
+                  className="mt-1 inline-flex w-full items-center justify-between gap-3 rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
+                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                  aria-pressed={theme === "dark"}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                    {theme === "dark" ? "Dark mode" : "Light mode"}
+                  </span>
+                  <span
+                    className={cn(
+                      "relative h-5 w-9 rounded-full transition-colors",
+                      theme === "dark" ? "bg-slate-700" : "bg-slate-300"
+                    )}
+                    aria-hidden="true"
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all",
+                        theme === "dark" ? "left-0.5" : "left-[18px]"
+                      )}
+                    />
+                  </span>
+                </button>
                 <button
                   type="button"
                   className="mt-1 inline-flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
