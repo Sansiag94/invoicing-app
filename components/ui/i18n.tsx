@@ -519,13 +519,91 @@ const UI_PHRASES: Record<string, Partial<Record<Exclude<AppLanguage, "en">, stri
   "Loading expenses...": { es: "Cargando gastos...", de: "Ausgaben werden geladen...", fr: "Chargement des depenses...", it: "Caricamento spese..." },
   "Unable to load expenses.": { es: "No se pudieron cargar los gastos.", de: "Ausgaben konnten nicht geladen werden.", fr: "Impossible de charger les depenses.", it: "Impossibile caricare le spese." },
   "Unable to load analytics.": { es: "No se pudieron cargar las analiticas.", de: "Analysen konnten nicht geladen werden.", fr: "Impossible de charger les analyses.", it: "Impossibile caricare le analisi." },
+  "Filter:": { es: "Filtro:", de: "Filter:", fr: "Filtre :", it: "Filtro:" },
+  "Showing": { es: "Mostrando", de: "Zeige", fr: "Affichage", it: "Mostro" },
+  "expense": { es: "gasto", de: "Ausgabe", fr: "depense", it: "spesa" },
+  "expenses": { es: "gastos", de: "Ausgaben", fr: "depenses", it: "spese" },
+  "invoice": { es: "factura", de: "Rechnung", fr: "facture", it: "fattura" },
+  "invoices": { es: "facturas", de: "Rechnungen", fr: "factures", it: "fatture" },
+  "client": { es: "cliente", de: "Kunde", fr: "client", it: "cliente" },
+  "clients": { es: "clientes", de: "Kunden", fr: "clients", it: "clienti" },
+  "totaling": { es: "por un total de", de: "mit Summe", fr: "totalisant", it: "per un totale di" },
+  "currently overdue": { es: "vencido actualmente", de: "aktuell ueberfaellig", fr: "actuellement en retard", it: "attualmente scaduto" },
+  "needs follow-up": { es: "necesita seguimiento", de: "braucht Nachfassung", fr: "necessite une relance", it: "richiede follow-up" },
+  "draft, sent, or overdue": { es: "borrador, enviada o vencida", de: "Entwurf, gesendet oder ueberfaellig", fr: "brouillon, envoyee ou en retard", it: "bozza, inviata o scaduta" },
+  "Draft, sent, and overdue": { es: "Borradores, enviadas y vencidas", de: "Entwuerfe, gesendete und ueberfaellige", fr: "Brouillons, envoyees et en retard", it: "Bozze, inviate e scadute" },
+  "not yet paid": { es: "aun no pagadas", de: "noch nicht bezahlt", fr: "pas encore payees", it: "non ancora pagate" },
+  "official invoice": { es: "factura oficial", de: "offizielle Rechnung", fr: "facture officielle", it: "fattura ufficiale" },
+  "issued in range": { es: "emitida en el rango", de: "im Zeitraum ausgestellt", fr: "emise dans la periode", it: "emessa nel periodo" },
+  "Cash received": { es: "Dinero recibido", de: "Zahlungen erhalten", fr: "Encaissements recus", it: "Incassi ricevuti" },
+  "Selected": { es: "Seleccionado", de: "Ausgewaehlt", fr: "Selectionne", it: "Selezionato" },
+  "Selected invoices sent.": { es: "Facturas seleccionadas enviadas.", de: "Ausgewaehlte Rechnungen gesendet.", fr: "Factures selectionnees envoyees.", it: "Fatture selezionate inviate." },
+  "Selected invoices marked as paid.": { es: "Facturas seleccionadas marcadas como pagadas.", de: "Ausgewaehlte Rechnungen als bezahlt markiert.", fr: "Factures selectionnees marquees payees.", it: "Fatture selezionate segnate pagate." },
+  "Selected invoices deleted.": { es: "Facturas seleccionadas eliminadas.", de: "Ausgewaehlte Rechnungen geloescht.", fr: "Factures selectionnees supprimees.", it: "Fatture selezionate eliminate." },
+  "Send Invoice": { es: "Enviar factura", de: "Rechnung senden", fr: "Envoyer la facture", it: "Invia fattura" },
+  "Send Reminder": { es: "Enviar recordatorio", de: "Erinnerung senden", fr: "Envoyer une relance", it: "Invia promemoria" },
+  "Mark Unpaid": { es: "Marcar pendiente", de: "Als unbezahlt markieren", fr: "Marquer impayee", it: "Segna non pagata" },
+  "Reopen Invoice": { es: "Reabrir factura", de: "Rechnung wieder oeffnen", fr: "Rouvrir la facture", it: "Riapri fattura" },
+  "Reopen & Edit": { es: "Reabrir y editar", de: "Wieder oeffnen & bearbeiten", fr: "Rouvrir et modifier", it: "Riapri e modifica" },
+  "Preview": { es: "Vista previa", de: "Vorschau", fr: "Apercu", it: "Anteprima" },
+  "Download PDF": { es: "Descargar PDF", de: "PDF herunterladen", fr: "Telecharger PDF", it: "Scarica PDF" },
+  "Copy Link": { es: "Copiar enlace", de: "Link kopieren", fr: "Copier le lien", it: "Copia link" },
+  "Delete Invoices": { es: "Eliminar facturas", de: "Rechnungen loeschen", fr: "Supprimer les factures", it: "Elimina fatture" },
+  "Delete invoice": { es: "Eliminar factura", de: "Rechnung loeschen", fr: "Supprimer la facture", it: "Elimina fattura" },
+  "Save changes": { es: "Guardar cambios", de: "Aenderungen speichern", fr: "Enregistrer les modifications", it: "Salva modifiche" },
+  "Saving changes...": { es: "Guardando cambios...", de: "Aenderungen werden gespeichert...", fr: "Enregistrement des modifications...", it: "Salvataggio modifiche..." },
+  "Save New Password": { es: "Guardar nueva contrasena", de: "Neues Passwort speichern", fr: "Enregistrer le nouveau mot de passe", it: "Salva nuova password" },
+  "Updating password...": { es: "Actualizando contrasena...", de: "Passwort wird aktualisiert...", fr: "Mise a jour du mot de passe...", it: "Aggiornamento password..." },
+  "Current Password": { es: "Contrasena actual", de: "Aktuelles Passwort", fr: "Mot de passe actuel", it: "Password attuale" },
+  "New Password": { es: "Nueva contrasena", de: "Neues Passwort", fr: "Nouveau mot de passe", it: "Nuova password" },
+  "Repeat New Password": { es: "Repetir nueva contrasena", de: "Neues Passwort wiederholen", fr: "Repeter le nouveau mot de passe", it: "Ripeti nuova password" },
+  "Enter your current password": { es: "Ingresa tu contrasena actual", de: "Aktuelles Passwort eingeben", fr: "Entrez votre mot de passe actuel", it: "Inserisci la password attuale" },
+  "At least 8 characters": { es: "Minimo 8 caracteres", de: "Mindestens 8 Zeichen", fr: "Au moins 8 caracteres", it: "Almeno 8 caratteri" },
+  "Repeat the new password": { es: "Repite la nueva contrasena", de: "Neues Passwort wiederholen", fr: "Repetez le nouveau mot de passe", it: "Ripeti la nuova password" },
+  "Forgot password?": { es: "Olvidaste la contrasena?", de: "Passwort vergessen?", fr: "Mot de passe oublie ?", it: "Password dimenticata?" },
+  "Back to settings": { es: "Volver a ajustes", de: "Zurueck zu Einstellungen", fr: "Retour aux parametres", it: "Torna alle impostazioni" },
+  "Checking your session...": { es: "Comprobando tu sesion...", de: "Sitzung wird geprueft...", fr: "Verification de la session...", it: "Controllo sessione..." },
+  "Search": { es: "Buscar", de: "Suchen", fr: "Rechercher", it: "Cerca" },
+  "Account": { es: "Cuenta", de: "Konto", fr: "Compte", it: "Account" },
+  "Sign out": { es: "Cerrar sesion", de: "Abmelden", fr: "Se deconnecter", it: "Esci" },
+  "Notifications": { es: "Notificaciones", de: "Benachrichtigungen", fr: "Notifications", it: "Notifiche" },
+  "No new notifications.": { es: "Sin notificaciones nuevas.", de: "Keine neuen Benachrichtigungen.", fr: "Aucune nouvelle notification.", it: "Nessuna nuova notifica." },
+  "Search invoices, clients, or pages": { es: "Buscar facturas, clientes o paginas", de: "Rechnungen, Kunden oder Seiten suchen", fr: "Rechercher factures, clients ou pages", it: "Cerca fatture, clienti o pagine" },
+  "No matches found.": { es: "Sin resultados.", de: "Keine Treffer gefunden.", fr: "Aucun resultat.", it: "Nessun risultato." },
+  "Try a different search term.": { es: "Prueba otro termino de busqueda.", de: "Versuche einen anderen Suchbegriff.", fr: "Essayez un autre terme.", it: "Prova un altro termine." },
+  "View": { es: "Ver", de: "Ansehen", fr: "Voir", it: "Vedi" },
 };
 
 const TRANSLATABLE_ATTRIBUTES = ["placeholder", "aria-label", "title"] as const;
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildPhraseRegExp(phrase: string) {
+  const startsWithWord = /^[A-Za-z0-9]/.test(phrase);
+  const endsWithWord = /[A-Za-z0-9]$/.test(phrase);
+  return new RegExp(
+    `${startsWithWord ? "\\b" : ""}${escapeRegExp(phrase)}${endsWithWord ? "\\b" : ""}`,
+    "g"
+  );
+}
+
+const SORTED_UI_PHRASES = Object.keys(UI_PHRASES).sort((left, right) => right.length - left.length);
+
 function translateUiPhrase(phrase: string, language: AppLanguage) {
   if (language === "en") return phrase;
-  return UI_PHRASES[phrase]?.[language] ?? phrase;
+  const exactTranslation = UI_PHRASES[phrase]?.[language];
+  if (exactTranslation) return exactTranslation;
+
+  return SORTED_UI_PHRASES.reduce((translated, sourcePhrase) => {
+    const replacement = UI_PHRASES[sourcePhrase]?.[language];
+    if (!replacement || !translated.includes(sourcePhrase)) {
+      return translated;
+    }
+
+    return translated.replace(buildPhraseRegExp(sourcePhrase), replacement);
+  }, phrase);
 }
 
 function getKnownUiVariants(phrase: string) {
@@ -555,6 +633,7 @@ const AppLanguageContext = createContext<AppLanguageContextValue | null>(null);
 export function AppLanguageProvider({ children }: { children: ReactNode }) {
   const [language, setLanguageState] = useState<AppLanguage>(DEFAULT_APP_LANGUAGE);
   const originalTextNodesRef = useRef<WeakMap<Text, string>>(new WeakMap());
+  const translatedTextNodesRef = useRef<WeakMap<Text, string>>(new WeakMap());
   const isApplyingTranslationsRef = useRef(false);
 
   useEffect(() => {
@@ -583,6 +662,7 @@ export function AppLanguageProvider({ children }: { children: ReactNode }) {
 
     let animationFrame: number | null = null;
     const originalTextNodes = originalTextNodesRef.current;
+    const translatedTextNodes = translatedTextNodesRef.current;
 
     const shouldSkipElement = (element: Element | null) => {
       if (!element) return true;
@@ -593,8 +673,9 @@ export function AppLanguageProvider({ children }: { children: ReactNode }) {
       if (shouldSkipElement(node.parentElement)) return;
 
       const current = node.textContent ?? "";
+      const lastTranslated = translatedTextNodes.get(node);
       let original = originalTextNodes.get(node);
-      if (original) {
+      if (original && current !== lastTranslated) {
         const currentTrimmed = current.trim();
         const originalTrimmed = original.trim();
         if (currentTrimmed && !getKnownUiVariants(originalTrimmed).has(currentTrimmed)) {
@@ -614,6 +695,7 @@ export function AppLanguageProvider({ children }: { children: ReactNode }) {
       if (node.textContent !== next) {
         node.textContent = next;
       }
+      translatedTextNodes.set(node, next);
     };
 
     const applyAttributeTranslation = (element: Element) => {
@@ -624,11 +706,13 @@ export function AppLanguageProvider({ children }: { children: ReactNode }) {
         if (!current) return;
 
         const originalAttribute = attributeOriginalName(attribute);
+        const translatedAttribute = `data-ui-translated-${attribute.replace(/[^a-z]/gi, "-")}`;
+        const lastTranslated = element.getAttribute(translatedAttribute);
         let original = element.getAttribute(originalAttribute);
         if (!element.hasAttribute(originalAttribute)) {
           original = current;
           element.setAttribute(originalAttribute, original);
-        } else if (original) {
+        } else if (original && current !== lastTranslated) {
           const currentTrimmed = current.trim();
           const originalTrimmed = original.trim();
           if (currentTrimmed && !getKnownUiVariants(originalTrimmed).has(currentTrimmed)) {
@@ -646,6 +730,7 @@ export function AppLanguageProvider({ children }: { children: ReactNode }) {
         if (element.getAttribute(attribute) !== next) {
           element.setAttribute(attribute, next);
         }
+        element.setAttribute(translatedAttribute, next);
       });
     };
 
