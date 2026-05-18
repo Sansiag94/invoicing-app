@@ -15,7 +15,6 @@ import {
   normalizeInvoiceLanguage,
 } from "@/lib/invoiceLanguage";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
-import { getNonVatRegisteredInvoiceNote } from "@/lib/vat";
 
 type InvoiceWithRelations = Prisma.InvoiceGetPayload<{
   include: {
@@ -646,6 +645,10 @@ const styles = StyleSheet.create({
     lineHeight: 1.35,
     color: "#374151",
   },
+  paymentNoteTitle: {
+    fontWeight: "bold",
+    color: "#111827",
+  },
 });
 
 function formatQuantity(value: number): string {
@@ -882,19 +885,14 @@ const InvoiceDocument = ({
   const additionalInformation =
     qrMetadata?.additionalInformation || buildInvoiceAdditionalInformation(invoice.invoiceNumber, invoiceLanguage);
   const bic = normalizeLine(invoice.business.bic);
-  const compactBankTransferLine =
-    bic || normalizeLine(invoice.business.iban)
-      ? `For direct bank transfer: ${normalizeLine(invoice.business.iban) ? `IBAN ${paymentAccount}` : ""}${
-          bic ? `${normalizeLine(invoice.business.iban) ? "; " : ""}${strings.bicSwift} ${bic}` : ""
-        }.`
-      : null;
+  const compactBankTransferLine = bic ? `Direct bank transfer: ${strings.bicSwift} ${bic}` : null;
 
   const messageText =
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
-  const invoiceVatNote = getNonVatRegisteredInvoiceNote(invoice.business);
-  const closingLines = buildMessageLines([messageText, invoiceVatNote].filter(Boolean).join("\n\n"));
+  const closingLines = buildMessageLines(messageText);
   const paymentNote = normalizeLine(invoice.paymentNote);
-  const effectivePaymentNote = [paymentNote, compactBankTransferLine].filter(Boolean).join("\n") || null;
+  const paymentNoteLines = [paymentNote, compactBankTransferLine].filter(Boolean);
+  const effectivePaymentNote = paymentNoteLines.length > 0 ? ["Payment options", ...paymentNoteLines].join("\n") : null;
   const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
   const recipientLineCount = toCompactAddressLines(clientAddress).length + (clientVatNumber ? 1 : 0);
   const sellerHeaderHeight =
@@ -1072,7 +1070,10 @@ const InvoiceDocument = ({
                   {effectivePaymentNote ? (
                     <View style={styles.paymentNoteBox}>
                       {buildPaymentNoteLines(effectivePaymentNote).map((line, index) => (
-                        <Text key={`payment-note-line-${pageIndex}-${index}`} style={styles.paymentNoteLine}>
+                        <Text
+                          key={`payment-note-line-${pageIndex}-${index}`}
+                          style={[styles.paymentNoteLine, index === 0 ? styles.paymentNoteTitle : {}]}
+                        >
                           {line || " "}
                         </Text>
                       ))}

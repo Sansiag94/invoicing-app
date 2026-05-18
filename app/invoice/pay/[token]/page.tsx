@@ -18,7 +18,6 @@ import {
 import { getInvoiceSenderName } from "@/lib/business";
 import { PublicInvoiceDetails } from "@/lib/types";
 import { buildPublicInvoiceLinkFromToken } from "@/lib/publicInvoiceLink";
-import { getNonVatRegisteredInvoiceNote } from "@/lib/vat";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -262,13 +261,11 @@ export default function PublicInvoicePage() {
     { label: strings.amount, value: `${invoice.currency} ${formatInvoiceMoney(totalAmountDue, invoiceLanguage)}` },
     paymentReference ? { label: strings.referenceMessage, value: paymentReference } : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row?.value));
-  const compactBankTransferLine =
-    invoice.business.iban || invoice.business.bic
-      ? `For direct bank transfer: ${invoice.business.iban ? `IBAN ${formatIban(invoice.business.iban)}` : ""}${
-          invoice.business.bic ? `${invoice.business.iban ? "; " : ""}${strings.bicSwift} ${invoice.business.bic}` : ""
-        }.`
-      : null;
-  const effectivePaymentNote = [invoice.paymentNote?.trim() || null, compactBankTransferLine].filter(Boolean).join("\n");
+  const compactBankTransferLine = invoice.business.bic
+    ? `Direct bank transfer: ${strings.bicSwift} ${invoice.business.bic}`
+    : null;
+  const paymentNoteLines = [invoice.paymentNote?.trim() || null, compactBankTransferLine].filter(Boolean);
+  const effectivePaymentNote = paymentNoteLines.length > 0 ? ["Payment options", ...paymentNoteLines].join("\n") : null;
 
   const qrBillSection = (
     <section className="qr-bill pt-3">
@@ -716,14 +713,21 @@ export default function PublicInvoicePage() {
         </section>
 
         <section className="mt-6 max-w-[120mm] text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
-          {[invoice.notes?.trim() ? invoice.notes.trim() : defaultMessage, invoice ? getNonVatRegisteredInvoiceNote(invoice.business) : null]
-            .filter(Boolean)
-            .join("\n\n")}
+          {invoice.notes?.trim() ? invoice.notes.trim() : defaultMessage}
         </section>
 
         {effectivePaymentNote ? (
-          <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
-            {effectivePaymentNote}
+          <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-[1.35] text-slate-700">
+            {paymentNoteLines.length > 0 ? (
+              <>
+                <p className="font-semibold text-slate-900">Payment options</p>
+                <div className="mt-1 space-y-1 whitespace-pre-line">
+                  {paymentNoteLines.map((line) => (
+                    <p key={line}>{line}</p>
+                  ))}
+                </div>
+              </>
+            ) : null}
           </section>
         ) : null}
 
