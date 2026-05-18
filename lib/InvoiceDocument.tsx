@@ -728,15 +728,25 @@ function paginateLineItems<T>(
   items: T[],
   includeQr: boolean,
   allowQrOnFirstPage: boolean,
-  forceClosingContinuation: boolean
-) : { pages: T[][]; qrPageIndex: number | null; closingPageIndex: number | null; standaloneQrPage: boolean } {
+  forceLineItemContinuation: boolean,
+  forceStandaloneClosingPage: boolean
+): {
+  pages: T[][];
+  qrPageIndex: number | null;
+  totalsPageIndex: number;
+  closingPageIndex: number | null;
+  standaloneClosingPage: boolean;
+  standaloneQrPage: boolean;
+} {
   if (!includeQr) {
     const pages = paginateWithoutQr(items);
-    if (forceClosingContinuation && pages.length === 1 && items.length > 1) {
+    if (forceLineItemContinuation && pages.length === 1 && items.length > 1) {
       return {
         pages: [items.slice(0, -1), items.slice(-1)],
         qrPageIndex: null,
-        closingPageIndex: 1,
+        totalsPageIndex: 1,
+        closingPageIndex: forceStandaloneClosingPage ? null : 1,
+        standaloneClosingPage: forceStandaloneClosingPage,
         standaloneQrPage: false,
       };
     }
@@ -744,18 +754,22 @@ function paginateLineItems<T>(
     return {
       pages,
       qrPageIndex: null,
-      closingPageIndex: pages.length - 1,
+      totalsPageIndex: pages.length - 1,
+      closingPageIndex: forceStandaloneClosingPage ? null : pages.length - 1,
+      standaloneClosingPage: forceStandaloneClosingPage,
       standaloneQrPage: false,
     };
   }
 
   const pages = paginateWithoutQr(items);
 
-  if (forceClosingContinuation && pages.length === 1 && items.length > 1) {
+  if (forceLineItemContinuation && pages.length === 1 && items.length > 1) {
     return {
       pages: [items.slice(0, -1), items.slice(-1)],
       qrPageIndex: null,
-      closingPageIndex: 1,
+      totalsPageIndex: 1,
+      closingPageIndex: forceStandaloneClosingPage ? null : 1,
+      standaloneClosingPage: forceStandaloneClosingPage,
       standaloneQrPage: true,
     };
   }
@@ -764,7 +778,9 @@ function paginateLineItems<T>(
     return {
       pages,
       qrPageIndex: 0,
+      totalsPageIndex: 0,
       closingPageIndex: 0,
+      standaloneClosingPage: false,
       standaloneQrPage: false,
     };
   }
@@ -772,7 +788,9 @@ function paginateLineItems<T>(
   return {
     pages,
     qrPageIndex: null,
-    closingPageIndex: pages.length - 1,
+    totalsPageIndex: pages.length - 1,
+    closingPageIndex: forceStandaloneClosingPage ? null : pages.length - 1,
+    standaloneClosingPage: forceStandaloneClosingPage,
     standaloneQrPage: true,
   };
 }
@@ -937,28 +955,84 @@ const InvoiceDocument = ({
   const firstPageClosingHeight = measureMessageHeight(closingLines);
   const firstPageClosingTop = firstPageTotalsTop + firstPageTotalsHeight + mm(9);
   const firstPagePaymentNoteTop = firstPageClosingTop + firstPageClosingHeight + mm(7);
+  const firstPageTotalsBottom = firstPageTotalsTop + firstPageTotalsHeight;
   const firstPageContentBottom = Math.max(
     firstPageTableTop + firstPageTableHeight,
-    firstPageTotalsTop + firstPageTotalsHeight,
+    firstPageTotalsBottom,
     firstPageClosingTop + firstPageClosingHeight,
     effectivePaymentNote ? firstPagePaymentNoteTop + measureNoteBoxHeight(effectivePaymentNote) : 0
   );
   const qrTopOnSharedPage = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN - QR_BILL_TOTAL_SPACE;
-  const allowQrOnFirstPage = shouldRenderQRSection && firstPageContentBottom + mm(6) <= qrTopOnSharedPage;
-  const forceClosingContinuation = firstPageContentBottom + mm(6) > A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN;
-  const { pages, qrPageIndex, closingPageIndex, standaloneQrPage } = paginateLineItems(
+  const pageContentBottomLimit = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN;
+  const forceLineItemContinuation = firstPageTotalsBottom + mm(6) > pageContentBottomLimit;
+  const forceStandaloneClosingPage = firstPageContentBottom + mm(6) > pageContentBottomLimit;
+  const allowQrOnFirstPage =
+    shouldRenderQRSection && !forceStandaloneClosingPage && firstPageContentBottom + mm(6) <= qrTopOnSharedPage;
+  const { pages, qrPageIndex, totalsPageIndex, closingPageIndex, standaloneClosingPage, standaloneQrPage } = paginateLineItems(
     invoice.lineItems,
     shouldRenderQRSection,
     allowQrOnFirstPage,
-    forceClosingContinuation
+    forceLineItemContinuation,
+    forceStandaloneClosingPage
   );
   const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
+  const renderTotalsBlock = () => (
+    <View style={styles.totalsBox}>
+      <View style={styles.totalsRule}>
+        <View style={styles.totalsRow}>
+          <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
+          <Text style={styles.totalsValue}>
+            {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
+          </Text>
+        </View>
+        {taxAmount > 0 ? (
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>{vatLabel}</Text>
+            <Text style={styles.totalsValue}>
+              {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
+            </Text>
+          </View>
+        ) : null}
+        <View style={styles.totalsRow}>
+          <Text style={styles.totalDueLabel}>{strings.total}</Text>
+          <Text style={styles.totalDueValue}>
+            {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
+  const renderClosingBlocks = (keyPrefix: string) => (
+    <>
+      <View style={styles.closingTextBlock}>
+        {closingLines.map((line, index) => (
+          <Text key={`${keyPrefix}-closing-line-${index}`} style={styles.closingLine}>
+            {line || " "}
+          </Text>
+        ))}
+      </View>
+
+      {effectivePaymentNote ? (
+        <View style={styles.paymentNoteBox}>
+          {buildPaymentNoteLines(effectivePaymentNote).map((line, index) => (
+            <Text
+              key={`${keyPrefix}-payment-note-line-${index}`}
+              style={[styles.paymentNoteLine, index === 0 ? styles.paymentNoteTitle : {}]}
+            >
+              {line || " "}
+            </Text>
+          ))}
+        </View>
+      ) : null}
+    </>
+  );
 
   return (
     <Document title={pdfTitle}>
       {pages.map((lineItems, pageIndex) => {
         const isFirstPage = pageIndex === 0;
         const isQrPage = qrPageIndex !== null && pageIndex === qrPageIndex;
+        const shouldRenderTotalsSection = pageIndex === totalsPageIndex;
         const shouldRenderClosingSections = pageIndex === closingPageIndex;
         const startIndex = pages.slice(0, pageIndex).reduce((sum, pageItems) => sum + pageItems.length, 1);
         const preparedRows = buildPreparedLineItemRows(lineItems, startIndex, invoiceLanguage);
@@ -1053,55 +1127,8 @@ const InvoiceDocument = ({
                 </View>
               ))}
 
-              {shouldRenderClosingSections ? (
-                <>
-                  <View style={styles.totalsBox}>
-                    <View style={styles.totalsRule}>
-                      <View style={styles.totalsRow}>
-                        <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
-                        <Text style={styles.totalsValue}>
-                          {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
-                        </Text>
-                      </View>
-                      {taxAmount > 0 ? (
-                        <View style={styles.totalsRow}>
-                          <Text style={styles.totalsLabel}>{vatLabel}</Text>
-                          <Text style={styles.totalsValue}>
-                            {invoice.currency} {formatInvoiceMoney(taxAmount, invoiceLanguage)}
-                          </Text>
-                        </View>
-                      ) : null}
-                      <View style={styles.totalsRow}>
-                        <Text style={styles.totalDueLabel}>{strings.total}</Text>
-                        <Text style={styles.totalDueValue}>
-                          {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  <View style={styles.closingTextBlock}>
-                    {closingLines.map((line, index) => (
-                      <Text key={`closing-line-${pageIndex}-${index}`} style={styles.closingLine}>
-                        {line || " "}
-                      </Text>
-                    ))}
-                  </View>
-
-                  {effectivePaymentNote ? (
-                    <View style={styles.paymentNoteBox}>
-                      {buildPaymentNoteLines(effectivePaymentNote).map((line, index) => (
-                        <Text
-                          key={`payment-note-line-${pageIndex}-${index}`}
-                          style={[styles.paymentNoteLine, index === 0 ? styles.paymentNoteTitle : {}]}
-                        >
-                          {line || " "}
-                        </Text>
-                      ))}
-                    </View>
-                  ) : null}
-                </>
-              ) : null}
+              {shouldRenderTotalsSection ? renderTotalsBlock() : null}
+              {shouldRenderClosingSections ? renderClosingBlocks(`invoice-page-${pageIndex}`) : null}
             </View>
 
             {isQrPage ? (
@@ -1216,6 +1243,14 @@ const InvoiceDocument = ({
           </Page>
         );
       })}
+      {standaloneClosingPage ? (
+        <Page key="invoice-closing-page" size="A4" style={styles.page} wrap={false}>
+          <View style={styles.pageBody} />
+          <View style={[styles.fixedContentFlowBlock, { top: PAGE_TOP_MARGIN }]} wrap={false}>
+            {renderClosingBlocks("standalone-closing")}
+          </View>
+        </Page>
+      ) : null}
       {standaloneQrPage ? (
         <Page size="A4" style={styles.page} wrap={false}>
           <View style={styles.pageBody} wrap={false} />
