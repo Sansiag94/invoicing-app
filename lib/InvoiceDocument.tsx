@@ -727,10 +727,20 @@ function paginateWithoutQr<T>(items: T[]): T[][] {
 function paginateLineItems<T>(
   items: T[],
   includeQr: boolean,
-  allowQrOnFirstPage: boolean
+  allowQrOnFirstPage: boolean,
+  forceClosingContinuation: boolean
 ) : { pages: T[][]; qrPageIndex: number | null; closingPageIndex: number | null; standaloneQrPage: boolean } {
   if (!includeQr) {
     const pages = paginateWithoutQr(items);
+    if (forceClosingContinuation && pages.length === 1 && items.length > 1) {
+      return {
+        pages: [items.slice(0, -1), items.slice(-1)],
+        qrPageIndex: null,
+        closingPageIndex: 1,
+        standaloneQrPage: false,
+      };
+    }
+
     return {
       pages,
       qrPageIndex: null,
@@ -740,6 +750,15 @@ function paginateLineItems<T>(
   }
 
   const pages = paginateWithoutQr(items);
+
+  if (forceClosingContinuation && pages.length === 1 && items.length > 1) {
+    return {
+      pages: [items.slice(0, -1), items.slice(-1)],
+      qrPageIndex: null,
+      closingPageIndex: 1,
+      standaloneQrPage: true,
+    };
+  }
 
   if (allowQrOnFirstPage && pages.length === 1) {
     return {
@@ -926,10 +945,12 @@ const InvoiceDocument = ({
   );
   const qrTopOnSharedPage = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN - QR_BILL_TOTAL_SPACE;
   const allowQrOnFirstPage = shouldRenderQRSection && firstPageContentBottom + mm(6) <= qrTopOnSharedPage;
+  const forceClosingContinuation = firstPageContentBottom + mm(6) > A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN;
   const { pages, qrPageIndex, closingPageIndex, standaloneQrPage } = paginateLineItems(
     invoice.lineItems,
     shouldRenderQRSection,
-    allowQrOnFirstPage
+    allowQrOnFirstPage,
+    forceClosingContinuation
   );
   const pdfTitle = buildInvoicePdfFilename(invoice.invoiceNumber).replace(/\.pdf$/i, "");
 
