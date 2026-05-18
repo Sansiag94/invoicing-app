@@ -262,8 +262,13 @@ export default function PublicInvoicePage() {
     { label: strings.amount, value: `${invoice.currency} ${formatInvoiceMoney(totalAmountDue, invoiceLanguage)}` },
     paymentReference ? { label: strings.referenceMessage, value: paymentReference } : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row?.value));
-  const shouldRenderQrBankTransferDetails =
-    canCollectPayment && shouldRenderQRSection && Boolean(invoice.business.bankName || invoice.business.bic);
+  const compactBankTransferLine =
+    invoice.business.iban || invoice.business.bic
+      ? `For direct bank transfer: ${invoice.business.iban ? `IBAN ${formatIban(invoice.business.iban)}` : ""}${
+          invoice.business.bic ? `${invoice.business.iban ? "; " : ""}${strings.bicSwift} ${invoice.business.bic}` : ""
+        }.`
+      : null;
+  const effectivePaymentNote = [invoice.paymentNote?.trim() || null, compactBankTransferLine].filter(Boolean).join("\n");
 
   const qrBillSection = (
     <section className="qr-bill pt-3">
@@ -716,23 +721,9 @@ export default function PublicInvoicePage() {
             .join("\n\n")}
         </section>
 
-        {invoice.paymentNote?.trim() ? (
+        {effectivePaymentNote ? (
           <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-[1.35] whitespace-pre-line text-slate-700">
-            {invoice.paymentNote.trim()}
-          </section>
-        ) : null}
-
-        {shouldRenderQrBankTransferDetails ? (
-          <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-300 bg-white px-4 py-3">
-            <h2 className="mb-2 text-[11px] font-semibold text-slate-900">{strings.internationalBankTransfer}</h2>
-            <dl className="space-y-1.5 text-[10px] leading-[1.35] text-slate-700">
-              {bankTransferRows.map((row) => (
-                <div key={row.label} className="flex items-start justify-between gap-3">
-                  <dt className="font-semibold text-slate-500">{row.label}</dt>
-                  <dd className="text-right text-slate-900">{row.value}</dd>
-                </div>
-              ))}
-            </dl>
+            {effectivePaymentNote}
           </section>
         ) : null}
 
@@ -759,36 +750,12 @@ export default function PublicInvoicePage() {
               <div className="border border-slate-200 p-3">
                 <p className="mb-2 text-[12px] font-semibold text-slate-900">{strings.internationalBankTransfer}</p>
                 <dl className="space-y-2 text-[10px] leading-[1.4] text-slate-700">
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="font-semibold text-slate-500">{strings.accountHolder}</dt>
-                    <dd className="text-right text-slate-900">{senderName}</dd>
-                  </div>
-                  {invoice.business.bankName ? (
-                    <div className="flex items-start justify-between gap-3">
-                      <dt className="font-semibold text-slate-500">{strings.bank}</dt>
-                      <dd className="text-right text-slate-900">{invoice.business.bankName}</dd>
+                  {bankTransferRows.map((row) => (
+                    <div key={row.label} className="flex items-start justify-between gap-3">
+                      <dt className="font-semibold text-slate-500">{row.label}</dt>
+                      <dd className="text-right text-slate-900">{row.value}</dd>
                     </div>
-                  ) : null}
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="font-semibold text-slate-500">{strings.iban}</dt>
-                    <dd className="text-right text-slate-900">{formatIban(invoice.business.iban)}</dd>
-                  </div>
-                  {invoice.business.bic ? (
-                    <div className="flex items-start justify-between gap-3">
-                      <dt className="font-semibold text-slate-500">{strings.bicSwift}</dt>
-                      <dd className="text-right text-slate-900">{invoice.business.bic}</dd>
-                    </div>
-                  ) : null}
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="font-semibold text-slate-500">{strings.amount}</dt>
-                    <dd className="text-right text-slate-900">
-                      {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
-                    </dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-3">
-                    <dt className="font-semibold text-slate-500">{strings.referenceMessage}</dt>
-                    <dd className="text-right text-slate-900">{paymentReference}</dd>
-                  </div>
+                  ))}
                 </dl>
               </div>
             </div>

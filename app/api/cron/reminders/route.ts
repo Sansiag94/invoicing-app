@@ -35,6 +35,9 @@ type ReminderCandidate = {
   businessName: string;
   businessOwnerName: string | null;
   businessInvoiceSenderType: string | null;
+  businessBankName: string | null;
+  businessIban: string | null;
+  businessBic: string | null;
   clientCompanyName: string | null;
   clientContactName: string | null;
   clientEmail: string;
@@ -66,6 +69,9 @@ async function findReminderCandidates(
       b."name" AS "businessName",
       b."ownerName" AS "businessOwnerName",
       b."invoiceSenderType" AS "businessInvoiceSenderType",
+      b."bankName" AS "businessBankName",
+      b."iban" AS "businessIban",
+      b."bic" AS "businessBic",
       c."companyName" AS "clientCompanyName",
       c."contactName" AS "clientContactName",
       c."email" AS "clientEmail"
@@ -175,13 +181,14 @@ async function processReminderBatch(
         candidate.clientContactName?.trim() ||
         candidate.clientCompanyName?.trim() ||
         clientEmail;
+      const businessDisplayName = getInvoiceSenderName({
+        name: candidate.businessName,
+        ownerName: candidate.businessOwnerName,
+        invoiceSenderType: candidate.businessInvoiceSenderType,
+      });
       await sendInvoiceReminderEmail({
         to: clientEmail,
-        businessName: getInvoiceSenderName({
-          name: candidate.businessName,
-          ownerName: candidate.businessOwnerName,
-          invoiceSenderType: candidate.businessInvoiceSenderType,
-        }),
+        businessName: businessDisplayName,
         recipientName,
         invoiceNumber,
         totalAmount: candidate.totalAmount,
@@ -189,6 +196,13 @@ async function processReminderBatch(
         invoiceLink,
         dueDate,
         reminderKind: reminderType,
+        bankTransferDetails: {
+          accountHolder: businessDisplayName,
+          bankName: candidate.businessBankName,
+          iban: candidate.businessIban,
+          bic: candidate.businessBic,
+          reference: invoiceNumber,
+        },
       });
       await logInvoiceEvent({
         invoiceId: candidate.id,

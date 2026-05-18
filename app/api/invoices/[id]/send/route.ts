@@ -153,6 +153,10 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     computedTotals.totalAmount > 0 ? computedTotals.totalAmount : existingInvoice.totalAmount;
   const clientDisplayName =
     existingInvoice.client.contactName || existingInvoice.client.companyName || clientEmail;
+  const emailBusinessName = getInvoiceSenderName({
+    ...existingInvoice.business,
+    ...senderPreferences,
+  });
   const pdfFilename = buildInvoicePdfFilename(officialInvoiceNumber);
   const pdfDocument = React.createElement(InvoiceDocument, {
     invoice: {
@@ -169,10 +173,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
 
   await sendInvoiceEmail({
     to: clientEmail,
-    businessName: getInvoiceSenderName({
-      ...existingInvoice.business,
-      ...senderPreferences,
-    }),
+    businessName: emailBusinessName,
     recipientName: clientDisplayName,
     invoiceNumber: officialInvoiceNumber,
     totalAmount: totalAmountForEmail,
@@ -180,6 +181,13 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     dueDate: existingInvoice.dueDate,
     viewLink: invoiceLink,
     payLink: invoiceLink,
+    bankTransferDetails: {
+      accountHolder: emailBusinessName,
+      bankName: existingInvoice.business.bankName,
+      iban: existingInvoice.business.iban,
+      bic: senderPreferences.bic,
+      reference: existingInvoice.reference || officialInvoiceNumber,
+    },
     pdfAttachment: {
       filename: pdfFilename,
       content: pdfBuffer,

@@ -96,19 +96,27 @@ export async function POST(
     const recipientName =
       invoice.client.contactName || invoice.client.companyName || invoice.client.email;
     const computedTotals = calculateInvoiceTotals(invoice.lineItems);
+    const emailBusinessName = getInvoiceSenderName({
+      ...invoice.business,
+      ...senderPreferences,
+    });
 
     await sendManualInvoiceReminderEmail({
       to: clientEmail,
-      businessName: getInvoiceSenderName({
-        ...invoice.business,
-        ...senderPreferences,
-      }),
+      businessName: emailBusinessName,
       recipientName,
       invoiceNumber: invoice.invoiceNumber,
       totalAmount: computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount,
       currency: invoice.currency,
       invoiceLink,
       dueDate: invoice.dueDate,
+      bankTransferDetails: {
+        accountHolder: emailBusinessName,
+        bankName: invoice.business.bankName,
+        iban: invoice.business.iban,
+        bic: invoice.business.bic,
+        reference: invoice.reference || invoice.invoiceNumber,
+      },
     });
 
     await logInvoiceEvent({
