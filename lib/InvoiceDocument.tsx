@@ -645,10 +645,6 @@ const styles = StyleSheet.create({
     lineHeight: 1.35,
     color: "#374151",
   },
-  paymentNoteTitle: {
-    fontWeight: "bold",
-    color: "#111827",
-  },
 });
 
 function formatQuantity(value: number): string {
@@ -927,7 +923,7 @@ const InvoiceDocument = ({
   const closingLines = buildMessageLines(messageText);
   const paymentNote = normalizeLine(invoice.paymentNote);
   const paymentNoteLines = [paymentNote].filter(Boolean);
-  const effectivePaymentNote = paymentNoteLines.length > 0 ? ["Payment options", ...paymentNoteLines].join("\n") : null;
+  const effectivePaymentNote = paymentNoteLines.length > 0 ? paymentNoteLines.join("\n") : null;
   const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
   const recipientLineCount = toCompactAddressLines(clientAddress).length + (clientVatNumber ? 1 : 0);
   const sellerHeaderHeight =
@@ -1037,7 +1033,7 @@ const InvoiceDocument = ({
           {buildPaymentNoteLines(effectivePaymentNote).map((line, index) => (
             <Text
               key={`${keyPrefix}-payment-note-line-${index}`}
-              style={[styles.paymentNoteLine, index === 0 ? styles.paymentNoteTitle : {}]}
+              style={styles.paymentNoteLine}
             >
               {line || " "}
             </Text>

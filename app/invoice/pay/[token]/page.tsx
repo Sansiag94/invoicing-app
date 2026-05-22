@@ -261,7 +261,7 @@ export default function PublicInvoicePage() {
     paymentReference ? { label: strings.referenceMessage, value: paymentReference } : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row?.value));
   const paymentNoteLines = [invoice.paymentNote?.trim() || null].filter(Boolean);
-  const effectivePaymentNote = paymentNoteLines.length > 0 ? ["Payment options", ...paymentNoteLines].join("\n") : null;
+  const effectivePaymentNote = paymentNoteLines.length > 0 ? paymentNoteLines.join("\n") : null;
 
   const qrBillSection = (
     <section className="qr-bill pt-3">
@@ -715,14 +715,11 @@ export default function PublicInvoicePage() {
         {effectivePaymentNote ? (
           <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-[1.35] text-slate-700">
             {paymentNoteLines.length > 0 ? (
-              <>
-                <p className="font-semibold text-slate-900">Payment options</p>
-                <div className="mt-1 space-y-1 whitespace-pre-line">
-                  {paymentNoteLines.map((line) => (
-                    <p key={line}>{line}</p>
-                  ))}
-                </div>
-              </>
+              <div className="space-y-1 whitespace-pre-line">
+                {paymentNoteLines.map((line) => (
+                  <p key={line}>{line}</p>
+                ))}
+              </div>
             ) : null}
           </section>
         ) : null}
