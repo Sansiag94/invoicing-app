@@ -148,7 +148,7 @@ function formatIban(value: string | null | undefined): string {
 }
 
 function buildBankTransferRows(details: BankTransferDetails | null | undefined, amountLabel: string) {
-  if (!details || (!details.iban && !details.bic && !details.bankName)) {
+  if (!details || (!details.iban && !details.bankName)) {
     return [];
   }
 
@@ -156,7 +156,6 @@ function buildBankTransferRows(details: BankTransferDetails | null | undefined, 
     details.accountHolder ? ["Account holder", details.accountHolder] : null,
     details.bankName ? ["Bank", details.bankName] : null,
     details.iban ? ["IBAN", formatIban(details.iban)] : null,
-    details.bic ? ["BIC / SWIFT", details.bic] : null,
     ["Amount", amountLabel],
     details.reference ? ["Reference", details.reference] : null,
   ].filter((row): row is [string, string] => Boolean(row?.[1]));

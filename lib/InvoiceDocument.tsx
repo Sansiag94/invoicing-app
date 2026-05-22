@@ -921,14 +921,12 @@ const InvoiceDocument = ({
   const paymentAccount = qrMetadata ? formatIban(qrMetadata.account) : formatIban(invoice.business.iban);
   const additionalInformation =
     qrMetadata?.additionalInformation || buildInvoiceAdditionalInformation(invoice.invoiceNumber, invoiceLanguage);
-  const bic = normalizeLine(invoice.business.bic);
-  const compactBankTransferLine = bic ? `Direct bank transfer: ${strings.bicSwift} ${bic}` : null;
 
   const messageText =
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
   const closingLines = buildMessageLines(messageText);
   const paymentNote = normalizeLine(invoice.paymentNote);
-  const paymentNoteLines = [paymentNote, compactBankTransferLine].filter(Boolean);
+  const paymentNoteLines = [paymentNote].filter(Boolean);
   const effectivePaymentNote = paymentNoteLines.length > 0 ? ["Payment options", ...paymentNoteLines].join("\n") : null;
   const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
   const recipientLineCount = toCompactAddressLines(clientAddress).length + (clientVatNumber ? 1 : 0);
@@ -953,21 +951,43 @@ const InvoiceDocument = ({
   const firstPageTotalsTop = firstPageTableTop + firstPageTableHeight + mm(8);
   const firstPageTotalsHeight = mm(taxAmount > 0 ? 22 : 16);
   const firstPageClosingHeight = measureMessageHeight(closingLines);
-  const firstPageClosingTop = firstPageTotalsTop + firstPageTotalsHeight + mm(9);
-  const firstPagePaymentNoteTop = firstPageClosingTop + firstPageClosingHeight + mm(7);
   const firstPageTotalsBottom = firstPageTotalsTop + firstPageTotalsHeight;
-  const firstPageContentBottom = Math.max(
-    firstPageTableTop + firstPageTableHeight,
-    firstPageTotalsBottom,
-    firstPageClosingTop + firstPageClosingHeight,
-    effectivePaymentNote ? firstPagePaymentNoteTop + measureNoteBoxHeight(effectivePaymentNote) : 0
+  const pageContentBottomLimit = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN;
+  const basePages = paginateWithoutQr(invoice.lineItems);
+  const forceLineItemContinuation =
+    basePages.length === 1 && invoice.lineItems.length > 1 && firstPageTotalsBottom + mm(6) > pageContentBottomLimit;
+  const candidatePages =
+    forceLineItemContinuation && basePages.length === 1
+      ? [invoice.lineItems.slice(0, -1), invoice.lineItems.slice(-1)]
+      : basePages;
+  const candidateTotalsPageIndex = candidatePages.length - 1;
+  const candidateTotalsStartIndex = candidatePages
+    .slice(0, candidateTotalsPageIndex)
+    .reduce((sum, pageItems) => sum + pageItems.length, 1);
+  const candidateTotalsRows = buildPreparedLineItemRows(
+    candidatePages[candidateTotalsPageIndex] ?? [],
+    candidateTotalsStartIndex,
+    invoiceLanguage
+  );
+  const candidateTotalsHeroTop =
+    candidateTotalsPageIndex === 0 ? firstPageHeroTop : PAGE_TOP_MARGIN;
+  const candidateTotalsTableTop = candidateTotalsHeroTop + mm(24);
+  const candidateTotalsTableHeight =
+    TABLE_HEADER_HEIGHT + candidateTotalsRows.reduce((sum, row) => sum + row.rowHeight, 0);
+  const candidateTotalsTop = candidateTotalsTableTop + candidateTotalsTableHeight + mm(8);
+  const candidateTotalsBottom = candidateTotalsTop + firstPageTotalsHeight;
+  const candidateClosingTop = candidateTotalsBottom + mm(9);
+  const candidatePaymentNoteTop = candidateClosingTop + firstPageClosingHeight + mm(7);
+  const candidateContentBottom = Math.max(
+    candidateTotalsTableTop + candidateTotalsTableHeight,
+    candidateTotalsBottom,
+    candidateClosingTop + firstPageClosingHeight,
+    effectivePaymentNote ? candidatePaymentNoteTop + measureNoteBoxHeight(effectivePaymentNote) : 0
   );
   const qrTopOnSharedPage = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN - QR_BILL_TOTAL_SPACE;
-  const pageContentBottomLimit = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN;
-  const forceLineItemContinuation = firstPageTotalsBottom + mm(6) > pageContentBottomLimit;
-  const forceStandaloneClosingPage = firstPageContentBottom + mm(6) > pageContentBottomLimit;
+  const forceStandaloneClosingPage = candidateContentBottom + mm(6) > pageContentBottomLimit;
   const allowQrOnFirstPage =
-    shouldRenderQRSection && !forceStandaloneClosingPage && firstPageContentBottom + mm(6) <= qrTopOnSharedPage;
+    shouldRenderQRSection && !forceStandaloneClosingPage && candidateContentBottom + mm(6) <= qrTopOnSharedPage;
   const { pages, qrPageIndex, totalsPageIndex, closingPageIndex, standaloneClosingPage, standaloneQrPage } = paginateLineItems(
     invoice.lineItems,
     shouldRenderQRSection,

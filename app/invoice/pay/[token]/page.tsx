@@ -257,14 +257,10 @@ export default function PublicInvoicePage() {
     { label: strings.accountHolder, value: senderName },
     invoice.business.bankName ? { label: strings.bank, value: invoice.business.bankName } : null,
     invoice.business.iban ? { label: strings.iban, value: formatIban(invoice.business.iban) } : null,
-    invoice.business.bic ? { label: strings.bicSwift, value: invoice.business.bic } : null,
     { label: strings.amount, value: `${invoice.currency} ${formatInvoiceMoney(totalAmountDue, invoiceLanguage)}` },
     paymentReference ? { label: strings.referenceMessage, value: paymentReference } : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row?.value));
-  const compactBankTransferLine = invoice.business.bic
-    ? `Direct bank transfer: ${strings.bicSwift} ${invoice.business.bic}`
-    : null;
-  const paymentNoteLines = [invoice.paymentNote?.trim() || null, compactBankTransferLine].filter(Boolean);
+  const paymentNoteLines = [invoice.paymentNote?.trim() || null].filter(Boolean);
   const effectivePaymentNote = paymentNoteLines.length > 0 ? ["Payment options", ...paymentNoteLines].join("\n") : null;
 
   const qrBillSection = (
