@@ -1,8 +1,8 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Clock3, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { ArrowLeft, Download, Filter } from "lucide-react";
 import { AnalyticsOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
@@ -18,6 +18,15 @@ function formatMoney(value: number): string {
   }).format(value);
 }
 
+function formatHeroMoney(value: number): string {
+  return new Intl.NumberFormat("de-CH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })
+    .format(value)
+    .replaceAll(".", "'");
+}
+
 function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
 }
@@ -28,45 +37,6 @@ function formatDeltaPercent(current: number, previous: number): string {
   }
 
   return `${(((current - previous) / previous) * 100).toFixed(1)}%`;
-}
-
-function MetricCard(props: {
-  label: string;
-  value: string;
-  helper: string;
-  tone?: "default" | "success" | "warning" | "danger";
-  icon: ReactNode;
-}) {
-  const toneClasses =
-    props.tone === "success"
-      ? "border-emerald-200 bg-white dark:border-emerald-900/80 dark:bg-slate-900"
-      : props.tone === "warning"
-        ? "border-amber-200 bg-white dark:border-amber-900/80 dark:bg-slate-900"
-        : props.tone === "danger"
-          ? "border-red-200 bg-white dark:border-red-900/80 dark:bg-slate-900"
-          : "border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900";
-
-  const iconClasses =
-    props.tone === "success"
-      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/60 dark:text-emerald-200"
-      : props.tone === "warning"
-        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/60 dark:text-amber-200"
-        : props.tone === "danger"
-          ? "bg-red-100 text-red-700 dark:bg-red-900/60 dark:text-red-200"
-          : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200";
-
-  return (
-    <Card className={toneClasses}>
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-300">{props.label}</CardTitle>
-        <div className={`rounded-lg p-2 ${iconClasses}`}>{props.icon}</div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-semibold text-slate-900 dark:text-slate-50">{props.value}</p>
-        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">{props.helper}</p>
-      </CardContent>
-    </Card>
-  );
 }
 
 function AnalyticsPageSkeleton() {
@@ -124,9 +94,36 @@ function getDateInputValue(date: Date): string {
 function getDefaultAnalyticsDateRange() {
   const now = new Date();
   return {
-    startDate: getDateInputValue(new Date(now.getFullYear(), now.getMonth() - 5, 1)),
-    endDate: getDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+    startDate: getDateInputValue(new Date(now.getFullYear(), 0, 1)),
+    endDate: getDateInputValue(new Date(now.getFullYear(), 11, 31)),
   };
+}
+
+function getYearDateRange(year: number) {
+  return {
+    startDate: getDateInputValue(new Date(year, 0, 1)),
+    endDate: getDateInputValue(new Date(year, 11, 31)),
+  };
+}
+
+function getRangeYear(startDate: string, endDate: string): string {
+  const startYear = Number(startDate.slice(0, 4));
+  const endYear = Number(endDate.slice(0, 4));
+
+  if (
+    Number.isFinite(startYear) &&
+    startYear === endYear &&
+    startDate === `${startYear}-01-01` &&
+    endDate === `${startYear}-12-31`
+  ) {
+    return String(startYear);
+  }
+
+  return "custom";
+}
+
+function getShortMonthLabel(label: string): string {
+  return label.split(" ")[0] ?? label;
 }
 
 function buildLinePath(
@@ -189,6 +186,34 @@ export default function AnalyticsPage() {
   const initialRange = initialAnalyticsRef.current?.dateRange ?? getDefaultAnalyticsDateRange();
   const [startDate, setStartDate] = useState(initialRange.startDate);
   const [endDate, setEndDate] = useState(initialRange.endDate);
+  const [selectedYear, setSelectedYear] = useState(() => getRangeYear(initialRange.startDate, initialRange.endDate));
+
+  const yearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    return Array.from({ length: 6 }, (_, index) => currentYear - index);
+  }, []);
+
+  function handleYearChange(value: string) {
+    setSelectedYear(value);
+
+    if (value === "custom") {
+      return;
+    }
+
+    const range = getYearDateRange(Number(value));
+    setStartDate(range.startDate);
+    setEndDate(range.endDate);
+  }
+
+  function handleStartDateChange(value: string) {
+    setStartDate(value);
+    setSelectedYear(getRangeYear(value, endDate));
+  }
+
+  function handleEndDateChange(value: string) {
+    setEndDate(value);
+    setSelectedYear(getRangeYear(startDate, value));
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -249,6 +274,49 @@ export default function AnalyticsPage() {
     };
   }, [visibleSeries]);
 
+  const heroData = useMemo(() => {
+    const profit = chartData.totals.profit;
+    const positiveProfit = Math.max(0, profit);
+    return {
+      incomeTaxEstimate: positiveProfit * 0.2,
+      socialSecurityEstimate: positiveProfit * 0.1,
+      maxMonthlyRevenue: Math.max(1, ...visibleSeries.map((entry) => entry.revenue)),
+    };
+  }, [chartData.totals.profit, visibleSeries]);
+
+  function exportAnalyticsCsv() {
+    if (!analytics) return;
+
+    const rows = [
+      ["Range", startDate, endDate],
+      ["Currency", analytics.currency],
+      [],
+      ["Month", "Revenue", "Expenses", "Profit"],
+      ...visibleSeries.map((entry) => [
+        entry.label,
+        entry.revenue.toFixed(2),
+        entry.expenses.toFixed(2),
+        entry.profit.toFixed(2),
+      ]),
+      [],
+      ["Total revenue", chartData.totals.revenue.toFixed(2)],
+      ["Total expenses", chartData.totals.expenses.toFixed(2)],
+      ["Profit", chartData.totals.profit.toFixed(2)],
+      ["Income tax planning estimate", heroData.incomeTaxEstimate.toFixed(2)],
+      ["Social security planning estimate", heroData.socialSecurityEstimate.toFixed(2)],
+    ];
+    const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `analytics-${startDate}-to-${endDate}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
   const comparisonData = useMemo(() => {
     const series = analytics?.monthlySeries ?? [];
     const previousSeries = series.slice(-visibleSeries.length * 2, -visibleSeries.length);
@@ -301,13 +369,6 @@ export default function AnalyticsPage() {
     };
   }, [analytics]);
 
-  const selectedRangeProfitMargin = useMemo(() => {
-    if (chartData.totals.revenue <= 0) {
-      return null;
-    }
-
-    return (chartData.totals.profit / chartData.totals.revenue) * 100;
-  }, [chartData.totals.profit, chartData.totals.revenue]);
   const chartWidth = 760;
   const chartHeight = 280;
   const chartPadding = { left: 24, right: 20, top: 20, bottom: 34 };
@@ -409,43 +470,112 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Analytics</h1>
-        <p className="max-w-3xl text-sm text-slate-500">
-          Use this page for performance trends, collections risk, client concentration, and where expenses are accumulating.
-        </p>
-      </div>
+      <section className="rounded-[1.5rem] bg-slate-50 px-6 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-950/40 dark:ring-slate-800">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-500">
+              <Link href="/dashboard" aria-label="Back to dashboard">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold text-slate-950 dark:text-slate-50">Analytics</h1>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{startDate} to {endDate}</p>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MetricCard
-          label="Revenue (selected range)"
-          value={`${analytics.currency} ${formatMoney(chartData.totals.revenue)}`}
-          helper={`${startDate} to ${endDate}`}
-          tone="default"
-          icon={<Wallet className="h-5 w-5" />}
-        />
-        <MetricCard
-          label="Costs (selected range)"
-          value={`${analytics.currency} ${formatMoney(chartData.totals.expenses)}`}
-          helper="Booked expenses in the selected dates"
-          tone="warning"
-          icon={<TrendingDown className="h-5 w-5" />}
-        />
-        <MetricCard
-          label="Net result (selected range)"
-          value={`${analytics.currency} ${formatMoney(chartData.totals.profit)}`}
-          helper="Revenue minus expenses in the selected range"
-          tone={chartData.totals.profit >= 0 ? "success" : "danger"}
-          icon={<TrendingUp className="h-5 w-5" />}
-        />
-        <MetricCard
-          label="Margin (selected range)"
-          value={selectedRangeProfitMargin === null ? "-" : formatPercent(selectedRangeProfitMargin)}
-          helper="Net result divided by revenue in the selected range"
-          tone={selectedRangeProfitMargin !== null && selectedRangeProfitMargin >= 0 ? "success" : "warning"}
-          icon={<Clock3 className="h-5 w-5" />}
-        />
-      </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800">
+              <Filter className="h-4 w-4 text-sky-600 dark:text-sky-300" />
+              <select
+                value={selectedYear}
+                onChange={(event) => handleYearChange(event.target.value)}
+                className="bg-transparent text-sm font-medium outline-none"
+                aria-label="Analytics year"
+              >
+                <option value="custom">Custom</option>
+                {yearOptions.map((year) => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+            </label>
+            <Button
+              type="button"
+              onClick={exportAnalyticsCsv}
+              className="h-11 rounded-full bg-red-500 px-5 text-white shadow-sm hover:bg-red-600"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-end">
+          <div className="space-y-8">
+            <div>
+              <p className="text-5xl font-semibold leading-none text-blue-600 dark:text-blue-300">
+                {formatHeroMoney(chartData.totals.revenue)} <span className="text-base font-medium text-slate-500">{analytics.currency}</span>
+              </p>
+              <p className="mt-3 text-base text-sky-700/70 dark:text-sky-200/70">Total revenue</p>
+            </div>
+            <div>
+              <p className="text-3xl font-medium leading-none text-slate-500 dark:text-slate-300">
+                {formatHeroMoney(chartData.totals.expenses)} <span className="text-sm font-medium">{analytics.currency}</span>
+              </p>
+              <p className="mt-3 text-base text-sky-700/70 dark:text-sky-200/70">Total expenses</p>
+            </div>
+          </div>
+
+          <div className="flex min-h-40 items-end gap-2 overflow-x-auto pb-1">
+            {visibleSeries.map((entry) => {
+              const barHeight = Math.max(6, (entry.revenue / heroData.maxMonthlyRevenue) * 96);
+              return (
+                <div key={entry.label} className="flex min-w-10 flex-1 flex-col items-center gap-3">
+                  <div
+                    className="w-full max-w-9 rounded-t-md bg-sky-100 dark:bg-sky-900/60"
+                    style={{ height: `${barHeight}px` }}
+                    title={`${entry.label}: ${analytics.currency} ${formatMoney(entry.revenue)} revenue`}
+                  />
+                  <span className="text-sm text-sky-700/70 dark:text-sky-200/70">{getShortMonthLabel(entry.label)}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-7 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[1.2fr_2fr] md:items-center">
+            <div>
+              <p className="text-sm font-medium text-sky-700/70 dark:text-sky-200/70">Profits</p>
+              <p className="mt-2 text-2xl font-medium text-slate-900 dark:text-slate-50">
+                {formatHeroMoney(chartData.totals.profit)} {analytics.currency}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-sky-700/70 dark:text-sky-200/70">
+                Estimated taxes {selectedYear === "custom" ? "for selected range" : selectedYear}
+              </p>
+              <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-lg font-medium text-slate-900 dark:text-slate-50">
+                    {formatHeroMoney(heroData.incomeTaxEstimate)} {analytics.currency}
+                  </p>
+                  <p className="text-sm text-sky-700/70 dark:text-sky-200/70">Income Tax</p>
+                </div>
+                <div>
+                  <p className="text-lg font-medium text-slate-900 dark:text-slate-50">
+                    {formatHeroMoney(heroData.socialSecurityEstimate)} {analytics.currency}
+                  </p>
+                  <p className="text-sm text-sky-700/70 dark:text-sky-200/70">Social Security</p>
+                </div>
+              </div>
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                Planning estimate only. Confirm final tax and social security amounts with your accountant.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <Card>
         <CardHeader>
@@ -560,7 +690,7 @@ export default function AnalyticsPage() {
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(event) => setStartDate(event.target.value)}
+                  onChange={(event) => handleStartDateChange(event.target.value)}
                   className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
                 />
               </label>
@@ -569,7 +699,7 @@ export default function AnalyticsPage() {
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(event) => setEndDate(event.target.value)}
+                  onChange={(event) => handleEndDateChange(event.target.value)}
                   className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
                 />
               </label>
