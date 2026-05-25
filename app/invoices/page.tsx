@@ -75,6 +75,7 @@ function parseNumber(value: string): number {
 }
 
 const MIN_QUANTITY = 0.01;
+const LINE_ITEM_GRID_COLUMNS = "2.5rem minmax(0, 1fr) 3.5rem 5.5rem 4.5rem 5rem 2.5rem";
 const SWISS_VAT_RATE_OPTIONS = SWISS_VAT_RATES.map((rate) => ({
   value: String(rate),
   label: `${rate}%`,
@@ -1798,15 +1799,13 @@ function InvoicePageContent() {
                   <div className="hidden lg:block">
                     <div
                       className="grid items-center gap-x-2 border-b border-slate-200 px-1 py-3 text-sm font-medium text-slate-600 dark:border-slate-800 dark:text-slate-300"
-                      style={{ gridTemplateColumns: "2.5rem minmax(0, 1fr) 3.5rem 5.5rem 4.5rem 5rem 2.5rem" }}
+                      style={{ gridTemplateColumns: LINE_ITEM_GRID_COLUMNS }}
                     >
-                      <span className="sr-only">Reorder</span>
-                      <span>Description</span>
-                      <span>Qty</span>
-                      <span>Unit Price</span>
-                      <span>Tax %</span>
-                      <span>Line Total</span>
-                      <span className="sr-only">Action</span>
+                      <span className="col-start-2">Description</span>
+                      <span className="col-start-3">Qty</span>
+                      <span className="col-start-4">Unit Price</span>
+                      <span className="col-start-5">Tax %</span>
+                      <span className="col-start-6">Line Total</span>
                     </div>
 
                     <div className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -1817,7 +1816,7 @@ function InvoicePageContent() {
                             "grid items-center gap-x-2 px-1 py-4",
                             dragOverLineItemIndex === index ? "bg-slate-50" : undefined
                           )}
-                          style={{ gridTemplateColumns: "2.5rem minmax(0, 1fr) 3.5rem 5.5rem 4.5rem 5rem 2.5rem" }}
+                          style={{ gridTemplateColumns: LINE_ITEM_GRID_COLUMNS }}
                           onDragOver={(event) => {
                             event.preventDefault();
                             if (draggedLineItemIndex !== null) {
