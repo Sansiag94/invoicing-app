@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
 import LegalFooter from "@/components/LegalFooter";
+import SupportAssistant from "@/components/SupportAssistant";
 import { AppLanguageProvider, StaticAppLanguageProvider } from "@/components/ui/i18n";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
@@ -282,6 +283,7 @@ export default function AppFrame({ children }: AppFrameProps) {
             <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>
           {showLegalFooter ? <LegalFooter linkSource={legalFooterSource} /> : null}
+          <SupportAssistant />
         </div>
       </div>
     </AppLanguageProvider>

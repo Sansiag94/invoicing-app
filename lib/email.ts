@@ -76,6 +76,15 @@ type SendMonthlyReportEmailInput = {
   analyticsLink: string;
 };
 
+type SendSupportEscalationEmailInput = {
+  to: string;
+  userEmail: string;
+  businessName: string;
+  question: string;
+  transcript: string;
+  pagePath?: string | null;
+};
+
 let resendClient: Resend | null = null;
 const DEFAULT_RESEND_FROM_EMAIL = "Sierra Services <invoices@sierraservices.ch>";
 const DEFAULT_RESEND_REPLY_TO_EMAIL = "santiago@sierraservices.ch";
@@ -725,6 +734,73 @@ ${privacyUrl}`;
       error: result.error,
     });
     throw new EmailDeliveryError("Failed to send monthly report email");
+  }
+
+  return result;
+}
+
+export async function sendSupportEscalationEmail({
+  to,
+  userEmail,
+  businessName,
+  question,
+  transcript,
+  pagePath,
+}: SendSupportEscalationEmailInput) {
+  const from = buildSenderIdentity(APP_NAME);
+  const replyTo = userEmail || process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
+  const safeBusinessName = escapeHtml(businessName);
+  const safeUserEmail = escapeHtml(userEmail);
+  const safeQuestion = escapeHtml(question);
+  const safeTranscript = escapeHtml(transcript);
+  const safePagePath = pagePath ? escapeHtml(pagePath) : null;
+
+  const result = await getResendClient().emails.send({
+    from,
+    replyTo,
+    to,
+    subject: `${APP_NAME} support request - ${businessName}`,
+    text: `New support request from ${userEmail}
+
+Business: ${businessName}
+Page: ${pagePath || "Not provided"}
+
+Question:
+${question}
+
+Conversation:
+${transcript}
+`,
+    html: `
+      <div style="font-family: Arial, sans-serif; background: #f3f5f7; padding: 28px;">
+        <div style="max-width: 680px; margin: 0 auto; background: #ffffff; border: 1px solid #dbe2ea; border-radius: 16px; padding: 28px;">
+          <p style="margin: 0 0 12px; color: #64748b; font-size: 13px;">${APP_NAME} support request</p>
+          <h2 style="margin: 0 0 10px; color: #0f172a; font-size: 22px;">${safeBusinessName}</h2>
+          <p style="margin: 0 0 18px; color: #475569; line-height: 1.6;">
+            User: <strong style="color:#0f172a;">${safeUserEmail}</strong><br />
+            ${safePagePath ? `Page: <strong style="color:#0f172a;">${safePagePath}</strong>` : "Page: Not provided"}
+          </p>
+          <div style="margin: 0 0 18px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 16px;">
+            <p style="margin: 0 0 8px; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase;">Question</p>
+            <p style="margin: 0; color: #0f172a; line-height: 1.6;">${safeQuestion}</p>
+          </div>
+          <div style="border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; padding: 16px;">
+            <p style="margin: 0 0 8px; color: #64748b; font-size: 12px; font-weight: 700; text-transform: uppercase;">Conversation</p>
+            <pre style="margin: 0; white-space: pre-wrap; color: #0f172a; font-family: Arial, sans-serif; line-height: 1.55;">${safeTranscript}</pre>
+          </div>
+        </div>
+      </div>
+    `,
+  });
+
+  if (result.error) {
+    console.error("[email] Support escalation failed", {
+      to,
+      userEmail,
+      businessName,
+      error: result.error,
+    });
+    throw new EmailDeliveryError("Failed to send support request email");
   }
 
   return result;
