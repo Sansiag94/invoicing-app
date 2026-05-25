@@ -1,6 +1,6 @@
 import React from "react";
 /* eslint-disable jsx-a11y/alt-text */
-import { Document, Image, Link, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
+import { Document, Image, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { Prisma } from "@prisma/client";
 import { calculateInvoiceTotals, getInvoiceVatLabel, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
@@ -149,7 +149,6 @@ const COL_UNIT_WIDTH = mm(23);
 const COL_TOTAL_WIDTH = mm(23);
 const TABLE_HEADER_HEIGHT = mm(7);
 const TABLE_ROW_MIN_HEIGHT = mm(8.5);
-const TABLE_TEXT_LINE_HEIGHT_POINTS = 12;
 const TABLE_TEXT_LINE_HEIGHT_RATIO = 1.25;
 const SELLER_BLOCK_WIDTH = mm(82);
 const RECIPIENT_BLOCK_WIDTH = mm(58);
@@ -790,39 +789,6 @@ function paginateLineItems<T>(
     standaloneClosingPage: forceStandaloneClosingPage,
     standaloneQrPage: true,
   };
-}
-
-function InvoiceLineItemsTable(props: {
-  lineItems: InvoiceWithRelations["lineItems"];
-  startIndex: number;
-  language: ReturnType<typeof normalizeInvoiceLanguage>;
-  continuation?: boolean;
-}) {
-  const strings = getInvoiceStrings(props.language);
-
-  return (
-    <View style={props.continuation ? styles.tableWrapContinuation : styles.tableWrap}>
-      <View style={styles.tableHeader}>
-        <Text style={[styles.tableHeaderText, styles.colPos]}>{strings.position}</Text>
-        <Text style={[styles.tableHeaderText, styles.colDesc]}>{strings.description}</Text>
-        <Text style={[styles.tableHeaderText, styles.colQty]}>{strings.quantity}</Text>
-        <Text style={[styles.tableHeaderText, styles.colUnit]}>{strings.unitPrice}</Text>
-        <Text style={[styles.tableHeaderText, styles.colTotal]}>{strings.amount}</Text>
-      </View>
-
-      {props.lineItems.map((item, index) => (
-        <View key={item.id} style={styles.tableRow}>
-          <Text style={[styles.tableCellText, styles.colPos]}>{props.startIndex + index}</Text>
-          <Text style={[styles.tableCellText, styles.colDesc]}>{item.description}</Text>
-          <Text style={[styles.tableCellText, styles.colQty]}>{formatQuantity(item.quantity)}</Text>
-          <Text style={[styles.tableCellText, styles.colUnit]}>{formatInvoiceMoney(item.unitPrice, props.language)}</Text>
-          <Text style={[styles.tableCellText, styles.colTotal]}>
-            {formatInvoiceMoney(item.quantity * item.unitPrice, props.language)}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
 }
 
 const InvoiceDocument = ({
