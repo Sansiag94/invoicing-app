@@ -1797,6 +1797,15 @@ function InvoicePageContent() {
 
                   <div className="hidden overflow-x-auto lg:block">
                     <Table className="table-fixed">
+                      <colgroup>
+                        <col className="w-10" />
+                        <col />
+                        <col className="w-16" />
+                        <col className="w-24" />
+                        <col className="w-20" />
+                        <col className="w-20" />
+                        <col className="w-10" />
+                      </colgroup>
                       <TableHeader>
                         <TableRow>
                           <TableHead className="w-10 px-1">

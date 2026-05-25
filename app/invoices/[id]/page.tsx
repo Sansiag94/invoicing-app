@@ -1368,6 +1368,17 @@ export default function InvoiceDetailPage() {
 
           <div className={cn("overflow-x-auto", isEditing ? "hidden lg:block" : "block")}>
           <Table className={isEditing ? "table-fixed" : undefined}>
+            {isEditing ? (
+              <colgroup>
+                <col className="w-10" />
+                <col />
+                <col className="w-16" />
+                <col className="w-24" />
+                <col className="w-20" />
+                <col className="w-20" />
+                <col className="w-10" />
+              </colgroup>
+            ) : null}
             <TableHeader>
               <TableRow>
                 {isEditing ? (
