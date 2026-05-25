@@ -4,11 +4,11 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, CreditCard, ExternalLink, LifeBuoy, RefreshCw, Save, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, CreditCard, ExternalLink, FileText, LifeBuoy, RefreshCw, Save, Trash2, Upload } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { formatSequentialInvoiceNumber, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
-import { buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
+import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
 import { BillingStatus, BusinessSettingsData, InvoiceSenderType } from "@/lib/types";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { isValidBic, isValidEmail, isValidIban } from "@/lib/validation";
@@ -27,6 +27,7 @@ import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 
 type SettingsPageBootstrap = {
@@ -110,6 +111,11 @@ export default function SettingsPage() {
   const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(Boolean(initialBusiness?.acceptsTwintPayments));
   const [twintPhoneNumber, setTwintPhoneNumber] = useState(initialBusiness?.twintPhoneNumber ?? "");
   const [supportAssistantEnabled, setSupportAssistantEnabled] = useState(Boolean(initialBusiness?.supportAssistantEnabled));
+  const [replyToEmail, setReplyToEmail] = useState(initialBusiness?.replyToEmail ?? "");
+  const [defaultPaymentTermDays, setDefaultPaymentTermDays] = useState(String(initialBusiness?.defaultPaymentTermDays ?? 30));
+  const [defaultInvoiceMessage, setDefaultInvoiceMessage] = useState(initialBusiness?.defaultInvoiceMessage ?? "");
+  const [defaultInvoiceAttachmentUrl, setDefaultInvoiceAttachmentUrl] = useState(initialBusiness?.defaultInvoiceAttachmentUrl ?? "");
+  const [defaultInvoiceAttachmentName, setDefaultInvoiceAttachmentName] = useState(initialBusiness?.defaultInvoiceAttachmentName ?? "");
   const [usesPlatformStripe, setUsesPlatformStripe] = useState(Boolean(initialBusiness?.usesPlatformStripe));
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(initialBusiness?.stripeAccountId ?? null);
   const [stripeChargesEnabled, setStripeChargesEnabled] = useState(Boolean(initialBusiness?.stripeChargesEnabled));
@@ -117,6 +123,7 @@ export default function SettingsPage() {
   const [stripeDetailsSubmitted, setStripeDetailsSubmitted] = useState(Boolean(initialBusiness?.stripeDetailsSubmitted));
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isUploadingDefaultAttachment, setIsUploadingDefaultAttachment] = useState(false);
   const [isConnectingStripe, setIsConnectingStripe] = useState(false);
   const [isRefreshingStripe, setIsRefreshingStripe] = useState(false);
   const [isDisconnectingStripe, setIsDisconnectingStripe] = useState(false);
@@ -153,6 +160,8 @@ export default function SettingsPage() {
   const twintPreviewMessage = acceptsTwintPayments && twintPhoneNumber.trim()
     ? buildDefaultInvoicePaymentNote("en", twintPhoneNumber.trim())
     : null;
+  const defaultInvoiceMessagePreview =
+    defaultInvoiceMessage.trim() || buildDefaultInvoiceMessage("en", "Client", previewDisplayName || "Your name");
   const isStripeFullyEnabled =
     stripeChargesEnabled && stripePayoutsEnabled && stripeDetailsSubmitted;
   const stripeStatusTone = !usesPlatformStripe && !stripeAccountId
@@ -228,6 +237,11 @@ export default function SettingsPage() {
           acceptsTwintPayments,
           twintPhoneNumber,
           supportAssistantEnabled,
+          replyToEmail,
+          defaultPaymentTermDays: Number(defaultPaymentTermDays) || 30,
+          defaultInvoiceMessage,
+          defaultInvoiceAttachmentUrl,
+          defaultInvoiceAttachmentName,
           usesPlatformStripe,
           stripeAccountId,
           stripeChargesEnabled,
@@ -360,6 +374,25 @@ export default function SettingsPage() {
       return null;
     }
 
+    if (replyToEmail.trim() && !isValidEmail(replyToEmail.trim())) {
+      toast({
+        title: "Invalid reply-to email",
+        description: "Enter a valid reply-to email address or leave it blank.",
+        variant: "error",
+      });
+      return null;
+    }
+
+    const parsedDefaultPaymentTermDays = Number(defaultPaymentTermDays);
+    if (!Number.isInteger(parsedDefaultPaymentTermDays) || parsedDefaultPaymentTermDays < 0 || parsedDefaultPaymentTermDays > 365) {
+      toast({
+        title: "Invalid payment term",
+        description: "Enter a whole number between 0 and 365 days.",
+        variant: "error",
+      });
+      return null;
+    }
+
     if (vatRegistered && !isValidSwissVatNumber(vatNumber)) {
       toast({
         title: "Invalid Swiss VAT number",
@@ -397,6 +430,11 @@ export default function SettingsPage() {
         acceptsTwintPayments,
         twintPhoneNumber,
         supportAssistantEnabled,
+        replyToEmail,
+        defaultPaymentTermDays: parsedDefaultPaymentTermDays,
+        defaultInvoiceMessage,
+        defaultInvoiceAttachmentUrl,
+        defaultInvoiceAttachmentName,
         nextOfficialInvoiceSequence: Number(nextOfficialInvoiceSequence),
         logoUrl: options?.logoUrlOverride ?? logoUrl,
       }),
@@ -436,6 +474,11 @@ export default function SettingsPage() {
     setAcceptsTwintPayments(Boolean(updatedBusiness.acceptsTwintPayments));
     setTwintPhoneNumber(updatedBusiness.twintPhoneNumber || "");
     setSupportAssistantEnabled(Boolean(updatedBusiness.supportAssistantEnabled));
+    setReplyToEmail(updatedBusiness.replyToEmail || "");
+    setDefaultPaymentTermDays(String(updatedBusiness.defaultPaymentTermDays ?? 30));
+    setDefaultInvoiceMessage(updatedBusiness.defaultInvoiceMessage || "");
+    setDefaultInvoiceAttachmentUrl(updatedBusiness.defaultInvoiceAttachmentUrl || "");
+    setDefaultInvoiceAttachmentName(updatedBusiness.defaultInvoiceAttachmentName || "");
     setUsesPlatformStripe(Boolean(updatedBusiness.usesPlatformStripe));
     setStripeAccountId(updatedBusiness.stripeAccountId || null);
     setStripeChargesEnabled(Boolean(updatedBusiness.stripeChargesEnabled));
@@ -707,6 +750,82 @@ export default function SettingsPage() {
     }
   }
 
+  async function handleDefaultAttachmentUpload(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast({
+        title: "Invalid file",
+        description: "Please upload a PDF file.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setIsUploadingDefaultAttachment(true);
+
+    try {
+      const uploadBody = new FormData();
+      uploadBody.append("file", file);
+
+      const uploadResponse = await authenticatedFetch("/api/business/invoice-attachment", {
+        method: "POST",
+        body: uploadBody,
+      });
+      const uploadResult = (await uploadResponse.json()) as {
+        success?: boolean;
+        defaultInvoiceAttachmentUrl?: string;
+        defaultInvoiceAttachmentName?: string;
+        error?: string;
+      };
+
+      if (!uploadResponse.ok || !uploadResult.defaultInvoiceAttachmentUrl) {
+        toast({
+          title: "Attachment upload failed",
+          description: uploadResult.error ?? "The default invoice attachment could not be uploaded.",
+          variant: "error",
+        });
+        return;
+      }
+
+      setDefaultInvoiceAttachmentUrl(uploadResult.defaultInvoiceAttachmentUrl);
+      setDefaultInvoiceAttachmentName(uploadResult.defaultInvoiceAttachmentName || file.name);
+      toast({
+        title: "Default attachment uploaded",
+        description: "This PDF will be attached when invoices are emailed.",
+        variant: "success",
+      });
+    } finally {
+      setIsUploadingDefaultAttachment(false);
+    }
+  }
+
+  async function handleRemoveDefaultAttachment() {
+    const response = await authenticatedFetch("/api/business/invoice-attachment", {
+      method: "DELETE",
+    });
+    const result = (await response.json()) as { error?: string };
+
+    if (!response.ok) {
+      toast({
+        title: "Unable to remove attachment",
+        description: result.error ?? "The default attachment could not be removed.",
+        variant: "error",
+      });
+      return;
+    }
+
+    setDefaultInvoiceAttachmentUrl("");
+    setDefaultInvoiceAttachmentName("");
+    toast({
+      title: "Default attachment removed",
+      variant: "success",
+    });
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -747,6 +866,11 @@ export default function SettingsPage() {
           setAcceptsTwintPayments(Boolean(data?.acceptsTwintPayments));
           setTwintPhoneNumber(data?.twintPhoneNumber || "");
           setSupportAssistantEnabled(Boolean(data?.supportAssistantEnabled));
+          setReplyToEmail(data?.replyToEmail || "");
+          setDefaultPaymentTermDays(String(data?.defaultPaymentTermDays ?? 30));
+          setDefaultInvoiceMessage(data?.defaultInvoiceMessage || "");
+          setDefaultInvoiceAttachmentUrl(data?.defaultInvoiceAttachmentUrl || "");
+          setDefaultInvoiceAttachmentName(data?.defaultInvoiceAttachmentName || "");
           setUsesPlatformStripe(Boolean(data?.usesPlatformStripe));
           setStripeAccountId(data?.stripeAccountId || null);
           setStripeChargesEnabled(Boolean(data?.stripeChargesEnabled));
@@ -1050,6 +1174,115 @@ export default function SettingsPage() {
             Check this section before you send the first official invoice from the workspace.
           </p>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Invoice Defaults</CardTitle>
+            <p className="text-sm text-slate-500">
+              Prefill new invoices with your usual terms, message, reply-to address, and optional PDF attachment.
+            </p>
+          </CardHeader>
+          <CardContent className="grid gap-5 lg:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="defaultPaymentTermDays">Default payment term</Label>
+              <div className="flex items-center gap-3">
+                <Input
+                  id="defaultPaymentTermDays"
+                  type="number"
+                  min="0"
+                  max="365"
+                  step="1"
+                  value={defaultPaymentTermDays}
+                  onChange={(event) => setDefaultPaymentTermDays(event.target.value)}
+                  className="max-w-36"
+                />
+                <span className="text-sm text-slate-500 dark:text-slate-400">days after issue date</span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                New invoices use this term automatically, but you can still edit the due date per invoice.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="replyToEmail">Reply-to email</Label>
+              <Input
+                id="replyToEmail"
+                type="email"
+                value={replyToEmail}
+                onChange={(event) => setReplyToEmail(event.target.value)}
+                placeholder={email || "Optional"}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Customer replies to emailed invoices and reminders will go here. Leave blank to use the app default.
+              </p>
+            </div>
+
+            <div className="space-y-2 lg:col-span-2">
+              <Label htmlFor="defaultInvoiceMessage">Default invoice message</Label>
+              <Textarea
+                id="defaultInvoiceMessage"
+                rows={5}
+                value={defaultInvoiceMessage}
+                onChange={(event) => setDefaultInvoiceMessage(event.target.value)}
+                placeholder={defaultInvoiceMessagePreview}
+              />
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                This message prefills the invoice form. You can still edit it before creating each invoice.
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60 lg:col-span-2">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                    <FileText className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-slate-900 dark:text-slate-100">Default invoice attachment</p>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                      Attach a standard PDF, such as terms and conditions, whenever an invoice email is sent.
+                    </p>
+                    {defaultInvoiceAttachmentUrl ? (
+                      <a
+                        href={defaultInvoiceAttachmentUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-2 inline-block text-sm font-medium text-slate-900 underline dark:text-slate-100"
+                      >
+                        {defaultInvoiceAttachmentName || "Current attachment"}
+                      </a>
+                    ) : (
+                      <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">No default attachment uploaded.</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:flex-row md:flex-col">
+                  <Button asChild variant="secondary" disabled={isUploadingDefaultAttachment}>
+                    <label>
+                      <Upload className="h-4 w-4" />
+                      {isUploadingDefaultAttachment ? "Uploading..." : "Upload PDF"}
+                      <input type="file" accept="application/pdf,.pdf" onChange={handleDefaultAttachmentUpload} className="hidden" />
+                    </label>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => void handleRemoveDefaultAttachment()}
+                    disabled={isUploadingDefaultAttachment || !defaultInvoiceAttachmentUrl}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Remove
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2">
+              <Button onClick={handleSave} disabled={isSaving || isUploadingLogo || isUploadingDefaultAttachment} className="w-full sm:w-auto">
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving..." : "Save invoice defaults"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
           <Card>
             <CardHeader>

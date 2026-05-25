@@ -11,6 +11,11 @@ describe("invoice date helpers", () => {
     expect(getDefaultDueDate("2026-01-31")).toBe("2026-02-28");
   });
 
+  it("sets the due date from a payment term when provided", () => {
+    expect(getDefaultDueDate("2026-03-15", 30)).toBe("2026-04-14");
+    expect(getDefaultDueDate("2026-01-31", 0)).toBe("2026-01-31");
+  });
+
   it("normalizes ISO strings for date inputs", () => {
     expect(toDateInputValue("2026-03-15T12:00:00.000Z")).toBe("2026-03-15");
   });

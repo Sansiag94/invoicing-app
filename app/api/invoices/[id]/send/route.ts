@@ -43,6 +43,60 @@ async function readStreamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer
   return Buffer.concat(chunks);
 }
 
+type BusinessInvoiceEmailDefaults = {
+  replyToEmail: string | null;
+  defaultInvoiceAttachmentUrl: string | null;
+  defaultInvoiceAttachmentName: string | null;
+};
+
+async function loadBusinessInvoiceEmailDefaults(businessId: string): Promise<BusinessInvoiceEmailDefaults> {
+  try {
+    const rows = await prisma.$queryRaw<BusinessInvoiceEmailDefaults[]>`
+      SELECT "replyToEmail", "defaultInvoiceAttachmentUrl", "defaultInvoiceAttachmentName"
+      FROM "Business"
+      WHERE "uuid" = ${businessId}
+      LIMIT 1
+    `;
+
+    return {
+      replyToEmail: rows[0]?.replyToEmail ?? null,
+      defaultInvoiceAttachmentUrl: rows[0]?.defaultInvoiceAttachmentUrl ?? null,
+      defaultInvoiceAttachmentName: rows[0]?.defaultInvoiceAttachmentName ?? null,
+    };
+  } catch (error) {
+    console.warn("Unable to load invoice email defaults:", error);
+    return {
+      replyToEmail: null,
+      defaultInvoiceAttachmentUrl: null,
+      defaultInvoiceAttachmentName: null,
+    };
+  }
+}
+
+async function loadDefaultInvoiceAttachment(defaults: BusinessInvoiceEmailDefaults) {
+  if (!defaults.defaultInvoiceAttachmentUrl) {
+    return [];
+  }
+
+  try {
+    const response = await fetch(defaults.defaultInvoiceAttachmentUrl, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Attachment download failed with status ${response.status}`);
+    }
+
+    const arrayBuffer = await response.arrayBuffer();
+    return [
+      {
+        filename: defaults.defaultInvoiceAttachmentName || "invoice-attachment.pdf",
+        content: Buffer.from(arrayBuffer),
+      },
+    ];
+  } catch (error) {
+    console.error("Unable to attach default invoice PDF:", error);
+    return [];
+  }
+}
+
 async function sendInvoice(id: string, businessId: string, request: Request) {
   const existingInvoice = await prisma.invoice.findFirst({
     where: { id, businessId },
@@ -144,6 +198,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   });
 
   const senderPreferences = getBusinessSenderPreferences(existingInvoice.business);
+  const emailDefaults = await loadBusinessInvoiceEmailDefaults(existingInvoice.businessId);
 
   const computedTotals = calculateInvoiceTotals(existingInvoice.lineItems);
   const totalAmountForEmail =
@@ -168,6 +223,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   }) as unknown as Parameters<typeof pdf>[0];
   const pdfStream = (await pdf(pdfDocument).toBuffer()) as unknown as NodeJS.ReadableStream;
   const pdfBuffer = await readStreamToBuffer(pdfStream);
+  const extraAttachments = await loadDefaultInvoiceAttachment(emailDefaults);
 
   await sendInvoiceEmail({
     to: clientEmail,
@@ -180,6 +236,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     dueDate: existingInvoice.dueDate,
     viewLink: invoiceLink,
     payLink: invoiceLink,
+    replyToEmail: emailDefaults.replyToEmail,
     bankTransferDetails:
       amountDueForEmail > 0
         ? {
@@ -194,6 +251,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
       filename: pdfFilename,
       content: pdfBuffer,
     },
+    extraAttachments,
   });
 
   if (existingInvoice.status === "draft") {

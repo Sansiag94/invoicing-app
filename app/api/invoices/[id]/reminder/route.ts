@@ -22,6 +22,21 @@ import {
 
 export const runtime = "nodejs";
 
+async function loadBusinessReplyToEmail(businessId: string): Promise<string | null> {
+  try {
+    const rows = await prisma.$queryRaw<Array<{ replyToEmail: string | null }>>`
+      SELECT "replyToEmail"
+      FROM "Business"
+      WHERE "uuid" = ${businessId}
+      LIMIT 1
+    `;
+    return rows[0]?.replyToEmail ?? null;
+  } catch (error) {
+    console.warn("Unable to load reply-to email:", error);
+    return null;
+  }
+}
+
 export async function POST(
   request: Request,
   context: { params: Promise<{ id: string }> }
@@ -100,6 +115,7 @@ export async function POST(
       ...invoice.business,
       ...senderPreferences,
     });
+    const replyToEmail = await loadBusinessReplyToEmail(invoice.businessId);
 
     await sendManualInvoiceReminderEmail({
       to: clientEmail,
@@ -110,6 +126,7 @@ export async function POST(
       currency: invoice.currency,
       invoiceLink,
       dueDate: invoice.dueDate,
+      replyToEmail,
       bankTransferDetails: {
         accountHolder: emailBusinessName,
         bankName: invoice.business.bankName,

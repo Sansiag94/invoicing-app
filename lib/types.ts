@@ -104,6 +104,11 @@ export interface BusinessSettingsData {
   acceptsTwintPayments?: boolean;
   twintPhoneNumber?: string | null;
   supportAssistantEnabled?: boolean;
+  replyToEmail?: string | null;
+  defaultPaymentTermDays?: number;
+  defaultInvoiceMessage?: string | null;
+  defaultInvoiceAttachmentUrl?: string | null;
+  defaultInvoiceAttachmentName?: string | null;
 }
 
 export interface InvoiceSummary {

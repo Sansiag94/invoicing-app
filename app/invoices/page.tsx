@@ -118,6 +118,33 @@ function buildInvoiceNotesTemplate(client: ClientSummary | null, senderName: str
   );
 }
 
+function buildInvoiceNotesFromSettings(
+  client: ClientSummary | null,
+  senderName: string,
+  template?: string | null
+): string {
+  const trimmedTemplate = template?.trim();
+  if (!trimmedTemplate) {
+    return buildInvoiceNotesTemplate(client, senderName);
+  }
+
+  const clientFirstName = getClientFirstName(client);
+  const senderFirstName = senderName.split(/\s+/).find(Boolean) || senderName;
+
+  return trimmedTemplate
+    .replaceAll("{client_first_name}", clientFirstName)
+    .replaceAll("client_first_name", clientFirstName)
+    .replaceAll("{sender_first_name}", senderFirstName)
+    .replaceAll("sender_first_name", senderFirstName)
+    .replaceAll("{sender_name}", senderName)
+    .replaceAll("sender_name", senderName);
+}
+
+function getBusinessPaymentTermDays(business: BusinessSettingsData | null): number {
+  const days = business?.defaultPaymentTermDays;
+  return typeof days === "number" && Number.isFinite(days) && days >= 0 ? days : 30;
+}
+
 function buildInvoicePaymentNoteTemplate(
   client: ClientSummary | null,
   acceptsTwintPayments: boolean,
@@ -196,10 +223,12 @@ function InvoicePageContent() {
     { description: "", quantity: 1, unitPrice: 0, taxRate: 0 },
   ]);
   const [issueDate, setIssueDate] = useState(defaultIssueDate);
-  const [dueDate, setDueDate] = useState(getDefaultDueDate(defaultIssueDate));
+  const [dueDate, setDueDate] = useState(getDefaultDueDate(defaultIssueDate, getBusinessPaymentTermDays(initialBusiness)));
   const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
-  const [notes, setNotes] = useState(buildInvoiceNotesTemplate(null, "User_name"));
+  const [notes, setNotes] = useState(
+    buildInvoiceNotesFromSettings(null, initialBusiness ? getInvoiceSenderName(initialBusiness) : "User_name", initialBusiness?.defaultInvoiceMessage)
+  );
   const [paymentNote, setPaymentNote] = useState(buildInvoicePaymentNoteTemplate(null, false, ""));
   const [portfolioForm, setPortfolioForm] = useState({
     description: "",
@@ -519,9 +548,13 @@ function InvoicePageContent() {
   useEffect(() => {
     if (notesManuallyEdited && notes.trim().length > 0) return;
 
-    const nextTemplate = buildInvoiceNotesTemplate(selectedClient, invoiceSenderName || "User_name");
+    const nextTemplate = buildInvoiceNotesFromSettings(
+      selectedClient,
+      invoiceSenderName || "User_name",
+      businessData?.defaultInvoiceMessage
+    );
     setNotes(nextTemplate);
-  }, [invoiceSenderName, notes, notesManuallyEdited, selectedClient]);
+  }, [businessData?.defaultInvoiceMessage, invoiceSenderName, notes, notesManuallyEdited, selectedClient]);
 
   useEffect(() => {
     if (paymentNoteManuallyEdited) return;
@@ -552,7 +585,7 @@ function InvoicePageContent() {
 
   const handleIssueDateChange = (nextIssueDate: string) => {
     setIssueDate(nextIssueDate);
-    setDueDate(getDefaultDueDate(nextIssueDate));
+    setDueDate(getDefaultDueDate(nextIssueDate, getBusinessPaymentTermDays(businessData)));
   };
 
   const updateLineItem = (index: number, key: keyof LineItemData, value: string | number) => {
@@ -801,11 +834,11 @@ function InvoicePageContent() {
       setLineItems([{ description: "", quantity: 1, unitPrice: 0, taxRate: 0 }]);
       const nextIssueDate = getTodayDateInputValue();
       setIssueDate(nextIssueDate);
-      setDueDate(getDefaultDueDate(nextIssueDate));
+      setDueDate(getDefaultDueDate(nextIssueDate, getBusinessPaymentTermDays(businessData)));
       setClientId("");
       setSubject("");
       setNotesManuallyEdited(false);
-      setNotes(buildInvoiceNotesTemplate(null, invoiceSenderName || "User_name"));
+      setNotes(buildInvoiceNotesFromSettings(null, invoiceSenderName || "User_name", businessData?.defaultInvoiceMessage));
       setPaymentNoteManuallyEdited(false);
       setPaymentNote(buildInvoicePaymentNoteTemplate(null, acceptsTwintPayments, twintPhoneNumber));
       setIsCreateFormOpen(false);
@@ -1617,6 +1650,9 @@ function InvoicePageContent() {
                       value={dueDate}
                       onChange={(event) => setDueDate(event.target.value)}
                     />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Prefilled from your {getBusinessPaymentTermDays(businessData)} day payment term. You can change it for this invoice.
+                    </p>
                   </div>
                 </div>
 

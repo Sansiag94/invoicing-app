@@ -23,6 +23,11 @@ type SendInvoiceEmailInput = {
     filename: string;
     content: Buffer;
   } | null;
+  extraAttachments?: Array<{
+    filename: string;
+    content: Buffer;
+  }>;
+  replyToEmail?: string | null;
   bankTransferDetails?: BankTransferDetails | null;
 };
 
@@ -39,6 +44,7 @@ type SendInvoiceReminderEmailInput = {
   dueDate: Date;
   reminderKind: InvoiceReminderKind;
   bankTransferDetails?: BankTransferDetails | null;
+  replyToEmail?: string | null;
 };
 
 type SendManualInvoiceReminderEmailInput = {
@@ -51,6 +57,7 @@ type SendManualInvoiceReminderEmailInput = {
   invoiceLink: string;
   dueDate: Date;
   bankTransferDetails?: BankTransferDetails | null;
+  replyToEmail?: string | null;
 };
 
 type BankTransferDetails = {
@@ -232,10 +239,12 @@ export async function sendInvoiceEmail({
   viewLink,
   payLink,
   pdfAttachment,
+  extraAttachments = [],
+  replyToEmail,
   bankTransferDetails,
 }: SendInvoiceEmailInput) {
   const from = buildSenderIdentity(businessName);
-  const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
+  const replyTo = replyToEmail?.trim() || process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const payableAmount = amountDue ?? totalAmount;
   const formattedAmountDue = `${currency} ${payableAmount.toFixed(2)}`;
@@ -328,14 +337,17 @@ ${privacyUrl}
         </div>
       </div>
     `,
-    attachments: pdfAttachment
-      ? [
-          {
-            filename: pdfAttachment.filename,
-            content: pdfAttachment.content,
-          },
-        ]
-      : undefined,
+    attachments: [
+      ...(pdfAttachment
+        ? [
+            {
+              filename: pdfAttachment.filename,
+              content: pdfAttachment.content,
+            },
+          ]
+        : []),
+      ...extraAttachments,
+    ],
   });
 
   if (result.error) {
@@ -377,9 +389,10 @@ export async function sendInvoiceReminderEmail({
   dueDate,
   reminderKind,
   bankTransferDetails,
+  replyToEmail,
 }: SendInvoiceReminderEmailInput) {
   const from = buildSenderIdentity(businessName);
-  const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
+  const replyTo = replyToEmail?.trim() || process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const dueDateLabel = formatDueDate(dueDate);
   const normalizedRecipientName = recipientName?.trim();
@@ -490,9 +503,10 @@ export async function sendManualInvoiceReminderEmail({
   invoiceLink,
   dueDate,
   bankTransferDetails,
+  replyToEmail,
 }: SendManualInvoiceReminderEmailInput) {
   const from = buildSenderIdentity(businessName);
-  const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
+  const replyTo = replyToEmail?.trim() || process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
   const dueDateLabel = formatDueDate(dueDate);
   const normalizedRecipientName = recipientName?.trim();

@@ -55,6 +55,11 @@ model Business {
   acceptsTwintPayments Boolean @default(false)
   twintPhoneNumber String?
   supportAssistantEnabled Boolean @default(false)
+  replyToEmail String?
+  defaultPaymentTermDays Int @default(30)
+  defaultInvoiceMessage String?
+  defaultInvoiceAttachmentUrl String?
+  defaultInvoiceAttachmentName String?
   invoicePrefix  String
   invoiceCounter Int       @default(0)
   closedAt       DateTime?

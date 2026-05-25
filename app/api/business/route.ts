@@ -34,6 +34,11 @@ type UpdateBusinessBody = {
   acceptsTwintPayments?: unknown;
   twintPhoneNumber?: unknown;
   supportAssistantEnabled?: unknown;
+  replyToEmail?: unknown;
+  defaultPaymentTermDays?: unknown;
+  defaultInvoiceMessage?: unknown;
+  defaultInvoiceAttachmentUrl?: unknown;
+  defaultInvoiceAttachmentName?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -59,6 +64,21 @@ function asPositiveInteger(value: unknown): number | null {
   return null;
 }
 
+function asPaymentTermDays(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 365) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 365) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
 type SenderPreferencesRow = {
   ownerName: string | null;
   invoiceSenderType: string | null;
@@ -66,13 +86,20 @@ type SenderPreferencesRow = {
   acceptsTwintPayments: boolean | null;
   twintPhoneNumber: string | null;
   supportAssistantEnabled: boolean | null;
+  replyToEmail: string | null;
+  defaultPaymentTermDays: number | null;
+  defaultInvoiceMessage: string | null;
+  defaultInvoiceAttachmentUrl: string | null;
+  defaultInvoiceAttachmentName: string | null;
 };
 
 async function loadSenderPreferences(businessId: string) {
   try {
     const rows = await prisma.$queryRaw<SenderPreferencesRow[]>`
       SELECT "ownerName", "invoiceSenderType", "bic"
-      ,"acceptsTwintPayments", "twintPhoneNumber", "supportAssistantEnabled"
+      ,"acceptsTwintPayments", "twintPhoneNumber", "supportAssistantEnabled",
+      "replyToEmail", "defaultPaymentTermDays", "defaultInvoiceMessage",
+      "defaultInvoiceAttachmentUrl", "defaultInvoiceAttachmentName"
       FROM "Business"
       WHERE "uuid" = ${businessId}
       LIMIT 1
@@ -86,6 +113,11 @@ async function loadSenderPreferences(businessId: string) {
       acceptsTwintPayments: Boolean(row?.acceptsTwintPayments),
       twintPhoneNumber: row?.twintPhoneNumber ?? null,
       supportAssistantEnabled: Boolean(row?.supportAssistantEnabled),
+      replyToEmail: row?.replyToEmail ?? null,
+      defaultPaymentTermDays: row?.defaultPaymentTermDays ?? 30,
+      defaultInvoiceMessage: row?.defaultInvoiceMessage ?? null,
+      defaultInvoiceAttachmentUrl: row?.defaultInvoiceAttachmentUrl ?? null,
+      defaultInvoiceAttachmentName: row?.defaultInvoiceAttachmentName ?? null,
     };
   } catch (error) {
     console.warn("Unable to load sender preferences (columns may not exist yet):", error);
@@ -96,6 +128,11 @@ async function loadSenderPreferences(businessId: string) {
       acceptsTwintPayments: false,
       twintPhoneNumber: null,
       supportAssistantEnabled: false,
+      replyToEmail: null,
+      defaultPaymentTermDays: 30,
+      defaultInvoiceMessage: null,
+      defaultInvoiceAttachmentUrl: null,
+      defaultInvoiceAttachmentName: null,
     };
   }
 }
@@ -189,6 +226,21 @@ export async function PATCH(request: Request) {
     const business = await ensureBusiness(user.id);
     await assertWorkspaceOpen(business.id);
     const existingSenderPreferences = await loadSenderPreferences(business.id);
+    const replyToEmail = asString(body.replyToEmail);
+    const defaultPaymentTermDays =
+      body.defaultPaymentTermDays === undefined
+        ? existingSenderPreferences.defaultPaymentTermDays
+        : asPaymentTermDays(body.defaultPaymentTermDays);
+    const defaultInvoiceMessage =
+      body.defaultInvoiceMessage === undefined ? existingSenderPreferences.defaultInvoiceMessage : asString(body.defaultInvoiceMessage);
+    const defaultInvoiceAttachmentUrl =
+      body.defaultInvoiceAttachmentUrl === undefined
+        ? existingSenderPreferences.defaultInvoiceAttachmentUrl
+        : asString(body.defaultInvoiceAttachmentUrl);
+    const defaultInvoiceAttachmentName =
+      body.defaultInvoiceAttachmentName === undefined
+        ? existingSenderPreferences.defaultInvoiceAttachmentName
+        : asString(body.defaultInvoiceAttachmentName);
     const supportAssistantEnabled =
       body.supportAssistantEnabled === undefined
         ? existingSenderPreferences.supportAssistantEnabled
@@ -201,6 +253,14 @@ export async function PATCH(request: Request) {
 
     if (vatRegistered && !normalizedVatNumber) {
       return apiError("Enter a Swiss VAT number in the format CHE-123.456.789 MWST, TVA, or IVA", 400);
+    }
+
+    if (replyToEmail && !isValidEmail(replyToEmail)) {
+      return apiError("Invalid reply-to email address", 400);
+    }
+
+    if (defaultPaymentTermDays === null) {
+      return apiError("Default payment term must be a whole number between 0 and 365 days", 400);
     }
 
     if (
@@ -247,7 +307,12 @@ export async function PATCH(request: Request) {
           "bic" = ${normalizedBic},
           "acceptsTwintPayments" = ${acceptsTwintPayments},
           "twintPhoneNumber" = ${acceptsTwintPayments ? twintPhoneNumber : null},
-          "supportAssistantEnabled" = ${supportAssistantEnabled}
+          "supportAssistantEnabled" = ${supportAssistantEnabled},
+          "replyToEmail" = ${replyToEmail},
+          "defaultPaymentTermDays" = ${defaultPaymentTermDays},
+          "defaultInvoiceMessage" = ${defaultInvoiceMessage},
+          "defaultInvoiceAttachmentUrl" = ${defaultInvoiceAttachmentUrl},
+          "defaultInvoiceAttachmentName" = ${defaultInvoiceAttachmentName}
         WHERE "uuid" = ${business.id}
       `;
     } catch (error) {

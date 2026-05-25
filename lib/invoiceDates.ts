@@ -5,8 +5,20 @@ export function getTodayDateInputValue(baseDate = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
-export function getDefaultDueDate(issueDateValue: string): string {
+function addDaysToDateInput(issueDateValue: string, days: number): string {
+  const [year, month, day] = issueDateValue.split("-").map(Number);
+  if (!year || !month || !day) return "";
+
+  const date = new Date(year, month - 1, day + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+export function getDefaultDueDate(issueDateValue: string, paymentTermDays?: number | null): string {
   if (!issueDateValue) return "";
+
+  if (typeof paymentTermDays === "number" && Number.isFinite(paymentTermDays) && paymentTermDays >= 0) {
+    return addDaysToDateInput(issueDateValue, Math.floor(paymentTermDays));
+  }
 
   const [year, month, day] = issueDateValue.split("-").map(Number);
   if (!year || !month || !day) return "";

@@ -38,6 +38,7 @@ type ReminderCandidate = {
   businessBankName: string | null;
   businessIban: string | null;
   businessBic: string | null;
+  businessReplyToEmail: string | null;
   clientCompanyName: string | null;
   clientContactName: string | null;
   clientEmail: string;
@@ -72,6 +73,7 @@ async function findReminderCandidates(
       b."bankName" AS "businessBankName",
       b."iban" AS "businessIban",
       b."bic" AS "businessBic",
+      b."replyToEmail" AS "businessReplyToEmail",
       c."companyName" AS "clientCompanyName",
       c."contactName" AS "clientContactName",
       c."email" AS "clientEmail"
@@ -196,6 +198,7 @@ async function processReminderBatch(
         invoiceLink,
         dueDate,
         reminderKind: reminderType,
+        replyToEmail: candidate.businessReplyToEmail,
         bankTransferDetails: {
           accountHolder: businessDisplayName,
           bankName: candidate.businessBankName,
