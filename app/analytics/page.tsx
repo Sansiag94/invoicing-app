@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, Filter } from "lucide-react";
+import { ArrowLeft, CalendarDays, Download, LineChart, ReceiptText, WalletCards } from "lucide-react";
 import { AnalyticsOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
@@ -470,27 +470,30 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[1.5rem] bg-slate-50 px-6 py-5 shadow-sm ring-1 ring-slate-200/70 dark:bg-slate-950/40 dark:ring-slate-800">
+      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-500">
+            <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-900 dark:hover:text-slate-50">
               <Link href="/dashboard" aria-label="Back to dashboard">
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white dark:bg-white dark:text-slate-950">
+              <LineChart className="h-5 w-5" />
+            </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-950 dark:text-slate-50">Analytics</h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">{startDate} to {endDate}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Financial overview for {startDate} to {endDate}</p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-3 text-sm font-medium text-slate-600 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:ring-slate-800">
-              <Filter className="h-4 w-4 text-sky-600 dark:text-sky-300" />
+            <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+              <CalendarDays className="h-4 w-4 text-slate-500 dark:text-slate-400" />
               <select
                 value={selectedYear}
                 onChange={(event) => handleYearChange(event.target.value)}
-                className="bg-transparent text-sm font-medium outline-none"
+                className="bg-transparent text-sm font-semibold outline-none"
                 aria-label="Analytics year"
               >
                 <option value="custom">Custom</option>
@@ -502,71 +505,78 @@ export default function AnalyticsPage() {
             <Button
               type="button"
               onClick={exportAnalyticsCsv}
-              className="h-11 rounded-full bg-red-500 px-5 text-white shadow-sm hover:bg-red-600"
+              className="h-10 rounded-md bg-slate-950 px-4 text-white shadow-sm hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
             >
               <Download className="mr-2 h-4 w-4" />
-              Export
+              Export CSV
             </Button>
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-end">
-          <div className="space-y-8">
+        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-end">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
             <div>
-              <p className="text-5xl font-semibold leading-none text-blue-600 dark:text-blue-300">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                <WalletCards className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                Revenue collected
+              </div>
+              <p className="mt-3 text-4xl font-semibold leading-none text-slate-950 dark:text-slate-50">
                 {formatHeroMoney(chartData.totals.revenue)} <span className="text-base font-medium text-slate-500">{analytics.currency}</span>
               </p>
-              <p className="mt-3 text-base text-sky-700/70 dark:text-sky-200/70">Total revenue</p>
             </div>
             <div>
-              <p className="text-3xl font-medium leading-none text-slate-500 dark:text-slate-300">
+              <div className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
+                <ReceiptText className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                Expenses booked
+              </div>
+              <p className="mt-3 text-3xl font-medium leading-none text-slate-600 dark:text-slate-300">
                 {formatHeroMoney(chartData.totals.expenses)} <span className="text-sm font-medium">{analytics.currency}</span>
               </p>
-              <p className="mt-3 text-base text-sky-700/70 dark:text-sky-200/70">Total expenses</p>
             </div>
           </div>
 
           <div className="flex min-h-40 items-end gap-2 overflow-x-auto pb-1">
             {visibleSeries.map((entry) => {
               const barHeight = Math.max(6, (entry.revenue / heroData.maxMonthlyRevenue) * 96);
+              const hasRevenue = entry.revenue > 0;
               return (
                 <div key={entry.label} className="flex min-w-10 flex-1 flex-col items-center gap-3">
                   <div
-                    className="w-full max-w-9 rounded-t-md bg-sky-100 dark:bg-sky-900/60"
+                    className={hasRevenue ? "w-full max-w-9 rounded-t-md bg-slate-950 dark:bg-slate-100" : "w-full max-w-9 rounded-t-md bg-slate-200 dark:bg-slate-800"}
                     style={{ height: `${barHeight}px` }}
                     title={`${entry.label}: ${analytics.currency} ${formatMoney(entry.revenue)} revenue`}
                   />
-                  <span className="text-sm text-sky-700/70 dark:text-sky-200/70">{getShortMonthLabel(entry.label)}</span>
+                  <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{getShortMonthLabel(entry.label)}</span>
                 </div>
               );
             })}
           </div>
         </div>
 
-        <div className="mt-7 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+        <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-[1.2fr_2fr] md:items-center">
             <div>
-              <p className="text-sm font-medium text-sky-700/70 dark:text-sky-200/70">Profits</p>
-              <p className="mt-2 text-2xl font-medium text-slate-900 dark:text-slate-50">
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Net result</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
                 {formatHeroMoney(chartData.totals.profit)} {analytics.currency}
               </p>
             </div>
             <div>
-              <p className="text-sm font-medium text-sky-700/70 dark:text-sky-200/70">
-                Estimated taxes {selectedYear === "custom" ? "for selected range" : selectedYear}
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
+                Tax planning estimate {selectedYear === "custom" ? "for selected range" : selectedYear}
               </p>
               <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <p className="text-lg font-medium text-slate-900 dark:text-slate-50">
                     {formatHeroMoney(heroData.incomeTaxEstimate)} {analytics.currency}
                   </p>
-                  <p className="text-sm text-sky-700/70 dark:text-sky-200/70">Income Tax</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Income tax</p>
                 </div>
                 <div>
                   <p className="text-lg font-medium text-slate-900 dark:text-slate-50">
                     {formatHeroMoney(heroData.socialSecurityEstimate)} {analytics.currency}
                   </p>
-                  <p className="text-sm text-sky-700/70 dark:text-sky-200/70">Social Security</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">Social security</p>
                 </div>
               </div>
               <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
