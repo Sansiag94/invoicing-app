@@ -9,7 +9,7 @@ import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails } from "@/lib/billingClient";
 import { getInvoiceVatLabel } from "@/lib/invoice";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
-import { BillingLimitDetails, InvoiceDetails, LineItemData } from "@/lib/types";
+import { BillingLimitDetails, InvoiceDetails, LineItemData, PortfolioItemRecord } from "@/lib/types";
 import {
   isSupportedSwissVatRate,
   NON_VAT_REGISTERED_INVOICE_NOTE,
@@ -20,6 +20,7 @@ import {
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getDefaultDueDate, toDateInputValue } from "@/lib/invoiceDates";
 import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
+import ServiceDescriptionInput from "@/components/invoices/ServiceDescriptionInput";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -138,6 +139,7 @@ export default function InvoiceDetailPage() {
   const [notes, setNotes] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
   const [lineItems, setLineItems] = useState<LineItemData[]>([]);
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItemRecord[]>([]);
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
   const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
 
@@ -148,6 +150,7 @@ export default function InvoiceDetailPage() {
   );
   const billingReturnPath = id ? `/invoices/${id}` : "/invoices";
   const vatRegistered = Boolean(invoice?.business.vatRegistered);
+  const invoiceCurrency = invoice?.currency ?? "CHF";
 
   function handleBillingLimitResponse(payload: { code?: string; details?: unknown }): boolean {
     const details = getBillingLimitDetails(payload);
@@ -255,6 +258,17 @@ export default function InvoiceDetailPage() {
     loadInvoiceIntoForm(safeInvoice);
   }, []);
 
+  const fetchPortfolioItems = useCallback(async () => {
+    const response = await authenticatedFetch("/api/portfolio-items");
+    const data = (await response.json()) as PortfolioItemRecord[] | { error?: string };
+
+    if (!response.ok || ("error" in data && data.error)) {
+      throw new Error(("error" in data ? data.error : null) ?? "Failed to load saved services");
+    }
+
+    setPortfolioItems(Array.isArray(data) ? data : []);
+  }, []);
+
   useEffect(() => {
     if (!id) return;
 
@@ -265,6 +279,9 @@ export default function InvoiceDetailPage() {
         setIsLoading(true);
         setLoadError(null);
         await fetchInvoice(id);
+        fetchPortfolioItems().catch((error) => {
+          console.error("Error fetching saved services:", error);
+        });
       } catch (error) {
         console.error("Error fetching invoice:", error);
         if (mounted) {
@@ -281,7 +298,7 @@ export default function InvoiceDetailPage() {
     return () => {
       mounted = false;
     };
-  }, [fetchInvoice, id]);
+  }, [fetchInvoice, fetchPortfolioItems, id]);
 
   useEffect(() => {
     if (vatRegistered) {
@@ -562,6 +579,22 @@ export default function InvoiceDetailPage() {
     setLineItems((current) =>
       current.map((item, itemIndex) =>
         itemIndex === index ? { ...item, [key]: value } : item
+      )
+    );
+  };
+
+  const applyPortfolioItemToLineItem = (index: number, portfolioItem: PortfolioItemRecord) => {
+    setLineItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index
+          ? {
+              ...item,
+              description: portfolioItem.description,
+              quantity: portfolioItem.defaultQuantity,
+              unitPrice: portfolioItem.unitPrice,
+              taxRate: vatRegistered ? portfolioItem.taxRate : 0,
+            }
+          : item
       )
     );
   };
@@ -1224,13 +1257,14 @@ export default function InvoiceDetailPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor={`edit-description-${index}`}>Description</Label>
-                      <Input
+                      <ServiceDescriptionInput
                         id={`edit-description-${index}`}
                         value={item.description}
                         placeholder="Description"
-                        onChange={(event) =>
-                          handleLineItemChange(index, "description", event.target.value)
-                        }
+                        portfolioItems={portfolioItems}
+                        currency={invoiceCurrency}
+                        onChange={(value) => handleLineItemChange(index, "description", value)}
+                        onSelect={(portfolioItem) => applyPortfolioItemToLineItem(index, portfolioItem)}
                       />
                     </div>
 
@@ -1384,12 +1418,13 @@ export default function InvoiceDetailPage() {
                         </button>
                       </TableCell>
                       <TableCell className="min-w-[14rem] pl-1 pr-2">
-                        <Input
+                        <ServiceDescriptionInput
                           value={item.description}
                           placeholder="Description"
-                          onChange={(event) =>
-                            handleLineItemChange(index, "description", event.target.value)
-                          }
+                          portfolioItems={portfolioItems}
+                          currency={invoiceCurrency}
+                          onChange={(value) => handleLineItemChange(index, "description", value)}
+                          onSelect={(portfolioItem) => applyPortfolioItemToLineItem(index, portfolioItem)}
                         />
                       </TableCell>
                       <TableCell className="px-2">

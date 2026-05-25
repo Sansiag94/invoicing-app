@@ -35,6 +35,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import InvoiceCreateSidebar from "@/components/invoices/InvoiceCreateSidebar";
+import ServiceDescriptionInput from "@/components/invoices/ServiceDescriptionInput";
 import { useToast } from "@/components/ui/toast";
 
 type InvoiceRow = InvoiceSummary & {
@@ -1699,30 +1700,15 @@ function InvoicePageContent() {
                             </button>
                           </div>
                           <div className="space-y-2">
-                            <Label htmlFor={`portfolio-${index}`}>Use saved service</Label>
-                            <Select
-                              id={`portfolio-${index}`}
-                              defaultValue=""
-                              onChange={(event) => {
-                                applyPortfolioItemToLineItem(index, event.target.value);
-                                event.currentTarget.value = "";
-                              }}
-                            >
-                              <option value="">Choose service</option>
-                              {portfolioItems.filter((portfolioItem) => portfolioItem.active).map((portfolioItem) => (
-                                <option key={portfolioItem.id} value={portfolioItem.id}>
-                                  {portfolioItem.description}
-                                </option>
-                              ))}
-                            </Select>
-                          </div>
-                          <div className="space-y-2">
                             <Label htmlFor={`description-${index}`}>Description</Label>
-                            <Input
+                            <ServiceDescriptionInput
                               id={`description-${index}`}
                               value={item.description}
                               placeholder="Description"
-                              onChange={(event) => updateLineItem(index, "description", event.target.value)}
+                              portfolioItems={portfolioItems}
+                              currency={businessCurrency}
+                              onChange={(value) => updateLineItem(index, "description", value)}
+                              onSelect={(portfolioItem) => applyPortfolioItemToLineItem(index, portfolioItem.id)}
                             />
                           </div>
 
@@ -1816,7 +1802,6 @@ function InvoicePageContent() {
                           <TableHead className="w-10 px-1">
                             <span className="sr-only">Reorder</span>
                           </TableHead>
-                          <TableHead className="w-40 px-2">Saved Service</TableHead>
                           <TableHead className="pl-1">Description</TableHead>
                           <TableHead className="w-20 px-2">Qty</TableHead>
                           <TableHead className="w-28 px-2">Unit Price</TableHead>
@@ -1853,27 +1838,14 @@ function InvoicePageContent() {
                                 <GripVertical className="h-4 w-4" />
                               </button>
                             </TableCell>
-                            <TableCell className="px-2">
-                              <Select
-                                defaultValue=""
-                                onChange={(event) => {
-                                  applyPortfolioItemToLineItem(index, event.target.value);
-                                  event.currentTarget.value = "";
-                                }}
-                              >
-                                <option value="">Choose</option>
-                                {portfolioItems.filter((portfolioItem) => portfolioItem.active).map((portfolioItem) => (
-                                  <option key={portfolioItem.id} value={portfolioItem.id}>
-                                    {portfolioItem.description}
-                                  </option>
-                                ))}
-                              </Select>
-                            </TableCell>
                             <TableCell className="min-w-[14rem] pl-1 pr-2">
-                              <Input
+                              <ServiceDescriptionInput
                                 value={item.description}
                                 placeholder="Description"
-                                onChange={(event) => updateLineItem(index, "description", event.target.value)}
+                                portfolioItems={portfolioItems}
+                                currency={businessCurrency}
+                                onChange={(value) => updateLineItem(index, "description", value)}
+                                onSelect={(portfolioItem) => applyPortfolioItemToLineItem(index, portfolioItem.id)}
                               />
                             </TableCell>
                             <TableCell className="px-2">
