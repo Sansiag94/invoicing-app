@@ -1795,133 +1795,108 @@ function InvoicePageContent() {
                     </Button>
                   </div>
 
-                  <div className="hidden overflow-x-auto lg:block">
-                    <Table className="table-fixed">
-                      <colgroup>
-                        <col className="w-10" />
-                        <col />
-                        <col className="w-16" />
-                        <col className="w-24" />
-                        <col className="w-20" />
-                        <col className="w-20" />
-                        <col className="w-10" />
-                      </colgroup>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10 px-1">
-                            <span className="sr-only">Reorder</span>
-                          </TableHead>
-                          <TableHead className="min-w-[24rem] pl-1">Description</TableHead>
-                          <TableHead className="w-16 px-1">Qty</TableHead>
-                          <TableHead className="w-24 px-1">Unit Price</TableHead>
-                          <TableHead className="w-20 px-1">Tax %</TableHead>
-                          <TableHead className="w-20 px-1">Line Total</TableHead>
-                          <TableHead className="w-10 px-1">
-                            <span className="sr-only">Action</span>
-                          </TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {lineItems.map((item, index) => (
-                          <TableRow
-                            key={`${item.id ?? "new"}-${index}`}
-                            className={dragOverLineItemIndex === index ? "bg-slate-50" : undefined}
-                            onDragOver={(event) => {
-                              event.preventDefault();
-                              if (draggedLineItemIndex !== null) {
-                                setDragOverLineItemIndex(index);
+                  <div className="hidden lg:block">
+                    <div
+                      className="grid items-center gap-x-2 border-b border-slate-200 px-1 py-3 text-sm font-medium text-slate-600 dark:border-slate-800 dark:text-slate-300"
+                      style={{ gridTemplateColumns: "2.5rem minmax(0, 1fr) 3.5rem 5.5rem 4.5rem 5rem 2.5rem" }}
+                    >
+                      <span className="sr-only">Reorder</span>
+                      <span>Description</span>
+                      <span>Qty</span>
+                      <span>Unit Price</span>
+                      <span>Tax %</span>
+                      <span>Line Total</span>
+                      <span className="sr-only">Action</span>
+                    </div>
+
+                    <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                      {lineItems.map((item, index) => (
+                        <div
+                          key={`${item.id ?? "new"}-${index}`}
+                          className={cn(
+                            "grid items-center gap-x-2 px-1 py-4",
+                            dragOverLineItemIndex === index ? "bg-slate-50" : undefined
+                          )}
+                          style={{ gridTemplateColumns: "2.5rem minmax(0, 1fr) 3.5rem 5.5rem 4.5rem 5rem 2.5rem" }}
+                          onDragOver={(event) => {
+                            event.preventDefault();
+                            if (draggedLineItemIndex !== null) {
+                              setDragOverLineItemIndex(index);
+                            }
+                          }}
+                          onDrop={(event) => {
+                            event.preventDefault();
+                            handleLineItemDrop(index);
+                          }}
+                        >
+                          <button
+                            type="button"
+                            draggable
+                            className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50"
+                            aria-label={`Drag line item ${index + 1}`}
+                            onDragStart={() => handleLineItemDragStart(index)}
+                            onDragEnd={handleLineItemDragEnd}
+                          >
+                            <GripVertical className="h-4 w-4" />
+                          </button>
+                          <ServiceDescriptionInput
+                            value={item.description}
+                            placeholder="Description"
+                            portfolioItems={portfolioItems}
+                            currency={businessCurrency}
+                            onChange={(value) => updateLineItem(index, "description", value)}
+                            onSelect={(portfolioItem) => applyPortfolioItemToLineItem(index, portfolioItem.id)}
+                          />
+                          <Input
+                            type="number"
+                            min={0.01}
+                            step="0.01"
+                            value={item.quantity}
+                            onFocus={handleNumberInputFocus}
+                            onBlur={(event) => {
+                              if (parseNumber(event.target.value) <= 0) {
+                                updateLineItem(index, "quantity", MIN_QUANTITY);
                               }
                             }}
-                            onDrop={(event) => {
-                              event.preventDefault();
-                              handleLineItemDrop(index);
-                            }}
+                            onChange={(event) =>
+                              updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
+                            }
+                          />
+                          <Input
+                            type="number"
+                            min={0}
+                            step="0.01"
+                            value={item.unitPrice}
+                            onFocus={handleNumberInputFocus}
+                            onChange={(event) =>
+                              updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
+                            }
+                          />
+                          <Select
+                            value={String(vatRegistered ? item.taxRate : 0)}
+                            disabled={!vatRegistered}
+                            onChange={(event) =>
+                              updateLineItem(index, "taxRate", Number(event.target.value))
+                            }
                           >
-                            <TableCell className="w-10 px-1">
-                              <button
-                                type="button"
-                                draggable
-                                className="rounded-md border border-slate-200 p-1.5 text-slate-500 hover:bg-slate-50"
-                                aria-label={`Drag line item ${index + 1}`}
-                                onDragStart={() => handleLineItemDragStart(index)}
-                                onDragEnd={handleLineItemDragEnd}
-                              >
-                                <GripVertical className="h-4 w-4" />
-                              </button>
-                            </TableCell>
-                            <TableCell className="min-w-[24rem] pl-1 pr-2">
-                              <ServiceDescriptionInput
-                                value={item.description}
-                                placeholder="Description"
-                                portfolioItems={portfolioItems}
-                                currency={businessCurrency}
-                                onChange={(value) => updateLineItem(index, "description", value)}
-                                onSelect={(portfolioItem) => applyPortfolioItemToLineItem(index, portfolioItem.id)}
-                              />
-                            </TableCell>
-                            <TableCell className="px-1">
-                              <Input
-                                type="number"
-                                min={0.01}
-                                step="0.01"
-                                value={item.quantity}
-                                onFocus={handleNumberInputFocus}
-                                onBlur={(event) => {
-                                  if (parseNumber(event.target.value) <= 0) {
-                                    updateLineItem(index, "quantity", MIN_QUANTITY);
-                                  }
-                                }}
-                                onChange={(event) =>
-                                  updateLineItem(index, "quantity", Math.max(0, parseNumber(event.target.value)))
-                                }
-                              />
-                            </TableCell>
-                            <TableCell className="px-1">
-                              <Input
-                                type="number"
-                                min={0}
-                                step="0.01"
-                                value={item.unitPrice}
-                                onFocus={handleNumberInputFocus}
-                                onChange={(event) =>
-                                  updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
-                                }
-                              />
-                            </TableCell>
-                            <TableCell className="px-1">
-                              <Select
-                                value={String(vatRegistered ? item.taxRate : 0)}
-                                disabled={!vatRegistered}
-                                onChange={(event) =>
-                                  updateLineItem(index, "taxRate", Number(event.target.value))
-                                }
-                              >
-                                {SWISS_VAT_RATE_OPTIONS.map((option) => (
-                                  <option key={option.value} value={option.value}>
-                                    {option.label}
-                                  </option>
-                                ))}
-                              </Select>
-                            </TableCell>
-                            <TableCell className="px-1 text-sm">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                            <TableCell className="px-1 text-center">
-                              <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        <TableRow>
-                          <TableCell className="px-2">
-                            <Button type="button" variant="secondary" onClick={addLineItem} className="justify-start">
-                              <Plus className="h-4 w-4" />
-                              Add Line Item
-                            </Button>
-                          </TableCell>
-                          <TableCell colSpan={7} />
-                        </TableRow>
-                      </TableBody>
-                    </Table>
+                            {SWISS_VAT_RATE_OPTIONS.map((option) => (
+                              <option key={option.value} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </Select>
+                          <span className="text-sm">{(item.quantity * item.unitPrice).toFixed(2)}</span>
+                          <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+
+                    <Button type="button" variant="secondary" onClick={addLineItem} className="mt-4 justify-start">
+                      <Plus className="h-4 w-4" />
+                      Add Line Item
+                    </Button>
                   </div>
                 </div>
 
