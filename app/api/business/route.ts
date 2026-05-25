@@ -33,6 +33,7 @@ type UpdateBusinessBody = {
   logoUrl?: unknown;
   acceptsTwintPayments?: unknown;
   twintPhoneNumber?: unknown;
+  supportAssistantEnabled?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -64,13 +65,14 @@ type SenderPreferencesRow = {
   bic: string | null;
   acceptsTwintPayments: boolean | null;
   twintPhoneNumber: string | null;
+  supportAssistantEnabled: boolean | null;
 };
 
 async function loadSenderPreferences(businessId: string) {
   try {
     const rows = await prisma.$queryRaw<SenderPreferencesRow[]>`
       SELECT "ownerName", "invoiceSenderType", "bic"
-      ,"acceptsTwintPayments", "twintPhoneNumber"
+      ,"acceptsTwintPayments", "twintPhoneNumber", "supportAssistantEnabled"
       FROM "Business"
       WHERE "uuid" = ${businessId}
       LIMIT 1
@@ -83,6 +85,7 @@ async function loadSenderPreferences(businessId: string) {
       bic: row?.bic ?? null,
       acceptsTwintPayments: Boolean(row?.acceptsTwintPayments),
       twintPhoneNumber: row?.twintPhoneNumber ?? null,
+      supportAssistantEnabled: Boolean(row?.supportAssistantEnabled),
     };
   } catch (error) {
     console.warn("Unable to load sender preferences (columns may not exist yet):", error);
@@ -92,6 +95,7 @@ async function loadSenderPreferences(businessId: string) {
       bic: null,
       acceptsTwintPayments: false,
       twintPhoneNumber: null,
+      supportAssistantEnabled: false,
     };
   }
 }
@@ -184,6 +188,11 @@ export async function PATCH(request: Request) {
 
     const business = await ensureBusiness(user.id);
     await assertWorkspaceOpen(business.id);
+    const existingSenderPreferences = await loadSenderPreferences(business.id);
+    const supportAssistantEnabled =
+      body.supportAssistantEnabled === undefined
+        ? existingSenderPreferences.supportAssistantEnabled
+        : asBoolean(body.supportAssistantEnabled);
     const vatRegistered =
       body.vatRegistered === undefined ? Boolean(business.vatRegistered) : asBoolean(body.vatRegistered);
     const normalizedVatNumber = vatRegistered
@@ -237,7 +246,8 @@ export async function PATCH(request: Request) {
           "invoiceSenderType" = ${invoiceSenderType},
           "bic" = ${normalizedBic},
           "acceptsTwintPayments" = ${acceptsTwintPayments},
-          "twintPhoneNumber" = ${acceptsTwintPayments ? twintPhoneNumber : null}
+          "twintPhoneNumber" = ${acceptsTwintPayments ? twintPhoneNumber : null},
+          "supportAssistantEnabled" = ${supportAssistantEnabled}
         WHERE "uuid" = ${business.id}
       `;
     } catch (error) {

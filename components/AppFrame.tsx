@@ -20,6 +20,7 @@ type AppFrameProps = {
 type ShellBusinessBrand = {
   name: string;
   logoUrl: string | null;
+  supportAssistantEnabled: boolean;
 };
 
 type AuthStatus = "checking" | "authenticated" | "unauthenticated";
@@ -199,7 +200,11 @@ export default function AppFrame({ children }: AppFrameProps) {
           return;
         }
 
-        const business = (await response.json()) as { name?: string; logoUrl?: string | null };
+        const business = (await response.json()) as {
+          name?: string;
+          logoUrl?: string | null;
+          supportAssistantEnabled?: boolean;
+        };
         if (!mounted) {
           return;
         }
@@ -207,6 +212,7 @@ export default function AppFrame({ children }: AppFrameProps) {
         setBusinessBrand({
           name: business.name?.trim() || APP_NAME,
           logoUrl: business.logoUrl ?? null,
+          supportAssistantEnabled: Boolean(business.supportAssistantEnabled),
         });
       } catch (error) {
         console.error("Unable to load shell branding:", error);
@@ -217,6 +223,18 @@ export default function AppFrame({ children }: AppFrameProps) {
       mounted = false;
     };
   }, [authStatus, hideShell]);
+
+  useEffect(() => {
+    function handleSupportPreferenceChange(event: Event) {
+      const enabled = Boolean((event as CustomEvent<{ enabled?: boolean }>).detail?.enabled);
+      setBusinessBrand((current) => current ? { ...current, supportAssistantEnabled: enabled } : current);
+    }
+
+    window.addEventListener("support-assistant-preference-changed", handleSupportPreferenceChange);
+    return () => {
+      window.removeEventListener("support-assistant-preference-changed", handleSupportPreferenceChange);
+    };
+  }, []);
 
   const openMobileSidebar = () =>
     setMobileSidebarState({
@@ -283,7 +301,7 @@ export default function AppFrame({ children }: AppFrameProps) {
             <div className="mx-auto w-full max-w-7xl">{children}</div>
           </main>
           {showLegalFooter ? <LegalFooter linkSource={legalFooterSource} /> : null}
-          <SupportAssistant />
+          <SupportAssistant enabled={Boolean(businessBrand?.supportAssistantEnabled)} />
         </div>
       </div>
     </AppLanguageProvider>

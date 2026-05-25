@@ -7,6 +7,20 @@ export type SupportChatMessage = {
 
 const MAX_MESSAGE_LENGTH = 1200;
 const MAX_MESSAGES = 10;
+const SENSITIVE_PATTERNS = [
+  /\bpasswords?\b/i,
+  /\bapi\s*keys?\b/i,
+  /\bsecret(s)?\b/i,
+  /\btokens?\b/i,
+  /\biban\b/i,
+  /\bbic\b/i,
+  /\bswift\b/i,
+  /\bbank\s+(account|details?)\b/i,
+  /\bcard\s+(number|details?)\b/i,
+  /\bprivate\s+token\b/i,
+  /\bclient\s+(email|address|phone|list)\b/i,
+  /\bcustomer\s+(email|address|phone|list)\b/i,
+] as const;
 
 export function getOpenAiApiKey(): string | null {
   const value = process.env.OPENAI_API_KEY?.trim();
@@ -108,6 +122,14 @@ export function buildSupportFallbackAnswer(question: string): string {
 
 export function formatSupportTranscript(messages: SupportChatMessage[]): string {
   return messages
-    .map((message) => `${message.role === "user" ? "User" : "Heidi"}: ${message.content}`)
+    .map((message) => `${message.role === "user" ? "User" : "Sierra Assistant"}: ${message.content}`)
     .join("\n\n");
+}
+
+export function isSensitiveSupportQuestion(question: string): boolean {
+  return SENSITIVE_PATTERNS.some((pattern) => pattern.test(question));
+}
+
+export function buildSensitiveDataRefusal(): string {
+  return "I cannot show or retrieve sensitive personal, banking, payment, secret, or client contact data in chat. Please open the relevant app page directly, or send the conversation to support if you need help finding it.";
 }

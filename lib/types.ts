@@ -103,6 +103,7 @@ export interface BusinessSettingsData {
   stripeDetailsSubmitted?: boolean;
   acceptsTwintPayments?: boolean;
   twintPhoneNumber?: string | null;
+  supportAssistantEnabled?: boolean;
 }
 
 export interface InvoiceSummary {

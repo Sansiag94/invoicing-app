@@ -31,11 +31,15 @@ const STARTER_PROMPTS = [
   },
 ];
 
+type SupportAssistantProps = {
+  enabled: boolean;
+};
+
 function buildId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-export default function SupportAssistant() {
+export default function SupportAssistant({ enabled }: SupportAssistantProps) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -46,11 +50,14 @@ export default function SupportAssistant() {
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   const canEscalate = messages.some((message) => message.role === "user");
-
   const apiMessages = useMemo(
     () => messages.map((message) => ({ role: message.role, content: message.content })),
     [messages]
   );
+
+  if (!enabled) {
+    return null;
+  }
 
   async function askSupport(question: string) {
     const trimmedQuestion = question.trim();
@@ -78,7 +85,21 @@ export default function SupportAssistant() {
           messages: nextMessages.map((message) => ({ role: message.role, content: message.content })),
         }),
       });
-      const data = (await response.json()) as { answer?: string; error?: string };
+      const data = (await response.json()) as { answer?: string; error?: string; code?: string };
+
+      if (response.status === 429 || data.code === "too_many_requests") {
+        setMessages((current) => [
+          ...current,
+          {
+            id: buildId(),
+            role: "assistant",
+            content:
+              data.error ||
+              "The daily Sierra Assistant limit has been reached. Please contact support by email for further assistance. The chat will be available again tomorrow.",
+          },
+        ]);
+        return;
+      }
 
       if (!response.ok || data.error) {
         throw new Error(data.error || "Support could not answer right now.");
@@ -180,7 +201,7 @@ export default function SupportAssistant() {
             </div>
             <div>
               <p className="font-semibold text-slate-950 dark:text-slate-50">Support</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Heidi can answer or send this to support</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Sierra Assistant can answer or send this to support</p>
             </div>
           </div>
           <button
@@ -201,7 +222,7 @@ export default function SupportAssistant() {
                   <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-slate-50">
                     <LifeBuoy className="h-6 w-6" />
                   </div>
-                  <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-50">Hi, I&apos;m Heidi</h2>
+                  <h2 className="text-xl font-semibold text-slate-950 dark:text-slate-50">Hi, I&apos;m Sierra Assistant</h2>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                     Your assistant for invoicing, expenses, and app workflow.
                   </p>
@@ -254,7 +275,7 @@ export default function SupportAssistant() {
                 {isSending ? (
                   <div className="flex justify-start">
                     <div className="rounded-2xl bg-slate-100 px-4 py-3 text-sm text-slate-500 dark:bg-slate-900 dark:text-slate-400">
-                      Heidi is checking...
+                      Sierra Assistant is checking...
                     </div>
                   </div>
                 ) : null}
@@ -275,7 +296,7 @@ export default function SupportAssistant() {
                   ref={inputRef}
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
-                  placeholder="Ask Heidi anything..."
+                  placeholder="Ask Sierra Assistant anything..."
                   className="min-w-0 flex-1 bg-transparent px-2 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 dark:text-slate-100"
                   disabled={isSending}
                 />
@@ -290,7 +311,7 @@ export default function SupportAssistant() {
               </div>
               <div className="mt-2 flex items-center justify-between gap-2">
                 <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-600 dark:bg-blue-950 dark:text-blue-300">
-                  Heidi
+                  Sierra Assistant
                 </span>
                 <button
                   type="button"

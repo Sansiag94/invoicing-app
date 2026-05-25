@@ -4,7 +4,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown, ChevronUp, CreditCard, ExternalLink, RefreshCw, Save, Trash2, Upload } from "lucide-react";
+import { ChevronDown, ChevronUp, CreditCard, ExternalLink, LifeBuoy, RefreshCw, Save, Trash2, Upload } from "lucide-react";
 import { buildAddressString } from "@/lib/address";
 import { formatSequentialInvoiceNumber, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -109,6 +109,7 @@ export default function SettingsPage() {
   const [logoUrl, setLogoUrl] = useState(initialBusiness?.logoUrl ?? "");
   const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(Boolean(initialBusiness?.acceptsTwintPayments));
   const [twintPhoneNumber, setTwintPhoneNumber] = useState(initialBusiness?.twintPhoneNumber ?? "");
+  const [supportAssistantEnabled, setSupportAssistantEnabled] = useState(Boolean(initialBusiness?.supportAssistantEnabled));
   const [usesPlatformStripe, setUsesPlatformStripe] = useState(Boolean(initialBusiness?.usesPlatformStripe));
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(initialBusiness?.stripeAccountId ?? null);
   const [stripeChargesEnabled, setStripeChargesEnabled] = useState(Boolean(initialBusiness?.stripeChargesEnabled));
@@ -226,6 +227,7 @@ export default function SettingsPage() {
           logoUrl,
           acceptsTwintPayments,
           twintPhoneNumber,
+          supportAssistantEnabled,
           usesPlatformStripe,
           stripeAccountId,
           stripeChargesEnabled,
@@ -394,6 +396,7 @@ export default function SettingsPage() {
         iban,
         acceptsTwintPayments,
         twintPhoneNumber,
+        supportAssistantEnabled,
         nextOfficialInvoiceSequence: Number(nextOfficialInvoiceSequence),
         logoUrl: options?.logoUrlOverride ?? logoUrl,
       }),
@@ -432,11 +435,17 @@ export default function SettingsPage() {
     setLogoUrl(updatedBusiness.logoUrl || "");
     setAcceptsTwintPayments(Boolean(updatedBusiness.acceptsTwintPayments));
     setTwintPhoneNumber(updatedBusiness.twintPhoneNumber || "");
+    setSupportAssistantEnabled(Boolean(updatedBusiness.supportAssistantEnabled));
     setUsesPlatformStripe(Boolean(updatedBusiness.usesPlatformStripe));
     setStripeAccountId(updatedBusiness.stripeAccountId || null);
     setStripeChargesEnabled(Boolean(updatedBusiness.stripeChargesEnabled));
     setStripePayoutsEnabled(Boolean(updatedBusiness.stripePayoutsEnabled));
     setStripeDetailsSubmitted(Boolean(updatedBusiness.stripeDetailsSubmitted));
+    window.dispatchEvent(
+      new CustomEvent("support-assistant-preference-changed", {
+        detail: { enabled: Boolean(updatedBusiness.supportAssistantEnabled) },
+      })
+    );
     setIsSaving(false);
 
     if (billingStatus || initialBilling) {
@@ -737,6 +746,7 @@ export default function SettingsPage() {
           setLogoUrl(data?.logoUrl || "");
           setAcceptsTwintPayments(Boolean(data?.acceptsTwintPayments));
           setTwintPhoneNumber(data?.twintPhoneNumber || "");
+          setSupportAssistantEnabled(Boolean(data?.supportAssistantEnabled));
           setUsesPlatformStripe(Boolean(data?.usesPlatformStripe));
           setStripeAccountId(data?.stripeAccountId || null);
           setStripeChargesEnabled(Boolean(data?.stripeChargesEnabled));
@@ -1259,6 +1269,51 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
         </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Support assistant</p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Sierra Assistant</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            Control whether the in-app support chat is available for this workspace.
+          </p>
+        </div>
+        <Card>
+          <CardContent className="grid gap-5 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="flex gap-4">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                <LifeBuoy className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-950 dark:text-slate-50">Enable Sierra Assistant</p>
+                <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+                  When enabled, users can ask workflow questions. The assistant has a daily message limit,
+                  avoids sensitive data, and can send unanswered conversations to your support email.
+                </p>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  OpenAI API billing is separate from ChatGPT subscriptions. Leave this off until your API key
+                  and usage budget are ready in Vercel.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100">
+                <span>{supportAssistantEnabled ? "Enabled" : "Disabled"}</span>
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-slate-300"
+                  checked={supportAssistantEnabled}
+                  onChange={(event) => setSupportAssistantEnabled(event.target.checked)}
+                />
+              </label>
+              <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving..." : "Save support setting"}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </section>
 
       <section className="space-y-4">

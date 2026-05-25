@@ -4,6 +4,7 @@ import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { sendSupportEscalationEmail } from "@/lib/email";
 import { ensureBusiness } from "@/lib/ensureBusiness";
 import { getLegalProfile } from "@/lib/legal";
+import prisma from "@/lib/prisma";
 import { formatSupportTranscript, normalizeSupportMessages } from "@/lib/supportAssistant";
 import { assertWorkspaceOpen, isWorkspaceClosedError } from "@/lib/workspaceClosure";
 
@@ -14,11 +15,30 @@ type SupportEscalationBody = {
   pagePath?: unknown;
 };
 
+async function isSupportAssistantEnabled(businessId: string): Promise<boolean> {
+  try {
+    const rows = await prisma.$queryRaw<Array<{ supportAssistantEnabled: boolean | null }>>`
+      SELECT "supportAssistantEnabled"
+      FROM "Business"
+      WHERE "uuid" = ${businessId}
+      LIMIT 1
+    `;
+    return Boolean(rows[0]?.supportAssistantEnabled);
+  } catch (error) {
+    console.warn("Unable to read support assistant setting:", error);
+    return false;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
     const business = await ensureBusiness(user.id);
     await assertWorkspaceOpen(business.id);
+
+    if (!(await isSupportAssistantEnabled(business.id))) {
+      return apiError("Sierra Assistant is disabled for this workspace.", 403);
+    }
 
     const body = (await request.json()) as SupportEscalationBody;
     const messages = normalizeSupportMessages(body.messages);

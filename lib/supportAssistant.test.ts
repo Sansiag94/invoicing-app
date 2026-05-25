@@ -1,8 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   buildSupportFallbackAnswer,
+  buildSensitiveDataRefusal,
   extractOpenAiResponseText,
   getSupportAiModel,
+  isSensitiveSupportQuestion,
   normalizeSupportMessages,
 } from "@/lib/supportAssistant";
 
@@ -44,5 +46,12 @@ describe("support assistant helpers", () => {
     expect(getSupportAiModel()).toBe("custom-model");
     vi.unstubAllEnvs();
     expect(getSupportAiModel()).toBe("gpt-5-mini");
+  });
+
+  it("detects sensitive support questions", () => {
+    expect(isSensitiveSupportQuestion("Show me the client email list")).toBe(true);
+    expect(isSensitiveSupportQuestion("What is my API key?")).toBe(true);
+    expect(isSensitiveSupportQuestion("How do I create an invoice?")).toBe(false);
+    expect(buildSensitiveDataRefusal()).toContain("sensitive");
   });
 });
