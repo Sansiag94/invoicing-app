@@ -349,7 +349,14 @@ export default function InvoiceDetailPage() {
       const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, {
         method: "POST",
       });
-      const result = (await response.json()) as { message?: string; error?: string; code?: string; details?: unknown };
+      const result = (await response.json()) as {
+        message?: string;
+        status?: InvoiceDetails["status"];
+        invoiceNumber?: string;
+        error?: string;
+        code?: string;
+        details?: unknown;
+      };
 
       if (!response.ok) {
         if (handleBillingLimitResponse(result)) {
@@ -364,7 +371,15 @@ export default function InvoiceDetailPage() {
         return;
       }
 
-      setInvoice((current) => (current ? { ...current, status: "sent" } : current));
+      setInvoice((current) =>
+        current
+          ? {
+              ...current,
+              status: result.status ?? (current.status === "paid" ? "paid" : "sent"),
+              invoiceNumber: result.invoiceNumber ?? current.invoiceNumber,
+            }
+          : current
+      );
       setSuccessMessage(result?.message ?? "Invoice sent");
     } catch (error) {
       console.error("Error sending invoice:", error);
@@ -821,8 +836,8 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
         <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap">
-          {!isEditing && invoice.status !== "paid" && invoice.status !== "cancelled" ? (
-            invoice.status === "draft" ? (
+          {!isEditing && invoice.status !== "cancelled" ? (
+            invoice.status === "draft" || invoice.status === "paid" ? (
               <Button
                 variant="default"
                 onClick={handleSendInvoice}
@@ -830,7 +845,7 @@ export default function InvoiceDetailPage() {
                 className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <Send className="h-4 w-4" />
-                {isSending ? "Sending..." : "Send"}
+                {isSending ? "Sending..." : invoice.status === "paid" ? "Send Paid Invoice" : "Send"}
               </Button>
             ) : (
               <Button

@@ -21,6 +21,7 @@ import {
 import InvoiceDocument from "@/lib/InvoiceDocument";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
+import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
 import { assertBusinessCanIssueInvoice, isBillingLimitError } from "@/lib/billing";
 import {
   assertRateLimit,
@@ -69,10 +70,6 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   if (!clientEmail) {
     console.warn("[invoice-send] Client email missing", { invoiceId: existingInvoice.id });
     return apiError("Client email is missing", 400);
-  }
-
-  if (existingInvoice.status === "paid") {
-    return apiError("Paid invoices cannot be sent again", 400);
   }
 
   if (existingInvoice.status === "cancelled") {
@@ -151,6 +148,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   const computedTotals = calculateInvoiceTotals(existingInvoice.lineItems);
   const totalAmountForEmail =
     computedTotals.totalAmount > 0 ? computedTotals.totalAmount : existingInvoice.totalAmount;
+  const amountDueForEmail = getInvoiceAmountDue(existingInvoice.status, totalAmountForEmail);
   const clientDisplayName =
     existingInvoice.client.contactName || existingInvoice.client.companyName || clientEmail;
   const emailBusinessName = getInvoiceSenderName({
@@ -177,17 +175,21 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     recipientName: clientDisplayName,
     invoiceNumber: officialInvoiceNumber,
     totalAmount: totalAmountForEmail,
+    amountDue: amountDueForEmail,
     currency: existingInvoice.currency,
     dueDate: existingInvoice.dueDate,
     viewLink: invoiceLink,
     payLink: invoiceLink,
-    bankTransferDetails: {
-      accountHolder: emailBusinessName,
-      bankName: existingInvoice.business.bankName,
-      iban: existingInvoice.business.iban,
-      bic: senderPreferences.bic,
-      reference: existingInvoice.reference || officialInvoiceNumber,
-    },
+    bankTransferDetails:
+      amountDueForEmail > 0
+        ? {
+            accountHolder: emailBusinessName,
+            bankName: existingInvoice.business.bankName,
+            iban: existingInvoice.business.iban,
+            bic: senderPreferences.bic,
+            reference: existingInvoice.reference || officialInvoiceNumber,
+          }
+        : null,
     pdfAttachment: {
       filename: pdfFilename,
       content: pdfBuffer,
@@ -218,7 +220,11 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
     clientEmail,
   });
 
-  return NextResponse.json({ message: "Invoice sent" });
+  return NextResponse.json({
+    message: existingInvoice.status === "paid" ? "Paid invoice sent" : "Invoice sent",
+    status: existingInvoice.status === "draft" ? "sent" : existingInvoice.status,
+    invoiceNumber: officialInvoiceNumber,
+  });
 }
 
 export async function GET() {

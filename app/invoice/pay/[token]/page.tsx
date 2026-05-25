@@ -154,6 +154,7 @@ export default function PublicInvoicePage() {
   const taxAmount = totals.taxAmount;
   const totalAmountDue = totals.totalAmount;
   const invoiceAmountDue = invoice ? getInvoiceAmountDue(invoice.status, totalAmountDue) : 0;
+  const paidAmount = invoice?.status === "paid" ? totalAmountDue : 0;
   const canCollectPayment = invoice?.status !== "paid" && invoice?.status !== "cancelled";
   const shouldRenderQRSection = canCollectPayment && Boolean(invoice?.qrBill);
   const cardPaymentAvailable = Boolean(invoice?.cardPaymentAvailable);
@@ -260,7 +261,9 @@ export default function PublicInvoicePage() {
     { label: strings.amount, value: `${invoice.currency} ${formatInvoiceMoney(totalAmountDue, invoiceLanguage)}` },
     paymentReference ? { label: strings.referenceMessage, value: paymentReference } : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row?.value));
-  const paymentNoteLines = [invoice.paymentNote?.trim() || null].filter(Boolean);
+  const paymentNoteLines = [
+    invoice.status === "paid" ? strings.invoiceAlreadyPaid : invoice.paymentNote?.trim() || null,
+  ].filter(Boolean);
   const effectivePaymentNote = paymentNoteLines.length > 0 ? paymentNoteLines.join("\n") : null;
 
   const qrBillSection = (
@@ -585,6 +588,12 @@ export default function PublicInvoicePage() {
           {strings.invoiceCancelledNoPaymentDue}
         </div>
       ) : null}
+      {invoice.status === "paid" ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 print:hidden">
+          {strings.invoiceAlreadyPaid}. {strings.amountDue}: {invoice.currency}{" "}
+          {formatInvoiceMoney(invoiceAmountDue, invoiceLanguage)}.
+        </div>
+      ) : null}
       {checkoutError ? (
         <div className="rounded-md border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-800 print:hidden">
           {checkoutError}
@@ -691,14 +700,24 @@ export default function PublicInvoicePage() {
                 </span>
               </div>
             ) : null}
-            <div className="flex items-center justify-between text-[20px] font-semibold leading-none">
+            <div className={`flex items-center justify-between leading-none ${
+              invoiceAmountDue === totalAmountDue ? "text-[20px] font-semibold" : "text-slate-700"
+            }`}>
               <span>{strings.total}</span>
               <span>
                 {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
               </span>
             </div>
-            {invoiceAmountDue !== totalAmountDue ? (
+            {paidAmount > 0 ? (
               <div className="mt-2 flex items-center justify-between text-sm text-slate-700">
+                <span>{strings.status.paid}</span>
+                <span>
+                  - {invoice.currency} {formatInvoiceMoney(paidAmount, invoiceLanguage)}
+                </span>
+              </div>
+            ) : null}
+            {invoiceAmountDue !== totalAmountDue ? (
+              <div className="mt-2 flex items-center justify-between text-[20px] font-semibold leading-none">
                 <span>{strings.amountDue}</span>
                 <span>
                   {invoice.currency} {formatInvoiceMoney(invoiceAmountDue, invoiceLanguage)}

@@ -269,7 +269,14 @@ export default function InvoicePreviewPage() {
       const response = await authenticatedFetch(`/api/invoices/${id}/send`, {
         method: "POST",
       });
-      const result = (await response.json()) as { message?: string; error?: string; code?: string; details?: unknown };
+      const result = (await response.json()) as {
+        message?: string;
+        status?: InvoiceDetails["status"];
+        invoiceNumber?: string;
+        error?: string;
+        code?: string;
+        details?: unknown;
+      };
 
       if (!response.ok) {
         if (handleBillingLimitResponse(result)) {
@@ -284,7 +291,15 @@ export default function InvoicePreviewPage() {
         return;
       }
 
-      setInvoice((current) => (current ? { ...current, status: "sent" } : current));
+      setInvoice((current) =>
+        current
+          ? {
+              ...current,
+              status: result.status ?? (current.status === "paid" ? "paid" : "sent"),
+              invoiceNumber: result.invoiceNumber ?? current.invoiceNumber,
+            }
+          : current
+      );
       router.push("/invoices");
     } catch (error) {
       console.error("Error sending invoice:", error);
@@ -496,8 +511,8 @@ export default function InvoicePreviewPage() {
         </div>
 
         <div className="grid w-full grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
-          {invoice?.status !== "paid" && invoice?.status !== "cancelled" ? (
-            invoice?.status === "draft" ? (
+          {invoice?.status !== "cancelled" ? (
+            invoice?.status === "draft" || invoice?.status === "paid" ? (
               <Button
                 variant="default"
                 onClick={handleSendInvoice}
@@ -505,7 +520,7 @@ export default function InvoicePreviewPage() {
                 className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <Send className="h-4 w-4" />
-                {isSending ? "Sending..." : "Send"}
+                {isSending ? "Sending..." : invoice?.status === "paid" ? "Send Paid Invoice" : "Send"}
               </Button>
             ) : (
               <Button

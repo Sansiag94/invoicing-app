@@ -1146,7 +1146,7 @@ function InvoicePageContent() {
 
     try {
       for (const invoice of selectedInvoices) {
-        if (action === "send" && invoice.status === "draft") {
+        if (action === "send" && (invoice.status === "draft" || invoice.status === "paid")) {
           const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" });
           const result = (await response.json()) as { error?: string; code?: string; details?: unknown };
 
@@ -2111,7 +2111,7 @@ function InvoicePageContent() {
                     </TableCell>
                     <TableCell>
                       <div className="grid grid-cols-[8.5rem_7rem] gap-2">
-                        {invoice.status === "draft" ? (
+                        {invoice.status === "draft" || invoice.status === "paid" ? (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -2123,7 +2123,11 @@ function InvoicePageContent() {
                             }}
                           >
                             <Send className="h-4 w-4" />
-                            {isSendingId === invoice.id ? "Sending..." : "Send"}
+                            {isSendingId === invoice.id
+                              ? "Sending..."
+                              : invoice.status === "paid"
+                                ? "Send Paid"
+                                : "Send"}
                           </Button>
                         ) : invoice.status === "sent" || invoice.status === "overdue" ? (
                           <Button
@@ -2188,7 +2192,7 @@ function InvoicePageContent() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
-                    {invoice.status === "draft" ? (
+                    {invoice.status === "draft" || invoice.status === "paid" ? (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -2200,7 +2204,11 @@ function InvoicePageContent() {
                         className="col-span-2"
                       >
                         <Send className="h-4 w-4" />
-                        {isSendingId === invoice.id ? "Sending..." : "Send"}
+                        {isSendingId === invoice.id
+                          ? "Sending..."
+                          : invoice.status === "paid"
+                            ? "Send Paid"
+                            : "Send"}
                       </Button>
                     ) : invoice.status === "sent" || invoice.status === "overdue" ? (
                       <Button

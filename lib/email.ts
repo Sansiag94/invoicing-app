@@ -14,6 +14,7 @@ type SendInvoiceEmailInput = {
   recipientName?: string | null;
   invoiceNumber: string;
   totalAmount: number;
+  amountDue?: number;
   currency: string;
   dueDate?: Date | string | null;
   viewLink: string;
@@ -216,6 +217,7 @@ export async function sendInvoiceEmail({
   recipientName,
   invoiceNumber,
   totalAmount,
+  amountDue,
   currency,
   dueDate,
   viewLink,
@@ -226,6 +228,9 @@ export async function sendInvoiceEmail({
   const from = buildSenderIdentity(businessName);
   const replyTo = process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
+  const payableAmount = amountDue ?? totalAmount;
+  const formattedAmountDue = `${currency} ${payableAmount.toFixed(2)}`;
+  const isAlreadyPaid = payableAmount <= 0;
   const parsedDueDate =
     dueDate instanceof Date ? dueDate : dueDate ? new Date(dueDate) : null;
   const dueDateLabel =
@@ -233,13 +238,14 @@ export async function sendInvoiceEmail({
   const normalizedRecipientName = recipientName?.trim();
   const greetingLine = normalizedRecipientName ? `Hello ${normalizedRecipientName},` : "Hello,";
   const effectivePayLink = payLink?.trim() || viewLink;
-  const bankTransferRows = buildBankTransferRows(bankTransferDetails, formattedTotal);
+  const bankTransferRows = isAlreadyPaid ? [] : buildBankTransferRows(bankTransferDetails, formattedTotal);
   const bankTransferText = renderBankTransferText(bankTransferRows);
   const bankTransferHtml = renderBankTransferHtml(bankTransferRows);
   const safeBusinessName = escapeHtml(businessName);
   const safeGreetingLine = escapeHtml(greetingLine);
   const safeInvoiceNumber = escapeHtml(invoiceNumber);
   const safeFormattedTotal = escapeHtml(formattedTotal);
+  const safeFormattedAmountDue = escapeHtml(formattedAmountDue);
   const safeDueDateLabel = dueDateLabel ? escapeHtml(dueDateLabel) : null;
   const safePayLink = escapeHtml(effectivePayLink);
   const { privacyUrl } = getLegalEmailLinks();
@@ -256,9 +262,11 @@ Please find attached invoice ${invoiceNumber} from ${businessName}.
 
 Invoice number: ${invoiceNumber}
 Total amount: ${formattedTotal}
-${dueDateLabel ? `Due date: ${dueDateLabel}\n` : ""}A PDF copy is attached for your records.
+Amount due: ${formattedAmountDue}
+${isAlreadyPaid ? "This invoice has already been paid. No further payment is due.\n" : ""}
+${dueDateLabel && !isAlreadyPaid ? `Due date: ${dueDateLabel}\n` : ""}A PDF copy is attached for your records.
 
-View or pay online:
+${isAlreadyPaid ? "View invoice online:" : "View or pay online:"}
 ${effectivePayLink}
 ${bankTransferText}
 
@@ -271,20 +279,25 @@ ${privacyUrl}
           <p style="margin: 0 0 14px; color: #334155;">${safeGreetingLine}</p>
           <h2 style="margin: 0 0 10px; color: #0f172a; font-size: 22px;">Your invoice from ${safeBusinessName}</h2>
           <p style="margin: 0 0 22px; color: #475569; line-height: 1.6;">
-            Please find attached invoice <strong>${safeInvoiceNumber}</strong>. You can review it online or pay it directly using the button below.
+            ${
+              isAlreadyPaid
+                ? `Please find attached invoice <strong>${safeInvoiceNumber}</strong>. This invoice has already been paid and no further payment is due.`
+                : `Please find attached invoice <strong>${safeInvoiceNumber}</strong>. You can review it online or pay it directly using the button below.`
+            }
           </p>
           <div style="margin: 0 0 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 18px;">
             <div style="margin: 0 0 10px; color: #475569;">Invoice number: <strong style="color:#0f172a;">${safeInvoiceNumber}</strong></div>
             <div style="margin: 0 0 10px; color: #475569;">Total amount: <strong style="color:#0f172a;">${safeFormattedTotal}</strong></div>
+            <div style="margin: 0 0 10px; color: #475569;">Amount due: <strong style="color:#0f172a;">${safeFormattedAmountDue}</strong></div>
             ${
-              safeDueDateLabel
+              safeDueDateLabel && !isAlreadyPaid
                 ? `<div style="margin: 0; color: #475569;">Due date: <strong style="color:#0f172a;">${safeDueDateLabel}</strong></div>`
                 : ""
             }
           </div>
           <div style="margin: 0 0 18px;">
             <a href="${safePayLink}" style="display: inline-block; padding: 13px 18px; background: #0f172a; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600;">
-              View / Pay Invoice Online
+              ${isAlreadyPaid ? "View Invoice Online" : "View / Pay Invoice Online"}
             </a>
           </div>
           <p style="margin: 0 0 18px; color: #64748b; font-size: 13px;">
@@ -292,7 +305,7 @@ ${privacyUrl}
           </p>
           ${bankTransferHtml}
           ${
-            safeDueDateLabel
+            safeDueDateLabel && !isAlreadyPaid
               ? `<p style="margin: 0 0 12px; color: #64748b; font-size: 13px;">If payment has already been arranged, you can ignore this email.</p>`
               : ""
           }

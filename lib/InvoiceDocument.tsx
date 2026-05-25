@@ -3,6 +3,7 @@ import React from "react";
 import { Document, Image, Link, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { Prisma } from "@prisma/client";
 import { calculateInvoiceTotals, getInvoiceVatLabel, parsePostalAddress } from "@/lib/invoice";
+import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
 import { generateSwissQRCodeRects, getSwissQRBillMetadata, type SwissQRBillMetadata } from "@/lib/qrbill";
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
@@ -834,8 +835,15 @@ const InvoiceDocument = ({
     invoiceSenderType: "company" | "owner";
   };
 }) => {
+  const totals = calculateInvoiceTotals(invoice.lineItems);
+  const subtotal = totals.subtotal;
+  const taxAmount = totals.taxAmount;
+  const totalAmountDue = totals.totalAmount;
+  const amountDue = getInvoiceAmountDue(invoice.status, totalAmountDue);
+  const paidAmount = invoice.status === "paid" ? totalAmountDue : 0;
+  const canCollectPayment = amountDue > 0 && invoice.status !== "cancelled";
   const shouldRenderQRSection =
-    isSwissCountry(invoice.client.country) && (invoice.currency === "CHF" || invoice.currency === "EUR");
+    canCollectPayment && isSwissCountry(invoice.client.country) && (invoice.currency === "CHF" || invoice.currency === "EUR");
   const canGenerateQRCode =
     shouldRenderQRSection &&
     typeof invoice.business.iban === "string" &&
@@ -883,10 +891,6 @@ const InvoiceDocument = ({
       ? collectLines(paymentRecipientName, ...toPaymentAddressLines(businessAddress))
       : collectLines(senderBusinessName, sellerSecondaryName, ...toPaymentAddressLines(businessAddress));
   const debtorLines = collectLines(clientPrimaryName, clientSecondaryName, ...toPaymentAddressLines(clientAddress));
-  const totals = calculateInvoiceTotals(invoice.lineItems);
-  const subtotal = totals.subtotal;
-  const taxAmount = totals.taxAmount;
-  const totalAmountDue = totals.totalAmount;
   const vatLabel = getInvoiceVatLabel(invoice.lineItems, strings.vat);
 
   const invoiceForQR = {
@@ -922,7 +926,7 @@ const InvoiceDocument = ({
     normalizeLine(invoice.notes) ?? buildDefaultInvoiceMessage(invoiceLanguage, clientPrimaryName, senderName);
   const closingLines = buildMessageLines(messageText);
   const paymentNote = normalizeLine(invoice.paymentNote);
-  const paymentNoteLines = [paymentNote].filter(Boolean);
+  const paymentNoteLines = [invoice.status === "paid" ? strings.invoiceAlreadyPaid : paymentNote].filter(Boolean);
   const effectivePaymentNote = paymentNoteLines.length > 0 ? paymentNoteLines.join("\n") : null;
   const sellerLineCount = businessHeaderLines.length + sellerContactLines.length;
   const recipientLineCount = toCompactAddressLines(clientAddress).length + (clientVatNumber ? 1 : 0);
@@ -945,7 +949,7 @@ const InvoiceDocument = ({
   const firstPageTableHeight =
     TABLE_HEADER_HEIGHT + firstPagePreparedRows.reduce((sum, row) => sum + row.rowHeight, 0);
   const firstPageTotalsTop = firstPageTableTop + firstPageTableHeight + mm(8);
-  const firstPageTotalsHeight = mm(taxAmount > 0 ? 22 : 16);
+  const firstPageTotalsHeight = mm(taxAmount > 0 ? 22 : 16) + (amountDue !== totalAmountDue ? mm(9) : 0);
   const firstPageClosingHeight = measureMessageHeight(closingLines);
   const firstPageTotalsBottom = firstPageTotalsTop + firstPageTotalsHeight;
   const pageContentBottomLimit = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN;
@@ -1010,11 +1014,27 @@ const InvoiceDocument = ({
           </View>
         ) : null}
         <View style={styles.totalsRow}>
-          <Text style={styles.totalDueLabel}>{strings.total}</Text>
-          <Text style={styles.totalDueValue}>
+          <Text style={amountDue === totalAmountDue ? styles.totalDueLabel : styles.totalsLabel}>{strings.total}</Text>
+          <Text style={amountDue === totalAmountDue ? styles.totalDueValue : styles.totalsValue}>
             {invoice.currency} {formatInvoiceMoney(totalAmountDue, invoiceLanguage)}
           </Text>
         </View>
+        {paidAmount > 0 ? (
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>{strings.status.paid}</Text>
+            <Text style={styles.totalsValue}>
+              - {invoice.currency} {formatInvoiceMoney(paidAmount, invoiceLanguage)}
+            </Text>
+          </View>
+        ) : null}
+        {amountDue !== totalAmountDue ? (
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalDueLabel}>{strings.amountDue}</Text>
+            <Text style={styles.totalDueValue}>
+              {invoice.currency} {formatInvoiceMoney(amountDue, invoiceLanguage)}
+            </Text>
+          </View>
+        ) : null}
       </View>
     </View>
   );
