@@ -1375,13 +1375,13 @@ export default function InvoiceDetailPage() {
                     <span className="sr-only">Reorder</span>
                   </TableHead>
                 ) : null}
-                <TableHead className={isEditing ? "pl-1" : undefined}>Description</TableHead>
-                <TableHead className={isEditing ? "w-20 px-2" : undefined}>Quantity</TableHead>
-                <TableHead className={isEditing ? "w-28 px-2" : undefined}>Unit Price</TableHead>
-                <TableHead className={isEditing ? "w-24 px-2" : undefined}>Tax %</TableHead>
-                <TableHead className={isEditing ? "w-24 px-2" : undefined}>Line Total</TableHead>
+                <TableHead className={isEditing ? "min-w-[24rem] pl-1" : undefined}>Description</TableHead>
+                <TableHead className={isEditing ? "w-16 px-1" : undefined}>Quantity</TableHead>
+                <TableHead className={isEditing ? "w-24 px-1" : undefined}>Unit Price</TableHead>
+                <TableHead className={isEditing ? "w-20 px-1" : undefined}>Tax %</TableHead>
+                <TableHead className={isEditing ? "w-20 px-1" : undefined}>Line Total</TableHead>
                 {isEditing ? (
-                  <TableHead className="w-12 px-1 text-center">
+                  <TableHead className="w-10 px-1 text-center">
                     <span className="sr-only">Actions</span>
                   </TableHead>
                 ) : null}
@@ -1417,7 +1417,7 @@ export default function InvoiceDetailPage() {
                           <GripVertical className="h-4 w-4" />
                         </button>
                       </TableCell>
-                      <TableCell className="min-w-[14rem] pl-1 pr-2">
+                      <TableCell className="min-w-[24rem] pl-1 pr-2">
                         <ServiceDescriptionInput
                           value={item.description}
                           placeholder="Description"
@@ -1427,7 +1427,7 @@ export default function InvoiceDetailPage() {
                           onSelect={(portfolioItem) => applyPortfolioItemToLineItem(index, portfolioItem)}
                         />
                       </TableCell>
-                      <TableCell className="px-2">
+                      <TableCell className="px-1">
                         <Input
                           type="number"
                           min={0.01}
@@ -1448,7 +1448,7 @@ export default function InvoiceDetailPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell className="px-2">
+                      <TableCell className="px-1">
                         <Input
                           type="number"
                           min={0}
@@ -1464,7 +1464,7 @@ export default function InvoiceDetailPage() {
                           }
                         />
                       </TableCell>
-                      <TableCell className="px-2">
+                      <TableCell className="px-1">
                         <Select
                           value={String(vatRegistered ? item.taxRate : 0)}
                           disabled={!vatRegistered}
@@ -1479,8 +1479,8 @@ export default function InvoiceDetailPage() {
                           ))}
                         </Select>
                       </TableCell>
-                      <TableCell className="px-2">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                      <TableCell className="w-12 px-1 text-center">
+                      <TableCell className="px-1 text-sm">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                      <TableCell className="w-10 px-1 text-center">
                         <Button
                           type="button"
                           variant="ghost"

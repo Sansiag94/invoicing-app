@@ -1802,12 +1802,14 @@ function InvoicePageContent() {
                           <TableHead className="w-10 px-1">
                             <span className="sr-only">Reorder</span>
                           </TableHead>
-                          <TableHead className="pl-1">Description</TableHead>
-                          <TableHead className="w-20 px-2">Qty</TableHead>
-                          <TableHead className="w-28 px-2">Unit Price</TableHead>
-                          <TableHead className="w-24 px-2">Tax %</TableHead>
-                          <TableHead className="w-24 px-2">Line Total</TableHead>
-                          <TableHead className="w-16 px-2">Action</TableHead>
+                          <TableHead className="min-w-[24rem] pl-1">Description</TableHead>
+                          <TableHead className="w-16 px-1">Qty</TableHead>
+                          <TableHead className="w-24 px-1">Unit Price</TableHead>
+                          <TableHead className="w-20 px-1">Tax %</TableHead>
+                          <TableHead className="w-20 px-1">Line Total</TableHead>
+                          <TableHead className="w-10 px-1">
+                            <span className="sr-only">Action</span>
+                          </TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -1838,7 +1840,7 @@ function InvoicePageContent() {
                                 <GripVertical className="h-4 w-4" />
                               </button>
                             </TableCell>
-                            <TableCell className="min-w-[14rem] pl-1 pr-2">
+                            <TableCell className="min-w-[24rem] pl-1 pr-2">
                               <ServiceDescriptionInput
                                 value={item.description}
                                 placeholder="Description"
@@ -1848,7 +1850,7 @@ function InvoicePageContent() {
                                 onSelect={(portfolioItem) => applyPortfolioItemToLineItem(index, portfolioItem.id)}
                               />
                             </TableCell>
-                            <TableCell className="px-2">
+                            <TableCell className="px-1">
                               <Input
                                 type="number"
                                 min={0.01}
@@ -1865,7 +1867,7 @@ function InvoicePageContent() {
                                 }
                               />
                             </TableCell>
-                            <TableCell className="px-2">
+                            <TableCell className="px-1">
                               <Input
                                 type="number"
                                 min={0}
@@ -1877,7 +1879,7 @@ function InvoicePageContent() {
                                 }
                               />
                             </TableCell>
-                            <TableCell className="px-2">
+                            <TableCell className="px-1">
                               <Select
                                 value={String(vatRegistered ? item.taxRate : 0)}
                                 disabled={!vatRegistered}
@@ -1892,8 +1894,8 @@ function InvoicePageContent() {
                                 ))}
                               </Select>
                             </TableCell>
-                            <TableCell className="px-2">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
-                            <TableCell className="px-2">
+                            <TableCell className="px-1 text-sm">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                            <TableCell className="px-1 text-center">
                               <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
