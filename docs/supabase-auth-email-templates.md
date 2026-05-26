@@ -13,7 +13,7 @@ Use the Resend SMTP settings:
 | Field | Value |
 | --- | --- |
 | Sender name | `Sierra Invoices` |
-| Sender email | `invoices@sierraservices.ch` |
+| Sender email | `no-reply@sierraservices.ch` |
 | SMTP host | `smtp.resend.com` |
 | SMTP port | `587` |
 | SMTP username | `resend` |
@@ -70,13 +70,7 @@ Body:
                 <table role="presentation" cellspacing="0" cellpadding="0">
                   <tr>
                     <td style="width:44px;height:44px;background:#020617;border-radius:12px;text-align:center;vertical-align:middle;">
-                      <img
-                        src="https://invoices.sierraservices.ch/brand-icon?size=96"
-                        width="32"
-                        height="32"
-                        alt="Sierra Invoices"
-                        style="display:block;margin:6px auto;border:0;"
-                      />
+                      <div style="font-size:16px;line-height:44px;font-weight:700;color:#ffffff;">SI</div>
                     </td>
                     <td style="padding-left:14px;">
                       <div style="font-size:18px;line-height:24px;font-weight:700;color:#0f172a;">Sierra Invoices</div>
