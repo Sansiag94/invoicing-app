@@ -194,16 +194,18 @@ function renderBankTransferHtml(rows: Array<[string, string]>): string {
   return `
     <div style="margin: 0 0 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff; padding: 18px;">
       <p style="margin: 0 0 12px; color: #0f172a; font-size: 14px; font-weight: 700;">Bank transfer details</p>
-      ${rows
-        .map(
-          ([label, value]) => `
-            <div style="display: flex; justify-content: space-between; gap: 16px; margin: 0 0 8px; color: #475569; font-size: 13px;">
-              <span style="font-weight: 600; color: #64748b;">${escapeHtml(label)}</span>
-              <strong style="color:#0f172a; text-align: right;">${escapeHtml(value)}</strong>
-            </div>
-          `
-        )
-        .join("")}
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse: collapse;">
+        ${rows
+          .map(
+            ([label, value]) => `
+              <tr>
+                <td style="padding: 0 16px 8px 0; color: #64748b; font-size: 13px; font-weight: 600; white-space: nowrap; vertical-align: top;">${escapeHtml(label)}</td>
+                <td style="padding: 0 0 8px 0; color: #0f172a; font-size: 13px; font-weight: 700; text-align: right; vertical-align: top; word-break: break-word;">${escapeHtml(value)}</td>
+              </tr>
+            `
+          )
+          .join("")}
+      </table>
     </div>
   `;
 }
