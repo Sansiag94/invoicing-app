@@ -270,7 +270,7 @@ export async function ensureSupabaseSessionRestored() {
   }
 }
 
-export function startClientLogout() {
+export async function startClientLogout() {
   if (typeof window === "undefined") {
     return;
   }
@@ -283,7 +283,11 @@ export function startClientLogout() {
   clearSessionBackup();
   clearSupabaseBrowserStorage();
 
-  void supabase.auth.signOut({ scope: "local" }).finally(() => {
+  try {
+    await supabase.auth.signOut({ scope: "local" });
+  } finally {
+    clearSessionBackup();
+    clearSupabaseBrowserStorage();
     logoutInProgress = false;
-  });
+  }
 }

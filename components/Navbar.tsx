@@ -301,7 +301,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     setIsAccountOpen(false);
 
     try {
-      startClientLogout();
+      await startClientLogout();
       void clearPwaAppCache();
       setUserEmail(null);
       window.location.replace("/");

@@ -1,10 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
-import { supabase } from "@/utils/supabase";
+import { startClientLogout, supabase } from "@/utils/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +16,17 @@ export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+
+  async function handleBackToLogin() {
+    setIsCancelling(true);
+
+    try {
+      await startClientLogout();
+    } finally {
+      router.replace("/login");
+    }
+  }
 
   async function handleSubmit() {
     if (newPassword.trim().length < 8) {
@@ -71,13 +81,15 @@ export default function ResetPasswordPage() {
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-10">
       <div className="mx-auto max-w-md space-y-6">
-        <Link
-          href="/login"
+        <button
+          type="button"
+          onClick={() => void handleBackToLogin()}
+          disabled={isCancelling}
           className="inline-flex items-center gap-2 text-sm font-medium text-slate-600 transition-colors hover:text-slate-900"
         >
           <ArrowLeft className="h-4 w-4" />
-          Back to login
-        </Link>
+          {isCancelling ? "Returning to login..." : "Back to login"}
+        </button>
 
         <Card>
           <CardHeader>
