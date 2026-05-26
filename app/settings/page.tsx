@@ -111,6 +111,7 @@ export default function SettingsPage() {
   const [acceptsTwintPayments, setAcceptsTwintPayments] = useState(Boolean(initialBusiness?.acceptsTwintPayments));
   const [twintPhoneNumber, setTwintPhoneNumber] = useState(initialBusiness?.twintPhoneNumber ?? "");
   const [supportAssistantEnabled, setSupportAssistantEnabled] = useState(Boolean(initialBusiness?.supportAssistantEnabled));
+  const [canManageSupportAssistant, setCanManageSupportAssistant] = useState(Boolean(initialBusiness?.canManageSupportAssistant));
   const [replyToEmail, setReplyToEmail] = useState(initialBusiness?.replyToEmail ?? "");
   const [defaultPaymentTermDays, setDefaultPaymentTermDays] = useState(String(initialBusiness?.defaultPaymentTermDays ?? 30));
   const [defaultInvoiceMessage, setDefaultInvoiceMessage] = useState(initialBusiness?.defaultInvoiceMessage ?? "");
@@ -237,6 +238,7 @@ export default function SettingsPage() {
           acceptsTwintPayments,
           twintPhoneNumber,
           supportAssistantEnabled,
+          canManageSupportAssistant,
           replyToEmail,
           defaultPaymentTermDays: Number(defaultPaymentTermDays) || 30,
           defaultInvoiceMessage,
@@ -404,40 +406,42 @@ export default function SettingsPage() {
 
     setIsSaving(true);
 
+    const payload = {
+      name,
+      ownerName,
+      invoiceSenderType,
+      address: buildAddressString({ street, postalCode, city }),
+      street,
+      postalCode,
+      city,
+      phone,
+      email,
+      website,
+      bankName,
+      bic,
+      country,
+      currency,
+      vatRegistered,
+      vatNumber: vatRegistered ? vatNumber : "",
+      iban,
+      acceptsTwintPayments,
+      twintPhoneNumber,
+      ...(canManageSupportAssistant ? { supportAssistantEnabled } : {}),
+      replyToEmail,
+      defaultPaymentTermDays: parsedDefaultPaymentTermDays,
+      defaultInvoiceMessage,
+      defaultInvoiceAttachmentUrl,
+      defaultInvoiceAttachmentName,
+      nextOfficialInvoiceSequence: Number(nextOfficialInvoiceSequence),
+      logoUrl: options?.logoUrlOverride ?? logoUrl,
+    };
+
     const response = await authenticatedFetch("/api/business", {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        name,
-        ownerName,
-        invoiceSenderType,
-        address: buildAddressString({ street, postalCode, city }),
-        street,
-        postalCode,
-        city,
-        phone,
-        email,
-        website,
-        bankName,
-        bic,
-        country,
-        currency,
-        vatRegistered,
-        vatNumber: vatRegistered ? vatNumber : "",
-        iban,
-        acceptsTwintPayments,
-        twintPhoneNumber,
-        supportAssistantEnabled,
-        replyToEmail,
-        defaultPaymentTermDays: parsedDefaultPaymentTermDays,
-        defaultInvoiceMessage,
-        defaultInvoiceAttachmentUrl,
-        defaultInvoiceAttachmentName,
-        nextOfficialInvoiceSequence: Number(nextOfficialInvoiceSequence),
-        logoUrl: options?.logoUrlOverride ?? logoUrl,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -474,6 +478,7 @@ export default function SettingsPage() {
     setAcceptsTwintPayments(Boolean(updatedBusiness.acceptsTwintPayments));
     setTwintPhoneNumber(updatedBusiness.twintPhoneNumber || "");
     setSupportAssistantEnabled(Boolean(updatedBusiness.supportAssistantEnabled));
+    setCanManageSupportAssistant(Boolean(updatedBusiness.canManageSupportAssistant));
     setReplyToEmail(updatedBusiness.replyToEmail || "");
     setDefaultPaymentTermDays(String(updatedBusiness.defaultPaymentTermDays ?? 30));
     setDefaultInvoiceMessage(updatedBusiness.defaultInvoiceMessage || "");
@@ -866,6 +871,7 @@ export default function SettingsPage() {
           setAcceptsTwintPayments(Boolean(data?.acceptsTwintPayments));
           setTwintPhoneNumber(data?.twintPhoneNumber || "");
           setSupportAssistantEnabled(Boolean(data?.supportAssistantEnabled));
+          setCanManageSupportAssistant(Boolean(data?.canManageSupportAssistant));
           setReplyToEmail(data?.replyToEmail || "");
           setDefaultPaymentTermDays(String(data?.defaultPaymentTermDays ?? 30));
           setDefaultInvoiceMessage(data?.defaultInvoiceMessage || "");
@@ -1504,50 +1510,52 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section className="space-y-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Support assistant</p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Sierra Assistant</h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Control whether the in-app support chat is available for this workspace.
-          </p>
-        </div>
-        <Card>
-          <CardContent className="grid gap-5 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-            <div className="flex gap-4">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
-                <LifeBuoy className="h-5 w-5" />
+      {canManageSupportAssistant ? (
+        <section className="space-y-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Support assistant</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-950 dark:text-slate-50">Sierra Assistant</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Control whether the in-app support chat is available for this workspace.
+            </p>
+          </div>
+          <Card>
+            <CardContent className="grid gap-5 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+              <div className="flex gap-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                  <LifeBuoy className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-950 dark:text-slate-50">Enable Sierra Assistant</p>
+                  <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
+                    When enabled, users can ask workflow questions. The assistant has a daily message limit,
+                    avoids sensitive data, and can send unanswered conversations to your support email.
+                  </p>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    OpenAI API billing is separate from ChatGPT subscriptions. Leave this off until your API key
+                    and usage budget are ready in Vercel.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="font-semibold text-slate-950 dark:text-slate-50">Enable Sierra Assistant</p>
-                <p className="mt-1 max-w-3xl text-sm text-slate-600 dark:text-slate-300">
-                  When enabled, users can ask workflow questions. The assistant has a daily message limit,
-                  avoids sensitive data, and can send unanswered conversations to your support email.
-                </p>
-                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                  OpenAI API billing is separate from ChatGPT subscriptions. Leave this off until your API key
-                  and usage budget are ready in Vercel.
-                </p>
+              <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
+                <label className="flex cursor-pointer items-center justify-between gap-4 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100">
+                  <span>{supportAssistantEnabled ? "Enabled" : "Disabled"}</span>
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300"
+                    checked={supportAssistantEnabled}
+                    onChange={(event) => setSupportAssistantEnabled(event.target.checked)}
+                  />
+                </label>
+                <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
+                  <Save className="h-4 w-4" />
+                  {isSaving ? "Saving..." : "Save support setting"}
+                </Button>
               </div>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-              <label className="flex cursor-pointer items-center justify-between gap-4 rounded-full border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-100">
-                <span>{supportAssistantEnabled ? "Enabled" : "Disabled"}</span>
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-slate-300"
-                  checked={supportAssistantEnabled}
-                  onChange={(event) => setSupportAssistantEnabled(event.target.checked)}
-                />
-              </label>
-              <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
-                <Save className="h-4 w-4" />
-                {isSaving ? "Saving..." : "Save support setting"}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
 
       <section className="space-y-4">
         <div>

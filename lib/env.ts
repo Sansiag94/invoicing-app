@@ -84,6 +84,10 @@ export function getComplimentaryProEmails(): string[] {
   return readEnvList("COMPLIMENTARY_PRO_EMAILS");
 }
 
+export function getAppAdminEmails(): string[] {
+  return readEnvList("APP_ADMIN_EMAILS");
+}
+
 export function getResendApiKey(): string {
   const value = readRequiredEnv("RESEND_API_KEY");
   if (!value) {

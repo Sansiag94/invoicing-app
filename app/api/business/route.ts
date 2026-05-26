@@ -6,6 +6,7 @@ import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { withStructuredAddress } from "@/lib/address";
 import { isSupportedInvoiceCurrency, normalizeInvoiceCurrency } from "@/lib/invoice";
 import { normalizeInvoiceSenderType } from "@/lib/business";
+import { isAppAdminEmail } from "@/lib/appAdmin";
 import { loadResolvedBusinessStripeStatus } from "@/lib/stripeConnect";
 import { isValidBic, isValidEmail, isValidIban, normalizeBic, normalizeIban } from "@/lib/validation";
 import { assertWorkspaceOpen, isWorkspaceClosedError } from "@/lib/workspaceClosure";
@@ -144,11 +145,13 @@ export async function GET(request: Request) {
     await assertWorkspaceOpen(business.id);
     const senderPreferences = await loadSenderPreferences(business.id);
     const stripeConnectStatus = await loadResolvedBusinessStripeStatus(business.id);
+    const canManageSupportAssistant = isAppAdminEmail(user.email);
 
     return NextResponse.json({
       ...business,
       ...senderPreferences,
       ...stripeConnectStatus,
+      canManageSupportAssistant,
       nextOfficialInvoiceSequence: business.invoiceCounter + 1,
     });
   } catch (error) {
@@ -226,6 +229,7 @@ export async function PATCH(request: Request) {
     const business = await ensureBusiness(user.id);
     await assertWorkspaceOpen(business.id);
     const existingSenderPreferences = await loadSenderPreferences(business.id);
+    const canManageSupportAssistant = isAppAdminEmail(user.email);
     const replyToEmail = asString(body.replyToEmail);
     const defaultPaymentTermDays =
       body.defaultPaymentTermDays === undefined
@@ -242,7 +246,7 @@ export async function PATCH(request: Request) {
         ? existingSenderPreferences.defaultInvoiceAttachmentName
         : asString(body.defaultInvoiceAttachmentName);
     const supportAssistantEnabled =
-      body.supportAssistantEnabled === undefined
+      body.supportAssistantEnabled === undefined || !canManageSupportAssistant
         ? existingSenderPreferences.supportAssistantEnabled
         : asBoolean(body.supportAssistantEnabled);
     const vatRegistered =
@@ -326,6 +330,7 @@ export async function PATCH(request: Request) {
       ...updatedBusiness,
       ...senderPreferences,
       ...stripeConnectStatus,
+      canManageSupportAssistant,
       nextOfficialInvoiceSequence: updatedBusiness.invoiceCounter + 1,
     });
   } catch (error) {
