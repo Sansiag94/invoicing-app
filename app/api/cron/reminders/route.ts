@@ -25,6 +25,13 @@ type ReminderBatchSummary = {
   failed: number;
 };
 
+type ReminderCronStage =
+  | "authorize"
+  | "prepare_windows"
+  | "before_due_3_days"
+  | "after_due_7_days"
+  | "complete";
+
 type ReminderCandidate = {
   id: string;
   invoiceNumber: string;
@@ -35,14 +42,15 @@ type ReminderCandidate = {
   businessName: string;
   businessOwnerName: string | null;
   businessInvoiceSenderType: string | null;
-  businessBankName: string | null;
-  businessIban: string | null;
-  businessBic: string | null;
   businessReplyToEmail: string | null;
   clientCompanyName: string | null;
   clientContactName: string | null;
   clientEmail: string;
 };
+
+function getErrorName(error: unknown): string {
+  return error instanceof Error ? error.name : "UnknownError";
+}
 
 function startOfUtcDay(value: Date): Date {
   return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
@@ -70,9 +78,6 @@ async function findReminderCandidates(
       b."name" AS "businessName",
       b."ownerName" AS "businessOwnerName",
       b."invoiceSenderType" AS "businessInvoiceSenderType",
-      b."bankName" AS "businessBankName",
-      b."iban" AS "businessIban",
-      b."bic" AS "businessBic",
       b."replyToEmail" AS "businessReplyToEmail",
       c."companyName" AS "clientCompanyName",
       c."contactName" AS "clientContactName",
@@ -199,20 +204,24 @@ async function processReminderBatch(
         dueDate,
         reminderKind: reminderType,
         replyToEmail: candidate.businessReplyToEmail,
-        bankTransferDetails: {
-          accountHolder: businessDisplayName,
-          bankName: candidate.businessBankName,
-          iban: candidate.businessIban,
-          bic: candidate.businessBic,
-          reference: invoiceNumber,
-        },
       });
-      await logInvoiceEvent({
-        invoiceId: candidate.id,
-        type: "reminder_sent",
-        actor: "System",
-        details: `Scheduled reminder sent (${reminderType})`,
-      });
+
+      try {
+        await logInvoiceEvent({
+          invoiceId: candidate.id,
+          type: "reminder_sent",
+          actor: "System",
+          details: `Scheduled reminder sent (${reminderType})`,
+        });
+      } catch (error) {
+        console.error("[invoice-reminders] Reminder sent but event logging failed", {
+          invoiceId: candidate.id,
+          invoiceNumber,
+          reminderType,
+          error,
+        });
+      }
+
       sent += 1;
     } catch (error) {
       await releaseReminderClaim(candidate.id, reminderType);
@@ -240,9 +249,12 @@ async function processReminderBatch(
 }
 
 async function runReminderJob(request: Request) {
+  let stage: ReminderCronStage = "authorize";
+
   try {
     assertAuthorizedCronRequest(request);
 
+    stage = "prepare_windows";
     const now = new Date();
     const todayStart = startOfUtcDay(now);
 
@@ -251,6 +263,7 @@ async function runReminderJob(request: Request) {
     const overdueStart = addDays(todayStart, -7);
     const overdueEnd = addDays(overdueStart, 1);
 
+    stage = "before_due_3_days";
     const dueSoon = await processReminderBatch(
       request,
       "before_due_3_days",
@@ -258,6 +271,7 @@ async function runReminderJob(request: Request) {
       dueSoonEnd
     );
 
+    stage = "after_due_7_days";
     const overdue = await processReminderBatch(
       request,
       "after_due_7_days",
@@ -265,6 +279,7 @@ async function runReminderJob(request: Request) {
       overdueEnd
     );
 
+    stage = "complete";
     return NextResponse.json({
       success: true,
       dueSoon,
@@ -273,16 +288,23 @@ async function runReminderJob(request: Request) {
     });
   } catch (error) {
     if (isCronAuthorizationError(error)) {
-      return apiError(error.message, error.status);
+      return apiError(error.message, error.status, { details: { stage } });
     }
 
     if (isEmailConfigurationError(error)) {
-      console.error("Error sending reminders: email configuration missing", error);
-      return apiError("Email provider not configured. Set RESEND_API_KEY.", 500);
+      console.error("Error sending reminders: email configuration missing", {
+        stage,
+        error,
+      });
+      return apiError("Email provider not configured for reminder emails.", 500, {
+        details: { stage, errorName: getErrorName(error) },
+      });
     }
 
-    console.error("Error processing invoice reminders:", error);
-    return apiError("Server error", 500);
+    console.error("Error processing invoice reminders:", { stage, error });
+    return apiError("Invoice reminder cron failed.", 500, {
+      details: { stage, errorName: getErrorName(error) },
+    });
   }
 }
 
