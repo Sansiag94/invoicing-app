@@ -169,9 +169,9 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
     let mounted = true;
 
     (async () => {
-      const { data } = await supabase.auth.getUser();
+      const { data } = await supabase.auth.getSession();
       if (!mounted) return;
-      setUserEmail(data.user?.email ?? null);
+      setUserEmail(data.session?.user?.email ?? null);
     })();
 
     const {
@@ -348,8 +348,11 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   }
 
   useEffect(() => {
+    if (!isNotificationsOpen) {
+      return;
+    }
+
     let cancelled = false;
-    let intervalId: number | null = null;
 
     const load = async () => {
       const loadedNotifications = await loadNotifications();
@@ -358,20 +361,15 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
       }
 
       setNotifications(loadedNotifications);
+      markNotificationsSeen(loadedNotifications);
     };
 
     void load();
-    intervalId = window.setInterval(() => {
-      void load();
-    }, 60_000);
 
     return () => {
       cancelled = true;
-      if (intervalId !== null) {
-        window.clearInterval(intervalId);
-      }
     };
-  }, []);
+  }, [isNotificationsOpen]);
 
   useEffect(() => {
     if (!isSearchOpen) {
@@ -593,17 +591,14 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
               type="button"
               className="relative inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md border border-slate-200 text-slate-700 transition-colors hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
               aria-label="Open notifications"
-              onClick={async () => {
+              onClick={() => {
                 setIsNotificationsOpen((current) => {
                   const nextValue = !current;
+                  if (nextValue) {
+                    markNotificationsSeen(notifications);
+                  }
                   return nextValue;
                 });
-
-                if (!isNotificationsOpen) {
-                  markNotificationsSeen(notifications);
-                  const loadedNotifications = await loadNotifications();
-                  markNotificationsSeen(loadedNotifications);
-                }
               }}
             >
               <Bell className="h-4 w-4" />

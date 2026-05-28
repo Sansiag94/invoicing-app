@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
@@ -49,6 +49,7 @@ function shouldShowLegalFooter(pathname: string, hideShell: boolean): boolean {
 
 export default function AppFrame({ children }: AppFrameProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const hideShell = useMemo(() => shouldHideShell(pathname), [pathname]);
   const showLegalFooter = useMemo(() => shouldShowLegalFooter(pathname, hideShell), [hideShell, pathname]);
   const legalFooterSource = pathname === "/settings" || pathname.startsWith("/settings/")
@@ -101,13 +102,8 @@ export default function AppFrame({ children }: AppFrameProps) {
       }
 
       if (session?.access_token) {
-        const { data: userData } = await supabase.auth.getUser();
-        if (!mounted) {
-          return;
-        }
-
-        if (userData.user && !userData.user.email_confirmed_at) {
-          const email = userData.user.email?.trim();
+        if (session.user && !session.user.email_confirmed_at) {
+          const email = session.user.email?.trim();
           setAuthStatus("unauthenticated");
           window.location.replace(
             email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email"
@@ -142,22 +138,16 @@ export default function AppFrame({ children }: AppFrameProps) {
         }
 
         if (nextSession?.access_token) {
-          void supabase.auth.getUser().then(({ data: userData }) => {
-            if (!mounted) {
-              return;
-            }
+          if (nextSession.user && !nextSession.user.email_confirmed_at) {
+            const email = nextSession.user.email?.trim();
+            setAuthStatus("unauthenticated");
+            window.location.replace(
+              email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email"
+            );
+            return;
+          }
 
-            if (userData.user && !userData.user.email_confirmed_at) {
-              const email = userData.user.email?.trim();
-              setAuthStatus("unauthenticated");
-              window.location.replace(
-                email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email"
-              );
-              return;
-            }
-
-            setAuthStatus("authenticated");
-          });
+          setAuthStatus("authenticated");
           return;
         }
       });
@@ -177,6 +167,39 @@ export default function AppFrame({ children }: AppFrameProps) {
       window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthenticationRequired);
     };
   }, [hideShell]);
+
+  useEffect(() => {
+    if (hideShell || authStatus !== "authenticated") {
+      return;
+    }
+
+    let cancelled = false;
+    const prefetchRoutes = () => {
+      if (cancelled) return;
+      ["/dashboard", "/clients", "/invoices", "/expenses", "/analytics", "/settings"].forEach((route) => {
+        router.prefetch(route);
+      });
+    };
+
+    const requestIdleCallback =
+      typeof window !== "undefined" ? window.requestIdleCallback : undefined;
+    const cancelIdleCallback =
+      typeof window !== "undefined" ? window.cancelIdleCallback : undefined;
+
+    if (requestIdleCallback && cancelIdleCallback) {
+      const idleId = requestIdleCallback(prefetchRoutes, { timeout: 3000 });
+      return () => {
+        cancelled = true;
+        cancelIdleCallback(idleId);
+      };
+    }
+
+    const timeoutId = window.setTimeout(prefetchRoutes, 1200);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [authStatus, hideShell, router]);
 
   useEffect(() => {
     if (hideShell || authStatus !== "authenticated") {
