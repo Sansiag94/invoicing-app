@@ -72,7 +72,7 @@ export default function ClientDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"profile" | "work" | "invoices">("profile");
+  const [activeTab, setActiveTab] = useState<"work" | "invoices">("work");
   const [workItems, setWorkItems] = useState<UnbilledWorkItemRecord[]>([]);
   const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<string[]>([]);
   const [isSavingWorkItem, setIsSavingWorkItem] = useState(false);
@@ -640,14 +640,13 @@ export default function ClientDetailPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold">{displayName}</h1>
-            <p className="text-sm text-slate-500">Client profile and related invoices</p>
+            <p className="text-sm text-slate-500">Client workspace, ongoing work, and invoices</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {!isEditing ? (
             <Button
               onClick={() => {
-                setActiveTab("profile");
                 setIsEditing(true);
               }}
             >
@@ -679,30 +678,7 @@ export default function ClientDetailPage() {
         </div>
       ) : null}
 
-      <div className="flex flex-wrap gap-2 border-b border-slate-200">
-        {[
-          { id: "profile", label: "Profile" },
-          { id: "work", label: "Unbilled Work" },
-          { id: "invoices", label: "Invoices" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`border-b-2 px-3 py-2 text-sm font-medium transition ${
-              activeTab === tab.id
-                ? "border-slate-950 text-slate-950"
-                : "border-transparent text-slate-500 hover:text-slate-900"
-            }`}
-            onClick={() => setActiveTab(tab.id as typeof activeTab)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "profile" ? (
-        <>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Client Details</CardTitle>
@@ -770,9 +746,9 @@ export default function ClientDetailPage() {
             </div>
           </CardContent>
         </Card>
-          </div>
+      </div>
 
-          {isEditing ? (
+      {isEditing ? (
         <Card>
           <CardHeader>
             <CardTitle>Edit Client</CardTitle>
@@ -875,15 +851,33 @@ export default function ClientDetailPage() {
             </form>
           </CardContent>
         </Card>
-          ) : null}
-        </>
       ) : null}
+
+      <div className="flex flex-wrap gap-2 border-b border-slate-200">
+        {[
+          { id: "work", label: "Ongoing Work" },
+          { id: "invoices", label: "Invoices" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`border-b-2 px-3 py-2 text-sm font-medium transition ${
+              activeTab === tab.id
+                ? "border-slate-950 text-slate-950"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+            onClick={() => setActiveTab(tab.id as typeof activeTab)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
       {activeTab === "work" ? (
         <Card>
           <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <CardTitle>Unbilled Work</CardTitle>
+              <CardTitle>Ongoing Work</CardTitle>
               <p className="mt-1 text-sm text-slate-500">
                 Save services as you complete them, then create one draft invoice when you are ready.
               </p>
