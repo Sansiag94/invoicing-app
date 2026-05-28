@@ -7,10 +7,11 @@ import { buildAddressString } from "@/lib/address";
 import { parsePostalAddress } from "@/lib/invoice";
 import { isSupportedCountry } from "@/lib/countries";
 import { DEFAULT_INVOICE_LANGUAGE, INVOICE_LANGUAGE_OPTIONS, getInvoiceLanguageLabel } from "@/lib/invoiceLanguage";
-import { ClientDetails, UnbilledWorkItemRecord } from "@/lib/types";
+import { ClientDetails, PortfolioItemRecord, UnbilledWorkItemRecord } from "@/lib/types";
 import { isValidEmail } from "@/lib/validation";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { ArrowLeft, Building2, FilePlus2, PencilLine, Plus, Trash2 } from "lucide-react";
+import ServiceDescriptionInput from "@/components/invoices/ServiceDescriptionInput";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,6 +83,8 @@ export default function ClientDetailPage() {
   const [workQuantity, setWorkQuantity] = useState("1");
   const [workUnitPrice, setWorkUnitPrice] = useState("");
   const [workNotes, setWorkNotes] = useState("");
+  const [portfolioItems, setPortfolioItems] = useState<PortfolioItemRecord[]>([]);
+  const [hasLoadedPortfolioItems, setHasLoadedPortfolioItems] = useState(false);
   const { toast } = useToast();
 
   const [companyName, setCompanyName] = useState("");
@@ -149,6 +152,40 @@ export default function ClientDetailPage() {
       mounted = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    if (activeTab !== "work" || hasLoadedPortfolioItems) {
+      return;
+    }
+
+    let mounted = true;
+
+    (async () => {
+      try {
+        const response = await authenticatedFetch("/api/portfolio-items");
+        const data = (await response.json()) as PortfolioItemRecord[] | { error?: string };
+
+        if (!response.ok || !Array.isArray(data)) {
+          throw new Error(("error" in data ? data.error : null) ?? "Unable to load saved services");
+        }
+
+        if (mounted) {
+          setPortfolioItems(data);
+          setHasLoadedPortfolioItems(true);
+        }
+      } catch (error) {
+        console.error("Error loading saved services:", error);
+        if (mounted) {
+          setPortfolioItems([]);
+          setHasLoadedPortfolioItems(true);
+        }
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [activeTab, hasLoadedPortfolioItems]);
 
   async function handleUpdateClient(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -320,6 +357,12 @@ export default function ClientDetailPage() {
     setWorkQuantity(String(item.quantity));
     setWorkUnitPrice(String(item.unitPrice));
     setWorkNotes(item.notes ?? "");
+  }
+
+  function applyPortfolioItemToWorkForm(item: PortfolioItemRecord) {
+    setWorkDescription(item.description);
+    setWorkQuantity("1");
+    setWorkUnitPrice(String(item.unitPrice));
   }
 
   async function saveWorkItem(e: FormEvent<HTMLFormElement>) {
@@ -784,12 +827,14 @@ export default function ClientDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="workDescription">Service / product</Label>
-                  <Input
+                  <ServiceDescriptionInput
                     id="workDescription"
                     value={workDescription}
-                    onChange={(event) => setWorkDescription(event.target.value)}
+                    portfolioItems={portfolioItems}
+                    currency={outstandingCurrency}
+                    onChange={setWorkDescription}
+                    onSelect={applyPortfolioItemToWorkForm}
                     placeholder="Write service/product here"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
