@@ -1449,7 +1449,7 @@ function InvoicePageContent() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <Label>Line Items</Label>
                     <Button asChild variant="outline" size="sm">
-                      <Link href="/catalog">Manage saved services</Link>
+                      <Link href="/catalog">Service Catalog</Link>
                     </Button>
                   </div>
 

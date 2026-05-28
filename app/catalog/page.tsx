@@ -270,9 +270,9 @@ export default function CatalogPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
-            Service Catalog
+            Services
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 dark:text-slate-50">Catalog</h1>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-slate-950 dark:text-slate-50">Service Catalog</h1>
           <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">
             Save reusable services and products once, then pick them quickly in invoices and unbilled work.
           </p>
@@ -359,7 +359,7 @@ export default function CatalogPage() {
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 value={searchQuery}
-                placeholder="Search catalog"
+                placeholder="Search service catalog"
                 className="w-full pl-9 sm:w-64"
                 onChange={(event) => setSearchQuery(event.target.value)}
               />
@@ -394,7 +394,7 @@ export default function CatalogPage() {
             </div>
           ) : filteredItems.length === 0 ? (
             <div className="rounded-md border border-dashed border-slate-200 px-4 py-8 text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              {items.length === 0 ? "No catalog items yet." : "No catalog items match this view."}
+              {items.length === 0 ? "No services or products saved yet." : "No services or products match this view."}
             </div>
           ) : (
             <div className="divide-y divide-slate-200 overflow-hidden rounded-md border border-slate-200 dark:divide-slate-800 dark:border-slate-800">

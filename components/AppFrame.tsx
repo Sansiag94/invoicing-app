@@ -176,7 +176,7 @@ export default function AppFrame({ children }: AppFrameProps) {
     let cancelled = false;
     const prefetchRoutes = () => {
       if (cancelled) return;
-      ["/dashboard", "/clients", "/invoices", "/expenses", "/analytics", "/settings"].forEach((route) => {
+      ["/dashboard", "/clients", "/invoices", "/catalog", "/expenses", "/analytics", "/settings"].forEach((route) => {
         router.prefetch(route);
       });
     };

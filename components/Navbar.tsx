@@ -21,11 +21,12 @@ const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
   { href: "/invoices", label: "Invoices" },
+  { href: "/catalog", label: "Services" },
   { href: "/expenses", label: "Expenses" },
   { href: "/analytics", label: "Analytics" },
 ];
 
-type NavTranslationKey = "dashboard" | "clients" | "invoices" | "expenses" | "analytics";
+type NavTranslationKey = "dashboard" | "clients" | "invoices" | "services" | "expenses" | "analytics";
 
 type NavbarProps = {
   onOpenMenu?: () => void;
@@ -98,6 +99,7 @@ function getNavLabel(label: string, t: (key: NavTranslationKey) => string): stri
     key === "dashboard" ||
     key === "clients" ||
     key === "invoices" ||
+    key === "services" ||
     key === "expenses" ||
     key === "analytics"
   ) {
@@ -159,6 +161,12 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
         label: t("addExpense"),
         description: "Track a new business cost",
         href: "/expenses",
+      },
+      {
+        id: "services",
+        label: "Service Catalog",
+        description: "Manage reusable services and products",
+        href: "/catalog",
       },
       {
         id: "overdue",

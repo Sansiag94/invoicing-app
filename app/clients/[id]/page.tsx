@@ -373,7 +373,7 @@ export default function ClientDetailPage() {
     if (!description) {
       toast({
         title: "Missing service",
-        description: "Write a service or product before adding it to the catalog.",
+        description: "Write a service or product before saving it to the catalog.",
         variant: "error",
       });
       return;
@@ -429,7 +429,7 @@ export default function ClientDetailPage() {
       );
       setHasLoadedPortfolioItems(true);
       toast({
-        title: "Added to catalog",
+        title: "Saved to catalog",
         description: "You can select it faster next time.",
         variant: "success",
       });
@@ -890,7 +890,7 @@ export default function ClientDetailPage() {
             </div>
             <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
               <Button asChild variant="outline" className="w-full sm:w-auto">
-                <Link href="/catalog">Manage saved services</Link>
+                <Link href="/catalog">Service Catalog</Link>
               </Button>
               <Button
                 type="button"
@@ -927,7 +927,7 @@ export default function ClientDetailPage() {
                       disabled={isSavingCatalogItem || !workDescription.trim()}
                     >
                       <Plus className="h-4 w-4" />
-                      {isSavingCatalogItem ? "Saving..." : "Add to catalog"}
+                      {isSavingCatalogItem ? "Saving..." : "Save to catalog"}
                     </Button>
                   </div>
                   <ServiceDescriptionInput

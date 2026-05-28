@@ -7,8 +7,8 @@ import type { AppLanguage } from "@/lib/types";
 const ENGLISH_COPY = {
   dashboard: "Dashboard",
   clients: "Clients",
-  catalog: "Catalog",
   invoices: "Invoices",
+  services: "Services",
   expenses: "Expenses",
   analytics: "Analytics",
   settings: "Settings",
