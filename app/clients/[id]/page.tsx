@@ -568,7 +568,7 @@ export default function ClientDetailPage() {
         return;
       }
 
-      router.push(`/invoices/${result.id}`);
+      router.push(`/invoices/${result.id}?mode=edit`);
     } catch (error) {
       console.error("Error creating invoice from work items:", error);
       toast({
@@ -893,7 +893,7 @@ export default function ClientDetailPage() {
                 className="w-full sm:w-auto"
               >
                 <FilePlus2 className="h-4 w-4" />
-                {isCreatingInvoiceFromWork ? "Creating..." : "Create Draft Invoice"}
+                {isCreatingInvoiceFromWork ? "Creating..." : "Create & Edit Draft"}
               </Button>
             </div>
           </CardHeader>
