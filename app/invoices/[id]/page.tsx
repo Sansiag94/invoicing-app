@@ -12,10 +12,7 @@ import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { BillingLimitDetails, InvoiceDetails, LineItemData, PortfolioItemRecord } from "@/lib/types";
 import {
   isSupportedSwissVatRate,
-  NON_VAT_REGISTERED_INVOICE_NOTE,
   SWISS_VAT_RATES,
-  SWISS_VAT_THRESHOLD_WARNING,
-  VAT_COMPLIANCE_DISCLAIMER,
 } from "@/lib/vat";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { getDefaultDueDate, toDateInputValue } from "@/lib/invoiceDates";
@@ -1212,12 +1209,6 @@ export default function InvoiceDetailPage() {
           <CardTitle>Line Items</CardTitle>
         </CardHeader>
         <CardContent>
-          {isEditing && !vatRegistered ? (
-            <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-100">
-              {NON_VAT_REGISTERED_INVOICE_NOTE} {SWISS_VAT_THRESHOLD_WARNING} {VAT_COMPLIANCE_DISCLAIMER}
-            </div>
-          ) : null}
-
           {isEditing ? (
             <div className="space-y-3 lg:hidden">
               {lineItems.map((item, index) => (

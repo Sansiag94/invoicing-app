@@ -18,10 +18,7 @@ import { getInvoiceSenderName } from "@/lib/business";
 import { getDefaultDueDate, getTodayDateInputValue } from "@/lib/invoiceDates";
 import {
   isSupportedSwissVatRate,
-  NON_VAT_REGISTERED_INVOICE_NOTE,
   SWISS_VAT_RATES,
-  SWISS_VAT_THRESHOLD_WARNING,
-  VAT_COMPLIANCE_DISCLAIMER,
 } from "@/lib/vat";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -1666,11 +1663,6 @@ function InvoicePageContent() {
 
                 <div className="space-y-3">
                   <Label>Line Items</Label>
-                  {!vatRegistered ? (
-                    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-100">
-                      {NON_VAT_REGISTERED_INVOICE_NOTE} {SWISS_VAT_THRESHOLD_WARNING} {VAT_COMPLIANCE_DISCLAIMER}
-                    </div>
-                  ) : null}
 
                   <div className="space-y-3 lg:hidden">
                     {lineItems.map((item, index) => (
