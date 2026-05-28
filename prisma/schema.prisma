@@ -71,6 +71,7 @@ model Business {
   expenses       Expense[] @relation("BusinessExpenses")
   portfolioItems PortfolioItem[] @relation("BusinessPortfolioItems")
   monthlyReports MonthlyReport[] @relation("BusinessMonthlyReports")
+  unbilledWorkItems UnbilledWorkItem[] @relation("BusinessUnbilledWorkItems")
 }
 
 model Client {
@@ -91,6 +92,7 @@ model Client {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   invoices    Invoice[] @relation("ClientInvoices")
+  unbilledWorkItems UnbilledWorkItem[] @relation("ClientUnbilledWorkItems")
 
   @@index([businessId, email])
 }
@@ -123,6 +125,7 @@ model Invoice {
   payments      Payment[]     @relation("InvoicePayments")
   reminders     InvoiceReminder[] @relation("InvoiceReminders")
   events        InvoiceEvent[] @relation("InvoiceEvents")
+  unbilledWorkItems UnbilledWorkItem[] @relation("InvoiceUnbilledWorkItems")
 
   @@index([stripeCheckoutSessionId])
   @@index([businessId, issuedAt])
@@ -173,6 +176,28 @@ model PortfolioItem {
 
   @@index([businessId, active])
   @@index([businessId, name])
+}
+
+model UnbilledWorkItem {
+  id          String             @id @default(uuid()) @map("uuid")
+  businessId  String
+  clientId    String
+  invoiceId   String?
+  serviceDate DateTime
+  description String
+  quantity    Float
+  unitPrice   Float
+  taxRate     Float              @default(0)
+  notes       String?
+  status      UnbilledWorkStatus @default(unbilled)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  business    Business           @relation("BusinessUnbilledWorkItems", fields: [businessId], references: [id], onDelete: Cascade)
+  client      Client             @relation("ClientUnbilledWorkItems", fields: [clientId], references: [id], onDelete: Cascade)
+  invoice     Invoice?           @relation("InvoiceUnbilledWorkItems", fields: [invoiceId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, clientId, status, serviceDate])
+  @@index([invoiceId])
 }
 
 model InvoiceReminder {
@@ -269,6 +294,12 @@ enum PaymentProvider {
 enum InvoiceReminderType {
   before_due_3_days
   after_due_7_days
+}
+
+enum UnbilledWorkStatus {
+  unbilled
+  added_to_draft
+  invoiced
 }
 
 enum ExpenseCategory {

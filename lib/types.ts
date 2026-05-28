@@ -5,6 +5,7 @@ export type InvoiceCurrency = "CHF" | "EUR";
 export type AppLanguage = "en" | "de" | "es" | "fr" | "it";
 export type InvoiceSenderType = "company" | "owner";
 export type BusinessPlanTier = "free" | "pro";
+export type UnbilledWorkStatus = "unbilled" | "added_to_draft" | "invoiced";
 export type BillingEntitlementSource = "free" | "stripe" | "complimentary";
 export type BillingSubscriptionStatus =
   | "inactive"
@@ -160,6 +161,7 @@ export interface InvoiceDetails extends InvoiceSummary {
 
 export interface ClientDetails extends ClientSummary {
   invoices: InvoiceSummary[];
+  unbilledWorkItems?: UnbilledWorkItemRecord[];
 }
 
 export interface DashboardRecentInvoice {
@@ -231,6 +233,27 @@ export interface PortfolioItemRecord {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UnbilledWorkItemRecord {
+  id: string;
+  businessId: string;
+  clientId: string;
+  invoiceId: string | null;
+  serviceDate: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  taxRate: number;
+  notes: string | null;
+  status: UnbilledWorkStatus;
+  createdAt: string;
+  updatedAt: string;
+  invoice?: {
+    id: string;
+    invoiceNumber: string;
+    status: InvoiceStatus;
+  } | null;
 }
 
 export interface ExpensesOverview {

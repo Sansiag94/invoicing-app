@@ -5,6 +5,7 @@ import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { withStructuredAddress } from "@/lib/address";
 import { isSupportedCountry } from "@/lib/countries";
 import { isSupportedInvoiceLanguage, normalizeInvoiceLanguage } from "@/lib/invoiceLanguage";
+import { toUnbilledWorkItemRecord } from "@/lib/unbilledWork";
 import { isValidEmail } from "@/lib/validation";
 
 type UpdateClientBody = {
@@ -68,6 +69,18 @@ export async function GET(
         invoices: {
           orderBy: { createdAt: "desc" },
         },
+        unbilledWorkItems: {
+          orderBy: [{ status: "asc" }, { serviceDate: "desc" }, { createdAt: "desc" }],
+          include: {
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                status: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -75,7 +88,10 @@ export async function GET(
       return apiError("Client not found", 404);
     }
 
-    return NextResponse.json(client);
+    return NextResponse.json({
+      ...client,
+      unbilledWorkItems: client.unbilledWorkItems.map(toUnbilledWorkItemRecord),
+    });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
@@ -152,10 +168,25 @@ export async function PATCH(
         invoices: {
           orderBy: { createdAt: "desc" },
         },
+        unbilledWorkItems: {
+          orderBy: [{ status: "asc" }, { serviceDate: "desc" }, { createdAt: "desc" }],
+          include: {
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                status: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(updatedClient);
+    return NextResponse.json({
+      ...updatedClient,
+      unbilledWorkItems: updatedClient.unbilledWorkItems.map(toUnbilledWorkItemRecord),
+    });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);
