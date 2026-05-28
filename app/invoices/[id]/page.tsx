@@ -590,9 +590,9 @@ export default function InvoiceDetailPage() {
           ? {
               ...item,
               description: portfolioItem.description,
-              quantity: portfolioItem.defaultQuantity,
+              quantity: 1,
               unitPrice: portfolioItem.unitPrice,
-              taxRate: vatRegistered ? portfolioItem.taxRate : 0,
+              taxRate: vatRegistered ? item.taxRate : 0,
             }
           : item
       )

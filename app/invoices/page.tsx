@@ -233,8 +233,6 @@ function InvoicePageContent() {
   const [portfolioForm, setPortfolioForm] = useState({
     description: "",
     unitPrice: "",
-    defaultQuantity: "1",
-    taxRate: "0",
     active: true,
   });
   const [isPortfolioOpen, setIsPortfolioOpen] = useState(false);
@@ -618,9 +616,9 @@ function InvoicePageContent() {
           ? {
               ...lineItem,
               description: item.description,
-              quantity: item.defaultQuantity,
+              quantity: 1,
               unitPrice: item.unitPrice,
-              taxRate: vatRegistered ? item.taxRate : 0,
+              taxRate: vatRegistered ? lineItem.taxRate : 0,
             }
           : lineItem
       )
@@ -632,8 +630,6 @@ function InvoicePageContent() {
     setPortfolioForm({
       description: "",
       unitPrice: "",
-      defaultQuantity: "1",
-      taxRate: "0",
       active: true,
     });
   };
@@ -643,8 +639,6 @@ function InvoicePageContent() {
     setPortfolioForm({
       description: item.description,
       unitPrice: String(item.unitPrice),
-      defaultQuantity: String(item.defaultQuantity),
-      taxRate: String(item.taxRate),
       active: item.active,
     });
     setIsPortfolioOpen(true);
@@ -672,8 +666,8 @@ function InvoicePageContent() {
             ...portfolioForm,
             name: portfolioForm.description,
             unitPrice: Number(portfolioForm.unitPrice),
-            defaultQuantity: Number(portfolioForm.defaultQuantity),
-            taxRate: Number(portfolioForm.taxRate),
+            defaultQuantity: 1,
+            taxRate: 0,
           }),
         }
       );
@@ -1493,8 +1487,8 @@ function InvoicePageContent() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
           <div>
-            <CardTitle>Saved Services</CardTitle>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Save repeated invoice descriptions so line items can be filled in one click.</p>
+            <CardTitle>Saved Services / Products</CardTitle>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Save repeated invoice descriptions and prices so line items can be filled in one click.</p>
           </div>
           <Button type="button" variant="outline" size="sm" onClick={() => setIsPortfolioOpen((current) => !current)}>
             {isPortfolioOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1503,14 +1497,14 @@ function InvoicePageContent() {
         </CardHeader>
         {isPortfolioOpen ? (
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(18rem,1fr)_8rem_8rem_7rem_6rem_auto] xl:items-end">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(18rem,1fr)_10rem_7rem_auto] md:items-end">
               <div className="space-y-2">
-                <Label htmlFor="portfolioDescription">Invoice description</Label>
+                <Label htmlFor="portfolioDescription">Service / product</Label>
                 <Input
                   id="portfolioDescription"
                   value={portfolioForm.description}
                   onChange={(event) => setPortfolioForm((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Kitchen cleaning"
+                  placeholder="Write service/product here"
                 />
               </div>
               <div className="space-y-2">
@@ -1522,29 +1516,6 @@ function InvoicePageContent() {
                   step="0.01"
                   value={portfolioForm.unitPrice}
                   onChange={(event) => setPortfolioForm((current) => ({ ...current, unitPrice: event.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="portfolioQuantity">Quantity</Label>
-                <Input
-                  id="portfolioQuantity"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={portfolioForm.defaultQuantity}
-                  onChange={(event) => setPortfolioForm((current) => ({ ...current, defaultQuantity: event.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="portfolioTax">Tax %</Label>
-                <Input
-                  id="portfolioTax"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={portfolioForm.taxRate}
-                  onChange={(event) => setPortfolioForm((current) => ({ ...current, taxRate: event.target.value }))}
-                  disabled={!vatRegistered}
                 />
               </div>
               <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
@@ -1581,8 +1552,8 @@ function InvoicePageContent() {
                     <div>
                       <p className="font-medium text-slate-900 dark:text-slate-100">{item.description}</p>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {businessCurrency} {item.unitPrice.toFixed(2)} x {item.defaultQuantity}
-                        {vatRegistered ? ` - ${item.taxRate}% tax` : ""} {item.active ? "" : "- inactive"}
+                        {businessCurrency} {item.unitPrice.toFixed(2)}
+                        {item.active ? "" : " - inactive"}
                       </p>
                     </div>
                     <div className="flex gap-2">

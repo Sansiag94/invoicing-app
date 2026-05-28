@@ -17,10 +17,7 @@ type ServiceDescriptionInputProps = {
 };
 
 function formatServiceMeta(item: PortfolioItemRecord, currency: string): string {
-  const quantity = Number.isInteger(item.defaultQuantity)
-    ? String(item.defaultQuantity)
-    : item.defaultQuantity.toFixed(2).replace(/\.?0+$/, "");
-  return `${currency} ${item.unitPrice.toFixed(2)} x ${quantity}${item.taxRate > 0 ? ` · ${item.taxRate}% VAT` : ""}`;
+  return `${currency} ${item.unitPrice.toFixed(2)}`;
 }
 
 export default function ServiceDescriptionInput({
