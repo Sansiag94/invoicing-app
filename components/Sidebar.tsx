@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText, Package } from "lucide-react";
+import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/appBrand";
 import { useAppLanguage } from "@/components/ui/i18n";
@@ -11,13 +11,12 @@ import { useAppLanguage } from "@/components/ui/i18n";
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
-  { href: "/catalog", label: "Catalog", icon: Package },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/expenses", label: "Expenses", icon: ReceiptText },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
 
-type NavTranslationKey = "dashboard" | "clients" | "catalog" | "invoices" | "expenses" | "analytics";
+type NavTranslationKey = "dashboard" | "clients" | "invoices" | "expenses" | "analytics";
 
 type SidebarProps = {
   onNavigate?: () => void;
@@ -38,7 +37,6 @@ function getNavLabel(label: string, t: (key: NavTranslationKey) => string): stri
   if (
     key === "dashboard" ||
     key === "clients" ||
-    key === "catalog" ||
     key === "invoices" ||
     key === "expenses" ||
     key === "analytics"

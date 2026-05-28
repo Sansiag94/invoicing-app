@@ -20,13 +20,12 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
-  { href: "/catalog", label: "Catalog" },
   { href: "/invoices", label: "Invoices" },
   { href: "/expenses", label: "Expenses" },
   { href: "/analytics", label: "Analytics" },
 ];
 
-type NavTranslationKey = "dashboard" | "clients" | "catalog" | "invoices" | "expenses" | "analytics";
+type NavTranslationKey = "dashboard" | "clients" | "invoices" | "expenses" | "analytics";
 
 type NavbarProps = {
   onOpenMenu?: () => void;
@@ -98,7 +97,6 @@ function getNavLabel(label: string, t: (key: NavTranslationKey) => string): stri
   if (
     key === "dashboard" ||
     key === "clients" ||
-    key === "catalog" ||
     key === "invoices" ||
     key === "expenses" ||
     key === "analytics"
@@ -155,12 +153,6 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
         label: t("addClient"),
         description: "Create a new client profile",
         href: "/clients",
-      },
-      {
-        id: "catalog",
-        label: "Open catalog",
-        description: "Manage reusable services and products",
-        href: "/catalog",
       },
       {
         id: "add-expense",

@@ -1446,7 +1446,12 @@ function InvoicePageContent() {
                 </div>
 
                 <div className="space-y-3">
-                  <Label>Line Items</Label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label>Line Items</Label>
+                    <Button asChild variant="outline" size="sm">
+                      <Link href="/catalog">Manage saved services</Link>
+                    </Button>
+                  </div>
 
                   <div className="space-y-3 lg:hidden">
                     {lineItems.map((item, index) => (

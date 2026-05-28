@@ -76,6 +76,7 @@ export default function ClientDetailPage() {
   const [workItems, setWorkItems] = useState<UnbilledWorkItemRecord[]>([]);
   const [selectedWorkItemIds, setSelectedWorkItemIds] = useState<string[]>([]);
   const [isSavingWorkItem, setIsSavingWorkItem] = useState(false);
+  const [isSavingCatalogItem, setIsSavingCatalogItem] = useState(false);
   const [isCreatingInvoiceFromWork, setIsCreatingInvoiceFromWork] = useState(false);
   const [editingWorkItemId, setEditingWorkItemId] = useState<string | null>(null);
   const [workServiceDate, setWorkServiceDate] = useState(getTodayDateInputValue());
@@ -365,6 +366,85 @@ export default function ClientDetailPage() {
     setWorkUnitPrice(String(item.unitPrice));
   }
 
+  async function saveWorkServiceToCatalog() {
+    const description = workDescription.trim();
+    const unitPrice = parseNumber(workUnitPrice);
+
+    if (!description) {
+      toast({
+        title: "Missing service",
+        description: "Write a service or product before adding it to the catalog.",
+        variant: "error",
+      });
+      return;
+    }
+
+    if (unitPrice < 0 || !Number.isFinite(unitPrice)) {
+      toast({
+        title: "Invalid unit price",
+        description: "Add a valid unit price before saving this catalog item.",
+        variant: "error",
+      });
+      return;
+    }
+
+    const alreadySaved = portfolioItems.some(
+      (item) => item.description.trim().toLowerCase() === description.toLowerCase()
+    );
+
+    if (alreadySaved) {
+      toast({
+        title: "Already in catalog",
+        description: "This service or product is already saved.",
+        variant: "info",
+      });
+      return;
+    }
+
+    setIsSavingCatalogItem(true);
+
+    try {
+      const response = await authenticatedFetch("/api/portfolio-items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: description,
+          description,
+          unitPrice,
+          defaultQuantity: 1,
+          taxRate: 0,
+          active: true,
+        }),
+      });
+      const result = (await response.json()) as PortfolioItemRecord | { error?: string };
+
+      if (!response.ok || !("id" in result)) {
+        throw new Error("error" in result ? result.error : "Unable to save catalog item");
+      }
+
+      setPortfolioItems((current) =>
+        [result, ...current].sort(
+          (left, right) => Number(right.active) - Number(left.active) || left.description.localeCompare(right.description)
+        )
+      );
+      setHasLoadedPortfolioItems(true);
+      toast({
+        title: "Added to catalog",
+        description: "You can select it faster next time.",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error saving catalog item:", error);
+      toast({
+        title: "Unable to add to catalog",
+        description: error instanceof Error ? error.message : "The catalog item could not be saved.",
+        variant: "error",
+      });
+    } finally {
+      setIsSavingCatalogItem(false);
+    }
+  }
+
   async function saveWorkItem(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -541,6 +621,12 @@ export default function ClientDetailPage() {
   const selectedWorkItems = unbilledItems.filter((item) => selectedWorkItemIds.includes(item.id));
   const selectedWorkTotal = selectedWorkItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
   const unbilledTotal = unbilledItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+  const allUnbilledSelected =
+    unbilledItems.length > 0 && unbilledItems.every((item) => selectedWorkItemIds.includes(item.id));
+
+  function toggleAllUnbilledWorkItems() {
+    setSelectedWorkItemIds(allUnbilledSelected ? [] : unbilledItems.map((item) => item.id));
+  }
 
   return (
     <div className="space-y-6">
@@ -802,15 +888,20 @@ export default function ClientDetailPage() {
                 Save services as you complete them, then create one draft invoice when you are ready.
               </p>
             </div>
-            <Button
-              type="button"
-              onClick={() => void createInvoiceFromWorkItems()}
-              disabled={selectedWorkItemIds.length === 0 || isCreatingInvoiceFromWork}
-              className="w-full sm:w-auto"
-            >
-              <FilePlus2 className="h-4 w-4" />
-              {isCreatingInvoiceFromWork ? "Creating..." : "Create Draft Invoice"}
-            </Button>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <Button asChild variant="outline" className="w-full sm:w-auto">
+                <Link href="/catalog">Manage saved services</Link>
+              </Button>
+              <Button
+                type="button"
+                onClick={() => void createInvoiceFromWorkItems()}
+                disabled={selectedWorkItemIds.length === 0 || isCreatingInvoiceFromWork}
+                className="w-full sm:w-auto"
+              >
+                <FilePlus2 className="h-4 w-4" />
+                {isCreatingInvoiceFromWork ? "Creating..." : "Create Draft Invoice"}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="grid gap-4 rounded-lg border border-slate-200 bg-slate-50 p-4 md:grid-cols-[10rem_minmax(14rem,1fr)_7rem_8rem]">
@@ -826,7 +917,19 @@ export default function ClientDetailPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="workDescription">Service / product</Label>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Label htmlFor="workDescription">Service / product</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void saveWorkServiceToCatalog()}
+                      disabled={isSavingCatalogItem || !workDescription.trim()}
+                    >
+                      <Plus className="h-4 w-4" />
+                      {isSavingCatalogItem ? "Saving..." : "Add to catalog"}
+                    </Button>
+                  </div>
                   <ServiceDescriptionInput
                     id="workDescription"
                     value={workDescription}
@@ -885,8 +988,19 @@ export default function ClientDetailPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-              <div className="text-slate-600">
-                {unbilledItems.length} unbilled item{unbilledItems.length === 1 ? "" : "s"} · CHF {unbilledTotal.toFixed(2)}
+              <div className="flex flex-wrap items-center gap-3 text-slate-600">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleAllUnbilledWorkItems}
+                  disabled={unbilledItems.length === 0}
+                >
+                  {allUnbilledSelected ? "Clear selection" : "Select all"}
+                </Button>
+                <span>
+                  {unbilledItems.length} unbilled item{unbilledItems.length === 1 ? "" : "s"} - CHF {unbilledTotal.toFixed(2)}
+                </span>
               </div>
               <div className="font-medium text-slate-900">
                 Selected: CHF {selectedWorkTotal.toFixed(2)}
@@ -904,7 +1018,16 @@ export default function ClientDetailPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-10" />
+                        <TableHead className="w-10">
+                          {unbilledItems.length > 0 ? (
+                            <input
+                              type="checkbox"
+                              checked={allUnbilledSelected}
+                              onChange={toggleAllUnbilledWorkItems}
+                              aria-label={allUnbilledSelected ? "Clear unbilled work selection" : "Select all unbilled work"}
+                            />
+                          ) : null}
+                        </TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Description</TableHead>
                         <TableHead>Qty</TableHead>
