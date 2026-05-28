@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildDefaultInvoiceMessage,
   buildDefaultInvoicePaymentNote,
+  buildWorkItemInvoiceSubject,
   formatInvoiceDate,
   getInvoiceLanguageLabel,
   getInvoiceStrings,
@@ -43,5 +44,24 @@ describe("invoice language helpers", () => {
     expect(getQrBillLanguage("es")).toBe("EN");
     expect(getQrBillLanguage("fr")).toBe("FR");
     expect(getInvoiceStrings("de").paymentOptions).toBe("Zahlungsoptionen");
+  });
+
+  it("uses the client invoice language for monthly work subjects", () => {
+    const mayDate = new Date("2026-05-28T00:00:00.000Z");
+
+    expect(buildWorkItemInvoiceSubject([mayDate], "de")).toBe("Leistungen Mai 2026");
+    expect(buildWorkItemInvoiceSubject([mayDate], "en")).toBe("Services May 2026");
+    expect(buildWorkItemInvoiceSubject([mayDate], "es")).toBe("Servicios de mayo de 2026");
+    expect(buildWorkItemInvoiceSubject([mayDate], "fr")).toBe("Services de mai 2026");
+    expect(buildWorkItemInvoiceSubject([mayDate], "it")).toBe("Servizi di maggio 2026");
+  });
+
+  it("uses localized generic work subjects for services spanning multiple months", () => {
+    expect(
+      buildWorkItemInvoiceSubject(
+        [new Date("2026-05-28T00:00:00.000Z"), new Date("2026-06-01T00:00:00.000Z")],
+        "de"
+      )
+    ).toBe("Offene Leistungen");
   });
 });

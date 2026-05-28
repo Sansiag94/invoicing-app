@@ -391,6 +391,54 @@ export function buildInvoiceAdditionalInformation(invoiceNumber: string, languag
   return `${getInvoiceStrings(language).invoice} ${invoiceNumber}`.trim();
 }
 
+export function buildWorkItemInvoiceSubject(serviceDates: Date[], languageInput: string): string {
+  const language = normalizeInvoiceLanguage(languageInput);
+  const genericSubject: Record<InvoiceLanguage, string> = {
+    en: "Unbilled work",
+    de: "Offene Leistungen",
+    es: "Servicios pendientes",
+    fr: "Services non factures",
+    it: "Servizi non fatturati",
+  };
+
+  if (serviceDates.length === 0) {
+    return genericSubject[language];
+  }
+
+  const firstDate = serviceDates[0];
+  const sameMonth = serviceDates.every(
+    (date) => date.getUTCFullYear() === firstDate.getUTCFullYear() && date.getUTCMonth() === firstDate.getUTCMonth()
+  );
+
+  if (!sameMonth) {
+    return genericSubject[language];
+  }
+
+  const monthLabel = new Intl.DateTimeFormat(getInvoiceLocale(language), {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(firstDate);
+
+  if (language === "de") {
+    return `Leistungen ${monthLabel}`;
+  }
+
+  if (language === "es") {
+    return `Servicios de ${monthLabel}`;
+  }
+
+  if (language === "fr") {
+    return `Services de ${monthLabel}`;
+  }
+
+  if (language === "it") {
+    return `Servizi di ${monthLabel}`;
+  }
+
+  return `Services ${monthLabel}`;
+}
+
 export function buildDefaultInvoiceMessage(
   language: InvoiceLanguage,
   clientName: string,

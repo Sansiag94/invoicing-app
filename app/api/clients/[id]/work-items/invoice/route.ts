@@ -5,7 +5,7 @@ import { apiError } from "@/lib/api-response";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { getInvoiceSenderName } from "@/lib/business";
 import { getDefaultDueDate, getTodayDateInputValue } from "@/lib/invoiceDates";
-import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
+import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote, buildWorkItemInvoiceSubject } from "@/lib/invoiceLanguage";
 import {
   calculateInvoiceTotals,
   formatDraftInvoiceNumber,
@@ -60,25 +60,6 @@ function buildInvoiceNotesFromSettings(
     .replaceAll("sender_first_name", senderFirstName)
     .replaceAll("{sender_name}", senderName)
     .replaceAll("sender_name", senderName);
-}
-
-function getWorkItemInvoiceSubject(serviceDates: Date[]): string {
-  if (serviceDates.length === 0) return "Unbilled work";
-
-  const first = serviceDates[0];
-  const sameMonth = serviceDates.every(
-    (date) => date.getUTCFullYear() === first.getUTCFullYear() && date.getUTCMonth() === first.getUTCMonth()
-  );
-
-  if (!sameMonth) {
-    return "Unbilled work";
-  }
-
-  return `Services ${new Intl.DateTimeFormat("en-GB", {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(first)}`;
 }
 
 export async function POST(
@@ -200,7 +181,7 @@ export async function POST(
           issuedAt: null,
           issueDate,
           dueDate,
-          subject: getWorkItemInvoiceSubject(workItems.map((item) => item.serviceDate)),
+          subject: buildWorkItemInvoiceSubject(workItems.map((item) => item.serviceDate), client.language),
           subtotal: computedTotals.subtotal,
           taxAmount: computedTotals.taxAmount,
           totalAmount: computedTotals.totalAmount,
