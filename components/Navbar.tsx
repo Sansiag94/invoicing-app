@@ -20,10 +20,13 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/clients", label: "Clients" },
+  { href: "/catalog", label: "Catalog" },
   { href: "/invoices", label: "Invoices" },
   { href: "/expenses", label: "Expenses" },
   { href: "/analytics", label: "Analytics" },
 ];
+
+type NavTranslationKey = "dashboard" | "clients" | "catalog" | "invoices" | "expenses" | "analytics";
 
 type NavbarProps = {
   onOpenMenu?: () => void;
@@ -89,6 +92,23 @@ function getBrandInitials(name: string): string {
   return ((words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "I")).toUpperCase();
 }
 
+function getNavLabel(label: string, t: (key: NavTranslationKey) => string): string {
+  const key = label.toLowerCase();
+
+  if (
+    key === "dashboard" ||
+    key === "clients" ||
+    key === "catalog" ||
+    key === "invoices" ||
+    key === "expenses" ||
+    key === "analytics"
+  ) {
+    return t(key);
+  }
+
+  return label;
+}
+
 export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
   const { t } = useAppLanguage();
   const seenNotificationsStorageKey = "sierra-invoices-seen-notifications";
@@ -135,6 +155,12 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
         label: t("addClient"),
         description: "Create a new client profile",
         href: "/clients",
+      },
+      {
+        id: "catalog",
+        label: "Open catalog",
+        description: "Manage reusable services and products",
+        href: "/catalog",
       },
       {
         id: "add-expense",
@@ -488,7 +514,7 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                     : "text-slate-700 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                 )}
               >
-                  {t(link.label.toLowerCase() as "dashboard" | "clients" | "invoices" | "expenses" | "analytics")}
+                  {getNavLabel(link.label, t)}
               </Link>
             );
           })}

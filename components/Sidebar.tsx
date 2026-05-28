@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText } from "lucide-react";
+import { BarChart3, LayoutDashboard, ReceiptText, Users, FileText, Package } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { APP_NAME } from "@/lib/appBrand";
 import { useAppLanguage } from "@/components/ui/i18n";
@@ -11,10 +11,13 @@ import { useAppLanguage } from "@/components/ui/i18n";
 const sidebarLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/clients", label: "Clients", icon: Users },
+  { href: "/catalog", label: "Catalog", icon: Package },
   { href: "/invoices", label: "Invoices", icon: FileText },
   { href: "/expenses", label: "Expenses", icon: ReceiptText },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
 ];
+
+type NavTranslationKey = "dashboard" | "clients" | "catalog" | "invoices" | "expenses" | "analytics";
 
 type SidebarProps = {
   onNavigate?: () => void;
@@ -27,6 +30,23 @@ type SidebarProps = {
 function getBrandInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean);
   return (words[0]?.[0] ?? "S") + (words[1]?.[0] ?? "I");
+}
+
+function getNavLabel(label: string, t: (key: NavTranslationKey) => string): string {
+  const key = label.toLowerCase();
+
+  if (
+    key === "dashboard" ||
+    key === "clients" ||
+    key === "catalog" ||
+    key === "invoices" ||
+    key === "expenses" ||
+    key === "analytics"
+  ) {
+    return t(key);
+  }
+
+  return label;
 }
 
 export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
@@ -76,7 +96,7 @@ export default function Sidebar({ onNavigate, businessBrand }: SidebarProps) {
                   )}
                 >
                   <Icon className="h-4 w-4" />
-                  <span>{t(link.label.toLowerCase() as "dashboard" | "clients" | "invoices" | "expenses" | "analytics")}</span>
+                  <span>{getNavLabel(link.label, t)}</span>
                 </Link>
               </li>
             );

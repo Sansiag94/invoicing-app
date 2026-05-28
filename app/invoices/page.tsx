@@ -227,14 +227,6 @@ function InvoicePageContent() {
     buildInvoiceNotesFromSettings(null, initialBusiness ? getInvoiceSenderName(initialBusiness) : "User_name", initialBusiness?.defaultInvoiceMessage)
   );
   const [paymentNote, setPaymentNote] = useState(buildInvoicePaymentNoteTemplate(null, false, ""));
-  const [portfolioForm, setPortfolioForm] = useState({
-    description: "",
-    unitPrice: "",
-    active: true,
-  });
-  const [isPortfolioOpen, setIsPortfolioOpen] = useState(false);
-  const [isSavingPortfolioItem, setIsSavingPortfolioItem] = useState(false);
-  const [editingPortfolioItemId, setEditingPortfolioItemId] = useState<string | null>(null);
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
   const [paymentNoteManuallyEdited, setPaymentNoteManuallyEdited] = useState(false);
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
@@ -335,17 +327,6 @@ function InvoicePageContent() {
     const res = await authenticatedFetch("/api/invoices");
     const data = (await res.json()) as InvoiceRow[];
     setInvoices(Array.isArray(data) ? data : []);
-  }
-
-  async function fetchPortfolioItems() {
-    const response = await authenticatedFetch("/api/portfolio-items");
-    const data = (await response.json()) as PortfolioItemRecord[] | { error?: string };
-
-    if (!response.ok || ("error" in data && data.error)) {
-      throw new Error(("error" in data ? data.error : null) ?? "Failed to load portfolio items");
-    }
-
-    setPortfolioItems(Array.isArray(data) ? data : []);
   }
 
   async function fetchBillingStatus() {
@@ -620,109 +601,6 @@ function InvoicePageContent() {
           : lineItem
       )
     );
-  };
-
-  const resetPortfolioForm = () => {
-    setEditingPortfolioItemId(null);
-    setPortfolioForm({
-      description: "",
-      unitPrice: "",
-      active: true,
-    });
-  };
-
-  const editPortfolioItem = (item: PortfolioItemRecord) => {
-    setEditingPortfolioItemId(item.id);
-    setPortfolioForm({
-      description: item.description,
-      unitPrice: String(item.unitPrice),
-      active: item.active,
-    });
-    setIsPortfolioOpen(true);
-  };
-
-  const savePortfolioItem = async () => {
-    if (!portfolioForm.description.trim()) {
-      toast({
-        title: "Missing portfolio details",
-        description: "Add a description for this service.",
-        variant: "error",
-      });
-      return;
-    }
-
-    setIsSavingPortfolioItem(true);
-
-    try {
-      const response = await authenticatedFetch(
-        editingPortfolioItemId ? `/api/portfolio-items/${editingPortfolioItemId}` : "/api/portfolio-items",
-        {
-          method: editingPortfolioItemId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...portfolioForm,
-            name: portfolioForm.description,
-            unitPrice: Number(portfolioForm.unitPrice),
-            defaultQuantity: 1,
-            taxRate: 0,
-          }),
-        }
-      );
-      const result = (await response.json()) as PortfolioItemRecord & { error?: string };
-
-      if (!response.ok) {
-        toast({
-          title: "Unable to save service",
-          description: result.error ?? "Check the service details and try again.",
-          variant: "error",
-        });
-        return;
-      }
-
-      await fetchPortfolioItems();
-      resetPortfolioForm();
-      setSuccessMessage("Portfolio service saved.");
-    } catch (error) {
-      console.error("Error saving portfolio item:", error);
-      toast({
-        title: "Unable to save service",
-        description: "The service could not be saved.",
-        variant: "error",
-      });
-    } finally {
-      setIsSavingPortfolioItem(false);
-    }
-  };
-
-  const deletePortfolioItem = async (item: PortfolioItemRecord) => {
-    const confirmed = window.confirm(`Delete service "${item.description}"?`);
-    if (!confirmed) return;
-
-    try {
-      const response = await authenticatedFetch(`/api/portfolio-items/${item.id}`, {
-        method: "DELETE",
-      });
-      const result = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        toast({
-          title: "Unable to delete service",
-          description: result.error ?? "The service could not be deleted.",
-          variant: "error",
-        });
-        return;
-      }
-
-      await fetchPortfolioItems();
-      setSuccessMessage("Portfolio service deleted.");
-    } catch (error) {
-      console.error("Error deleting portfolio item:", error);
-      toast({
-        title: "Unable to delete service",
-        description: "The service could not be deleted.",
-        variant: "error",
-      });
-    }
   };
 
   const moveLineItem = (fromIndex: number, toIndex: number) => {
@@ -1480,100 +1358,6 @@ function InvoicePageContent() {
           {successMessage}
         </div>
       ) : null}
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-3">
-          <div>
-            <CardTitle>Saved Services / Products</CardTitle>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Save repeated invoice descriptions and prices so line items can be filled in one click.</p>
-          </div>
-          <Button type="button" variant="outline" size="sm" onClick={() => setIsPortfolioOpen((current) => !current)}>
-            {isPortfolioOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            {isPortfolioOpen ? "Close" : "Manage"}
-          </Button>
-        </CardHeader>
-        {isPortfolioOpen ? (
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(18rem,1fr)_10rem_7rem_auto] md:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="portfolioDescription">Service / product</Label>
-                <Input
-                  id="portfolioDescription"
-                  value={portfolioForm.description}
-                  onChange={(event) => setPortfolioForm((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Write service/product here"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="portfolioPrice">Unit price</Label>
-                <Input
-                  id="portfolioPrice"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={portfolioForm.unitPrice}
-                  onChange={(event) => setPortfolioForm((current) => ({ ...current, unitPrice: event.target.value }))}
-                />
-              </div>
-              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={portfolioForm.active}
-                  onChange={(event) => setPortfolioForm((current) => ({ ...current, active: event.target.checked }))}
-                />
-                Active
-              </label>
-              <div className="flex gap-2">
-                <Button type="button" onClick={() => void savePortfolioItem()} disabled={isSavingPortfolioItem}>
-                  {isSavingPortfolioItem ? "Saving..." : editingPortfolioItemId ? "Save" : "Add"}
-                </Button>
-                {editingPortfolioItemId ? (
-                  <Button type="button" variant="outline" onClick={resetPortfolioForm}>
-                    Cancel
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-
-            {portfolioItems.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-5 text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-400">
-                No saved services yet.
-              </p>
-            ) : (
-              <div className="grid gap-2 md:grid-cols-2">
-                {portfolioItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">{item.description}</p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                        {businessCurrency} {item.unitPrice.toFixed(2)}
-                        {item.active ? "" : " - inactive"}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button type="button" size="sm" variant="outline" onClick={() => editPortfolioItem(item)}>
-                        Edit
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800"
-                        onClick={() => void deletePortfolioItem(item)}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        ) : null}
-      </Card>
 
       <Card ref={createInvoiceRef}>
         <CardHeader className="flex flex-row items-center justify-between gap-3">
