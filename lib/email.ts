@@ -26,6 +26,7 @@ type SendInvoiceEmailInput = {
   extraAttachments?: Array<{
     filename: string;
     content: Buffer;
+    contentType?: string;
   }>;
   replyToEmail?: string | null;
   bankTransferDetails?: BankTransferDetails | null;

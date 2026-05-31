@@ -29,6 +29,10 @@ import {
   createRateLimitErrorResponse,
   isRateLimitError,
 } from "@/lib/rateLimit";
+import {
+  getSupabaseAdminClient,
+  isSupabaseAdminConfigurationError,
+} from "@/lib/supabase-admin";
 import { getInvoiceVatConfigurationError } from "@/lib/vat";
 
 export const runtime = "nodejs";
@@ -97,6 +101,44 @@ async function loadDefaultInvoiceAttachment(defaults: BusinessInvoiceEmailDefaul
   }
 }
 
+async function loadInvoiceAttachments(
+  attachments: Array<{
+    filename: string;
+    contentType: string;
+    storageBucket: string;
+    storagePath: string;
+  }>
+) {
+  if (attachments.length === 0) {
+    return [];
+  }
+
+  const supabaseAdmin = getSupabaseAdminClient();
+  const loadedAttachments: Array<{
+    filename: string;
+    content: Buffer;
+    contentType: string;
+  }> = [];
+
+  for (const attachment of attachments) {
+    const result = await supabaseAdmin.storage
+      .from(attachment.storageBucket)
+      .download(attachment.storagePath);
+
+    if (result.error || !result.data) {
+      throw new Error(`Could not load invoice attachment "${attachment.filename}"`);
+    }
+
+    loadedAttachments.push({
+      filename: attachment.filename,
+      content: Buffer.from(await result.data.arrayBuffer()),
+      contentType: attachment.contentType,
+    });
+  }
+
+  return loadedAttachments;
+}
+
 async function sendInvoice(id: string, businessId: string, request: Request) {
   const existingInvoice = await prisma.invoice.findFirst({
     where: { id, businessId },
@@ -106,6 +148,9 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
       },
       business: true,
       client: true,
+      attachments: {
+        orderBy: { createdAt: "asc" },
+      },
     },
   });
 
@@ -223,7 +268,10 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   }) as unknown as Parameters<typeof pdf>[0];
   const pdfStream = (await pdf(pdfDocument).toBuffer()) as unknown as NodeJS.ReadableStream;
   const pdfBuffer = await readStreamToBuffer(pdfStream);
-  const extraAttachments = await loadDefaultInvoiceAttachment(emailDefaults);
+  const [defaultAttachments, invoiceAttachments] = await Promise.all([
+    loadDefaultInvoiceAttachment(emailDefaults),
+    loadInvoiceAttachments(existingInvoice.attachments),
+  ]);
 
   await sendInvoiceEmail({
     to: clientEmail,
@@ -251,7 +299,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
       filename: pdfFilename,
       content: pdfBuffer,
     },
-    extraAttachments,
+    extraAttachments: [...defaultAttachments, ...invoiceAttachments],
   });
 
   if (existingInvoice.status === "draft") {
@@ -337,6 +385,14 @@ export async function POST(
     if (isEmailDeliveryError(error)) {
       console.error("Error sending invoice: email delivery failed", error);
       return apiError(error.message, 502);
+    }
+
+    if (isSupabaseAdminConfigurationError(error)) {
+      console.error("Error sending invoice: attachment storage not configured", error);
+      return apiError(
+        "Invoice attachments are not configured. Set SUPABASE_SERVICE_ROLE_KEY.",
+        500
+      );
     }
 
     console.error("Error sending invoice:", error);

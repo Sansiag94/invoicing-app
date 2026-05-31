@@ -5,11 +5,12 @@ import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, BellRing, CheckCircle2, CircleOff, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
+import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
 import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails } from "@/lib/billingClient";
 import { getInvoiceVatLabel } from "@/lib/invoice";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
-import { BillingLimitDetails, InvoiceDetails, LineItemData, PortfolioItemRecord } from "@/lib/types";
+import { BillingLimitDetails, InvoiceAttachmentRecord, InvoiceDetails, LineItemData, PortfolioItemRecord } from "@/lib/types";
 import {
   isSupportedSwissVatRate,
   SWISS_VAT_RATES,
@@ -418,6 +419,10 @@ export default function InvoiceDetailPage() {
     }
 
     void sendInvoiceNow();
+  };
+
+  const handleAttachmentsChange = (attachments: InvoiceAttachmentRecord[]) => {
+    setInvoice((current) => (current ? { ...current, attachments } : current));
   };
 
   const handleDuplicateInvoice = async () => {
@@ -996,6 +1001,15 @@ export default function InvoiceDetailPage() {
           This invoice is cancelled. It stays on record, but reminders, card checkout, and
           amount due are now treated as {invoice.currency} 0.00 until you reopen it.
         </div>
+      ) : null}
+
+      {!isEditing ? (
+        <InvoiceAttachmentsPanel
+          invoiceId={invoice.id}
+          attachments={invoice.attachments ?? []}
+          onAttachmentsChange={handleAttachmentsChange}
+          disabled={isSending || isDeleting || isDuplicating}
+        />
       ) : null}
 
       {!isEditing ? (

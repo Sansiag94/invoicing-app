@@ -99,6 +99,9 @@ export async function GET(
         payments: {
           orderBy: { createdAt: "desc" },
         },
+        attachments: {
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
@@ -329,6 +332,9 @@ export async function PATCH(
           business: true,
           payments: {
             orderBy: { createdAt: "desc" },
+          },
+          attachments: {
+            orderBy: { createdAt: "asc" },
           },
         },
       });

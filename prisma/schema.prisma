@@ -125,6 +125,7 @@ model Invoice {
   payments      Payment[]     @relation("InvoicePayments")
   reminders     InvoiceReminder[] @relation("InvoiceReminders")
   events        InvoiceEvent[] @relation("InvoiceEvents")
+  attachments   InvoiceAttachment[] @relation("InvoiceAttachments")
   unbilledWorkItems UnbilledWorkItem[] @relation("InvoiceUnbilledWorkItems")
 
   @@index([stripeCheckoutSessionId])
@@ -145,6 +146,22 @@ model LineItem {
   total       Float
   createdAt   DateTime @default(now())
   invoice     Invoice  @relation("InvoiceLineItems", fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+model InvoiceAttachment {
+  id          String   @id @default(uuid()) @map("uuid")
+  invoiceId   String
+  businessId  String
+  filename    String
+  contentType String
+  sizeBytes   Int
+  storageBucket String
+  storagePath String
+  createdAt   DateTime @default(now())
+  invoice     Invoice  @relation("InvoiceAttachments", fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId, createdAt])
+  @@index([businessId])
 }
 
 model Payment {

@@ -5,9 +5,10 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, BellRing, CheckCircle2, CircleOff, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
+import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
 import { getBillingLimitDetails } from "@/lib/billingClient";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
-import { BillingLimitDetails, InvoiceDetails } from "@/lib/types";
+import { BillingLimitDetails, InvoiceAttachmentRecord, InvoiceDetails } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
@@ -322,6 +323,10 @@ export default function InvoicePreviewPage() {
     void sendInvoiceNow();
   };
 
+  const handleAttachmentsChange = (attachments: InvoiceAttachmentRecord[]) => {
+    setInvoice((current) => (current ? { ...current, attachments } : current));
+  };
+
   const handleManualStatusChange = async (nextStatus: "paid" | "unpaid" | "cancelled") => {
     if (!id || isUpdatingStatus) {
       return;
@@ -625,6 +630,15 @@ export default function InvoicePreviewPage() {
           This invoice is cancelled. The PDF stays available for your records, but no payment is
           due and online collection is turned off until you reopen it.
         </div>
+      ) : null}
+
+      {invoice ? (
+        <InvoiceAttachmentsPanel
+          invoiceId={invoice.id}
+          attachments={invoice.attachments ?? []}
+          onAttachmentsChange={handleAttachmentsChange}
+          disabled={isSending || isLoading || isDuplicating || isDeleting}
+        />
       ) : null}
 
       <Card className="overflow-hidden">

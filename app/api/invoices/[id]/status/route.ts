@@ -155,6 +155,9 @@ export async function PATCH(
             payments: {
               orderBy: { createdAt: "desc" },
             },
+            attachments: {
+              orderBy: { createdAt: "asc" },
+            },
           },
         });
       });
@@ -205,6 +208,9 @@ export async function PATCH(
             business: true,
             payments: {
               orderBy: { createdAt: "desc" },
+            },
+            attachments: {
+              orderBy: { createdAt: "asc" },
             },
           },
         });
@@ -267,6 +273,9 @@ export async function PATCH(
           business: true,
           payments: {
             orderBy: { createdAt: "desc" },
+          },
+          attachments: {
+            orderBy: { createdAt: "asc" },
           },
         },
       });

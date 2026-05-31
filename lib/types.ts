@@ -151,12 +151,25 @@ export interface InvoiceEventRecord {
   createdAt: string;
 }
 
+export interface InvoiceAttachmentRecord {
+  id: string;
+  invoiceId: string;
+  businessId: string;
+  filename: string;
+  contentType: string;
+  sizeBytes: number;
+  storageBucket: string;
+  storagePath: string;
+  createdAt: string;
+}
+
 export interface InvoiceDetails extends InvoiceSummary {
   client: ClientSummary;
   lineItems: LineItemData[];
   business: BusinessSettingsData;
   payments: InvoicePaymentRecord[];
   events: InvoiceEventRecord[];
+  attachments: InvoiceAttachmentRecord[];
 }
 
 export interface ClientDetails extends ClientSummary {
