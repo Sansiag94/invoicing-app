@@ -42,6 +42,7 @@ type CreateInvoiceBody = {
   paymentNote?: unknown;
   discountType?: unknown;
   discountValue?: unknown;
+  saveMessageAsClientDefault?: unknown;
   lineItems?: unknown;
 };
 
@@ -58,6 +59,10 @@ function asNumber(value: unknown): number | null {
     return Number.isFinite(parsed) ? parsed : null;
   }
   return null;
+}
+
+function asBoolean(value: unknown): boolean {
+  return value === true;
 }
 
 function asDate(value: unknown): Date | null {
@@ -142,8 +147,10 @@ export async function POST(request: Request) {
     const subject = asString(body.subject);
     const reference = asString(body.reference);
     const paymentNote = asString(body.paymentNote);
+    const notes = asString(body.notes);
     const discountType = normalizeDiscountType(asString(body.discountType));
     const discountValue = normalizeDiscountValue(asNumber(body.discountValue));
+    const saveMessageAsClientDefault = asBoolean(body.saveMessageAsClientDefault);
 
     if (!clientId || !issueDate || !dueDate) {
       return apiError("Missing required fields", 400);
@@ -288,7 +295,7 @@ export async function POST(request: Request) {
         discountValue,
         status: normalizedStatus,
         currency: selectedCurrency,
-        notes: asString(body.notes),
+        notes,
         paymentNote,
         publicToken: crypto.randomUUID(),
         lineItems: {
@@ -327,6 +334,13 @@ export async function POST(request: Request) {
         data: { invoiceNumber: officialInvoiceNumber },
       });
       invoice.invoiceNumber = officialInvoiceNumber;
+    }
+
+    if (saveMessageAsClientDefault) {
+      await prisma.client.update({
+        where: { id: client.id },
+        data: { defaultInvoiceMessage: notes },
+      });
     }
 
     await logInvoiceEvent({

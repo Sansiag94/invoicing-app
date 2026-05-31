@@ -37,11 +37,17 @@ function getClientFirstName(client: { contactName: string | null; companyName: s
 }
 
 function buildInvoiceNotesFromSettings(
-  client: { language: string; contactName: string | null; companyName: string | null; email: string },
+  client: {
+    language: string;
+    contactName: string | null;
+    companyName: string | null;
+    email: string;
+    defaultInvoiceMessage?: string | null;
+  },
   senderName: string,
   template?: string | null
 ): string {
-  const trimmedTemplate = template?.trim();
+  const trimmedTemplate = client.defaultInvoiceMessage?.trim() || template?.trim();
   if (!trimmedTemplate) {
     return buildDefaultInvoiceMessage(
       client.language as "en" | "de" | "es" | "fr" | "it",
@@ -107,6 +113,7 @@ export async function POST(
         contactName: true,
         email: true,
         language: true,
+        defaultInvoiceMessage: true,
       },
     });
 

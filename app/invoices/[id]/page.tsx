@@ -123,6 +123,7 @@ export default function InvoiceDetailPage() {
   const [discountType, setDiscountType] = useState<DiscountType>("none");
   const [discountValue, setDiscountValue] = useState(0);
   const [notes, setNotes] = useState("");
+  const [saveNotesAsClientDefault, setSaveNotesAsClientDefault] = useState(false);
   const [paymentNote, setPaymentNote] = useState("");
   const [lineItems, setLineItems] = useState<LineItemData[]>([]);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItemRecord[]>([]);
@@ -213,7 +214,7 @@ export default function InvoiceDetailPage() {
 
   const handleIssueDateChange = (nextIssueDate: string) => {
     setIssueDate(nextIssueDate);
-    setDueDate(getDefaultDueDate(nextIssueDate));
+    setDueDate(getDefaultDueDate(nextIssueDate, invoice?.business.defaultPaymentTermDays));
   };
 
   function loadInvoiceIntoForm(dataInvoice: InvoiceDetails) {
@@ -223,6 +224,7 @@ export default function InvoiceDetailPage() {
     setDiscountType(dataInvoice.discountType ?? "none");
     setDiscountValue(dataInvoice.discountValue ?? 0);
     setNotes(dataInvoice.notes ?? "");
+    setSaveNotesAsClientDefault(false);
     setPaymentNote(dataInvoice.paymentNote ?? "");
     setLineItems(
       dataInvoice.lineItems.map((item) => ({
@@ -735,6 +737,7 @@ export default function InvoiceDetailPage() {
           dueDate,
           subject,
           notes,
+          saveMessageAsClientDefault: saveNotesAsClientDefault,
           paymentNote,
           discountType,
           discountValue: discountType === "none" ? 0 : discountValue,
@@ -1239,6 +1242,18 @@ export default function InvoiceDetailPage() {
                   onChange={(event) => setNotes(event.target.value)}
                   placeholder="Add the greeting or message shown on the invoice"
                 />
+                <label className="flex items-start gap-2 text-sm text-slate-600">
+                  <input
+                    type="checkbox"
+                    checked={saveNotesAsClientDefault}
+                    onChange={(event) => setSaveNotesAsClientDefault(event.target.checked)}
+                    className="mt-1"
+                  />
+                  <span>
+                    Use this message for future invoices for{" "}
+                    {invoice.client.companyName || invoice.client.contactName || invoice.client.email}.
+                  </span>
+                </label>
               </div>
               <div className="space-y-2 md:col-span-3">
                 <Label htmlFor="paymentNote">Payment Note</Label>

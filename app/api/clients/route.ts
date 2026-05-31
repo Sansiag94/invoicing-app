@@ -19,6 +19,7 @@ type CreateClientBody = {
   contactName?: unknown;
   language?: unknown;
   vatNumber?: unknown;
+  defaultInvoiceMessage?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -65,6 +66,7 @@ export async function POST(request: Request) {
     const phone = asString(body.phone);
     const language = asString(body.language);
     const vatNumber = asString(body.vatNumber);
+    const defaultInvoiceMessage = asString(body.defaultInvoiceMessage);
     const structuredAddress = withStructuredAddress({
       address: asString(body.address),
       street: asString(body.street),
@@ -115,6 +117,7 @@ export async function POST(request: Request) {
         country,
         language: normalizeInvoiceLanguage(language),
         vatNumber,
+        defaultInvoiceMessage,
       },
     });
 

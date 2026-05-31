@@ -69,6 +69,7 @@ export interface ClientSummary {
   country: string;
   language: InvoiceLanguage;
   vatNumber: string | null;
+  defaultInvoiceMessage?: string | null;
 }
 
 export interface BusinessSettingsData {

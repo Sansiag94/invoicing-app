@@ -31,6 +31,7 @@ type UpdateInvoiceBody = {
   paymentNote?: unknown;
   discountType?: unknown;
   discountValue?: unknown;
+  saveMessageAsClientDefault?: unknown;
   lineItems?: unknown;
 };
 
@@ -49,6 +50,10 @@ function asNumber(value: unknown): number | null {
   }
 
   return null;
+}
+
+function asBoolean(value: unknown): boolean {
+  return value === true;
 }
 
 function asDate(value: unknown): Date | null {
@@ -154,6 +159,7 @@ export async function PATCH(
       where: { id, businessId },
       select: {
         id: true,
+        clientId: true,
         issueDate: true,
         dueDate: true,
         subject: true,
@@ -173,6 +179,7 @@ export async function PATCH(
     }
 
     const body = (await request.json()) as UpdateInvoiceBody;
+    const saveMessageAsClientDefault = asBoolean(body.saveMessageAsClientDefault);
     const issueDate =
       body.issueDate === undefined ? existingInvoice.issueDate : asDate(body.issueDate);
     const dueDate =
@@ -365,6 +372,13 @@ export async function PATCH(
             discountValue: item.discountValue,
             total: item.total,
           })),
+        });
+      }
+
+      if (saveMessageAsClientDefault) {
+        await tx.client.update({
+          where: { id: existingInvoice.clientId },
+          data: { defaultInvoiceMessage: notes },
         });
       }
 

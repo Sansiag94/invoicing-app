@@ -53,6 +53,7 @@ export async function GET(request: Request) {
       country: "Switzerland",
       language: "en",
       vatNumber: null,
+      defaultInvoiceMessage: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };

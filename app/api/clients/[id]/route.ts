@@ -20,6 +20,7 @@ type UpdateClientBody = {
   country?: unknown;
   language?: unknown;
   vatNumber?: unknown;
+  defaultInvoiceMessage?: unknown;
 };
 
 function asString(value: unknown): string | null {
@@ -122,6 +123,7 @@ export async function PATCH(
     const country = asString(body.country);
     const language = asString(body.language);
     const vatNumber = asString(body.vatNumber);
+    const defaultInvoiceMessage = asString(body.defaultInvoiceMessage);
     const structuredAddress = withStructuredAddress({
       address: asString(body.address),
       street: asString(body.street),
@@ -163,6 +165,7 @@ export async function PATCH(
         country,
         language: normalizeInvoiceLanguage(language),
         vatNumber,
+        defaultInvoiceMessage,
       },
       include: {
         invoices: {

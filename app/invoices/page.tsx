@@ -120,7 +120,7 @@ function buildInvoiceNotesFromSettings(
   senderName: string,
   template?: string | null
 ): string {
-  const trimmedTemplate = template?.trim();
+  const trimmedTemplate = client?.defaultInvoiceMessage?.trim() || template?.trim();
   if (!trimmedTemplate) {
     return buildInvoiceNotesTemplate(client, senderName);
   }
@@ -230,6 +230,8 @@ function InvoicePageContent() {
   );
   const [paymentNote, setPaymentNote] = useState(buildInvoicePaymentNoteTemplate(null, false, ""));
   const [notesManuallyEdited, setNotesManuallyEdited] = useState(false);
+  const [saveNotesAsClientDefault, setSaveNotesAsClientDefault] = useState(false);
+  const [dueDateManuallyEdited, setDueDateManuallyEdited] = useState(false);
   const [paymentNoteManuallyEdited, setPaymentNoteManuallyEdited] = useState(false);
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
   const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
@@ -501,6 +503,18 @@ function InvoicePageContent() {
   }, [requestedClientId]);
 
   useEffect(() => {
+    setSaveNotesAsClientDefault(false);
+  }, [clientId]);
+
+  useEffect(() => {
+    if (dueDateManuallyEdited) {
+      return;
+    }
+
+    setDueDate(getDefaultDueDate(issueDate, getBusinessPaymentTermDays(businessData)));
+  }, [businessData, dueDateManuallyEdited, issueDate]);
+
+  useEffect(() => {
     const billingQueryStatus = searchParams.get("billing");
     if (!billingQueryStatus) {
       return;
@@ -558,7 +572,9 @@ function InvoicePageContent() {
 
   const handleIssueDateChange = (nextIssueDate: string) => {
     setIssueDate(nextIssueDate);
-    setDueDate(getDefaultDueDate(nextIssueDate, getBusinessPaymentTermDays(businessData)));
+    if (!dueDateManuallyEdited) {
+      setDueDate(getDefaultDueDate(nextIssueDate, getBusinessPaymentTermDays(businessData)));
+    }
   };
 
   const updateLineItem = (index: number, key: keyof LineItemData, value: string | number) => {
@@ -695,6 +711,7 @@ function InvoicePageContent() {
           subject,
           status: "draft",
           notes,
+          saveMessageAsClientDefault: Boolean(selectedClient && saveNotesAsClientDefault),
           paymentNote,
           discountType,
           discountValue: discountType === "none" ? 0 : discountValue,
@@ -713,15 +730,25 @@ function InvoicePageContent() {
         return;
       }
 
+      if (selectedClient && saveNotesAsClientDefault) {
+        setClients((current) =>
+          current.map((client) =>
+            client.id === selectedClient.id ? { ...client, defaultInvoiceMessage: notes.trim() || null } : client
+          )
+        );
+      }
+
       setLineItems([{ description: "", quantity: 1, unitPrice: 0, taxRate: 0 }]);
       const nextIssueDate = getTodayDateInputValue();
       setIssueDate(nextIssueDate);
       setDueDate(getDefaultDueDate(nextIssueDate, getBusinessPaymentTermDays(businessData)));
+      setDueDateManuallyEdited(false);
       setClientId("");
       setSubject("");
       setDiscountType("none");
       setDiscountValue(0);
       setNotesManuallyEdited(false);
+      setSaveNotesAsClientDefault(false);
       setNotes(buildInvoiceNotesFromSettings(null, invoiceSenderName || "User_name", businessData?.defaultInvoiceMessage));
       setPaymentNoteManuallyEdited(false);
       setPaymentNote(buildInvoicePaymentNoteTemplate(null, acceptsTwintPayments, twintPhoneNumber));
@@ -1415,7 +1442,10 @@ function InvoicePageContent() {
                       id="dueDate"
                       type="date"
                       value={dueDate}
-                      onChange={(event) => setDueDate(event.target.value)}
+                      onChange={(event) => {
+                        setDueDate(event.target.value);
+                        setDueDateManuallyEdited(true);
+                      }}
                     />
                     <p className="text-xs text-slate-500 dark:text-slate-400">
                       Prefilled from your {getBusinessPaymentTermDays(businessData)} day payment term. You can change it for this invoice.
@@ -1445,6 +1475,20 @@ function InvoicePageContent() {
                     }}
                     placeholder="Add the greeting or message shown on the invoice"
                   />
+                  {selectedClient ? (
+                    <label className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <input
+                        type="checkbox"
+                        checked={saveNotesAsClientDefault}
+                        onChange={(event) => setSaveNotesAsClientDefault(event.target.checked)}
+                        className="mt-1"
+                      />
+                      <span>
+                        Use this message for future invoices for{" "}
+                        {selectedClient.companyName || selectedClient.contactName || selectedClient.email}.
+                      </span>
+                    </label>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">

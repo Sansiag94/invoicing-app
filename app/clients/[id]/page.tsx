@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/toast";
 
 function statusVariant(status: string): "default" | "success" | "warning" | "danger" {
@@ -98,6 +99,7 @@ export default function ClientDetailPage() {
   const [country, setCountry] = useState("");
   const [language, setLanguage] = useState(DEFAULT_INVOICE_LANGUAGE);
   const [vatNumber, setVatNumber] = useState("");
+  const [defaultInvoiceMessage, setDefaultInvoiceMessage] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -134,6 +136,7 @@ export default function ClientDetailPage() {
             setCountry(safeClient.country ?? "");
             setLanguage(safeClient.language ?? DEFAULT_INVOICE_LANGUAGE);
             setVatNumber(safeClient.vatNumber ?? "");
+            setDefaultInvoiceMessage(safeClient.defaultInvoiceMessage ?? "");
           }
         }
       } catch (error) {
@@ -242,6 +245,7 @@ export default function ClientDetailPage() {
           country,
           language,
           vatNumber,
+          defaultInvoiceMessage,
         }),
       });
 
@@ -287,6 +291,7 @@ export default function ClientDetailPage() {
     setCountry(client.country ?? "");
     setLanguage(client.language ?? DEFAULT_INVOICE_LANGUAGE);
     setVatNumber(client.vatNumber ?? "");
+    setDefaultInvoiceMessage(client.defaultInvoiceMessage ?? "");
   }
 
   async function handleDeleteClient() {
@@ -841,6 +846,20 @@ export default function ClientDetailPage() {
                   onChange={(event) => setVatNumber(event.target.value)}
                   placeholder="Optional"
                 />
+              </div>
+
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="defaultInvoiceMessage">Default Invoice Message</Label>
+                <Textarea
+                  id="defaultInvoiceMessage"
+                  rows={5}
+                  value={defaultInvoiceMessage}
+                  onChange={(event) => setDefaultInvoiceMessage(event.target.value)}
+                  placeholder="Optional message to reuse for this client's future invoices"
+                />
+                <p className="text-xs text-slate-500">
+                  Leave empty to use your normal default message from settings.
+                </p>
               </div>
 
               <div className="md:col-span-2">
