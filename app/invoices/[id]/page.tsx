@@ -8,9 +8,9 @@ import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
 import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails } from "@/lib/billingClient";
-import { getInvoiceVatLabel } from "@/lib/invoice";
+import { calculateInvoiceTotals, calculateLineNetAmount, getInvoiceVatLabel } from "@/lib/invoice";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
-import { BillingLimitDetails, InvoiceAttachmentRecord, InvoiceDetails, LineItemData, PortfolioItemRecord } from "@/lib/types";
+import { BillingLimitDetails, DiscountType, InvoiceAttachmentRecord, InvoiceDetails, LineItemData, PortfolioItemRecord } from "@/lib/types";
 import {
   isSupportedSwissVatRate,
   SWISS_VAT_RATES,
@@ -45,20 +45,6 @@ const SWISS_VAT_RATE_OPTIONS = SWISS_VAT_RATES.map((rate) => ({
 
 function handleNumberInputFocus(event: FocusEvent<HTMLInputElement>) {
   event.target.select();
-}
-
-function calculateTotals(lineItems: LineItemData[]) {
-  const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const taxAmount = lineItems.reduce(
-    (sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate) / 100,
-    0
-  );
-
-  return {
-    subtotal,
-    taxAmount,
-    totalAmount: subtotal + taxAmount,
-  };
 }
 
 function statusVariant(status: string): "default" | "success" | "warning" | "danger" {
@@ -134,6 +120,8 @@ export default function InvoiceDetailPage() {
   const [issueDate, setIssueDate] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [subject, setSubject] = useState("");
+  const [discountType, setDiscountType] = useState<DiscountType>("none");
+  const [discountValue, setDiscountValue] = useState(0);
   const [notes, setNotes] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
   const [lineItems, setLineItems] = useState<LineItemData[]>([]);
@@ -141,7 +129,10 @@ export default function InvoiceDetailPage() {
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
   const [dragOverLineItemIndex, setDragOverLineItemIndex] = useState<number | null>(null);
 
-  const editedTotals = useMemo(() => calculateTotals(lineItems), [lineItems]);
+  const editedTotals = useMemo(
+    () => calculateInvoiceTotals(lineItems, { discountType, discountValue }),
+    [discountType, discountValue, lineItems]
+  );
   const vatLabel = useMemo(
     () => getInvoiceVatLabel(isEditing ? lineItems : invoice?.lineItems ?? []),
     [invoice?.lineItems, isEditing, lineItems]
@@ -229,6 +220,8 @@ export default function InvoiceDetailPage() {
     setIssueDate(toDateInputValue(dataInvoice.issueDate));
     setDueDate(toDateInputValue(dataInvoice.dueDate));
     setSubject(dataInvoice.subject ?? "");
+    setDiscountType(dataInvoice.discountType ?? "none");
+    setDiscountValue(dataInvoice.discountValue ?? 0);
     setNotes(dataInvoice.notes ?? "");
     setPaymentNote(dataInvoice.paymentNote ?? "");
     setLineItems(
@@ -239,6 +232,8 @@ export default function InvoiceDetailPage() {
         quantity: item.quantity,
         unitPrice: item.unitPrice,
         taxRate: item.taxRate,
+        discountType: item.discountType ?? "none",
+        discountValue: item.discountValue ?? 0,
       }))
     );
   }
@@ -565,6 +560,8 @@ export default function InvoiceDetailPage() {
         quantity: 1,
         unitPrice: 0,
         taxRate: 0,
+        discountType: "none",
+        discountValue: 0,
       },
     ]);
   };
@@ -595,6 +592,8 @@ export default function InvoiceDetailPage() {
               quantity: 1,
               unitPrice: portfolioItem.unitPrice,
               taxRate: vatRegistered ? item.taxRate : 0,
+              discountType: item.discountType ?? "none",
+              discountValue: item.discountValue ?? 0,
             }
           : item
       )
@@ -656,6 +655,8 @@ export default function InvoiceDetailPage() {
       ...item,
       quantity: item.quantity > 0 ? item.quantity : MIN_QUANTITY,
       taxRate: vatRegistered ? item.taxRate : 0,
+      discountType: item.discountType ?? "none",
+      discountValue: item.discountType === "none" ? 0 : item.discountValue ?? 0,
     }));
 
     const hasAdjustedQuantities = normalizedLineItems.some(
@@ -672,6 +673,7 @@ export default function InvoiceDetailPage() {
         item.quantity <= 0 ||
         item.unitPrice < 0 ||
         item.taxRate < 0 ||
+        (item.discountType === "percentage" && (item.discountValue ?? 0) > 100) ||
         (vatRegistered && !isSupportedSwissVatRate(item.taxRate))
     );
 
@@ -711,6 +713,15 @@ export default function InvoiceDetailPage() {
       return;
     }
 
+    if (discountType === "percentage" && discountValue > 100) {
+      toast({
+        title: "Invalid invoice discount",
+        description: "Percentage discounts cannot be greater than 100%.",
+        variant: "error",
+      });
+      return;
+    }
+
     setIsSaving(true);
 
     try {
@@ -725,12 +736,16 @@ export default function InvoiceDetailPage() {
           subject,
           notes,
           paymentNote,
+          discountType,
+          discountValue: discountType === "none" ? 0 : discountValue,
           lineItems: normalizedLineItems.map((item) => ({
             id: item.id,
             description: item.description,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             taxRate: item.taxRate,
+            discountType: item.discountType,
+            discountValue: item.discountValue,
           })),
         }),
       });
@@ -1183,6 +1198,38 @@ export default function InvoiceDetailPage() {
                 <Label htmlFor="subject">Subject</Label>
                 <Input id="subject" value={subject} onChange={(event) => setSubject(event.target.value)} />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice-discount-type">Invoice Discount</Label>
+                <Select
+                  id="invoice-discount-type"
+                  value={discountType}
+                  onChange={(event) => {
+                    const nextType = event.target.value as DiscountType;
+                    setDiscountType(nextType);
+                    if (nextType === "none") {
+                      setDiscountValue(0);
+                    }
+                  }}
+                >
+                  <option value="none">No full-bill discount</option>
+                  <option value="percentage">Percent %</option>
+                  <option value="fixed">Fixed {invoice.currency}</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="invoice-discount-value">Discount Value</Label>
+                <Input
+                  id="invoice-discount-value"
+                  type="number"
+                  min={0}
+                  max={discountType === "percentage" ? 100 : undefined}
+                  step="0.01"
+                  value={discountValue}
+                  disabled={discountType === "none"}
+                  onFocus={handleNumberInputFocus}
+                  onChange={(event) => setDiscountValue(Math.max(0, parseNumberInput(event.target.value)))}
+                />
+              </div>
               <div className="space-y-2 md:col-span-3">
                 <Label htmlFor="notes">Message</Label>
                 <Textarea
@@ -1340,8 +1387,45 @@ export default function InvoiceDetailPage() {
                       <div className="space-y-2">
                         <Label>Line Total</Label>
                         <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium">
-                          {(item.quantity * item.unitPrice).toFixed(2)}
+                          {calculateLineNetAmount(item).toFixed(2)}
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+                      <div className="space-y-2">
+                        <Label htmlFor={`edit-discount-type-${index}`}>Discount</Label>
+                        <Select
+                          id={`edit-discount-type-${index}`}
+                          value={item.discountType ?? "none"}
+                          onChange={(event) => {
+                            const nextType = event.target.value as DiscountType;
+                            handleLineItemChange(index, "discountType", nextType);
+                            if (nextType === "none") {
+                              handleLineItemChange(index, "discountValue", 0);
+                            }
+                          }}
+                        >
+                          <option value="none">No discount</option>
+                          <option value="percentage">Percent %</option>
+                          <option value="fixed">Fixed {invoice.currency}</option>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor={`edit-discount-value-${index}`}>Value</Label>
+                        <Input
+                          id={`edit-discount-value-${index}`}
+                          type="number"
+                          min={0}
+                          max={(item.discountType ?? "none") === "percentage" ? 100 : undefined}
+                          step="0.01"
+                          value={item.discountValue ?? 0}
+                          disabled={(item.discountType ?? "none") === "none"}
+                          onFocus={handleNumberInputFocus}
+                          onChange={(event) =>
+                            handleLineItemChange(index, "discountValue", Math.max(0, parseNumberInput(event.target.value)))
+                          }
+                        />
                       </div>
                     </div>
 
@@ -1379,6 +1463,7 @@ export default function InvoiceDetailPage() {
                 <col />
                 <col className="w-16" />
                 <col className="w-24" />
+                <col className="w-32" />
                 <col className="w-20" />
                 <col className="w-20" />
                 <col className="w-10" />
@@ -1394,6 +1479,7 @@ export default function InvoiceDetailPage() {
                 <TableHead className={isEditing ? "min-w-[24rem] pl-1" : undefined}>Description</TableHead>
                 <TableHead className={isEditing ? "w-16 px-1" : undefined}>Quantity</TableHead>
                 <TableHead className={isEditing ? "w-24 px-1" : undefined}>Unit Price</TableHead>
+                <TableHead className={isEditing ? "w-32 px-1" : undefined}>Discount</TableHead>
                 <TableHead className={isEditing ? "w-20 px-1" : undefined}>Tax %</TableHead>
                 <TableHead className={isEditing ? "w-20 px-1" : undefined}>Line Total</TableHead>
                 {isEditing ? (
@@ -1481,6 +1567,36 @@ export default function InvoiceDetailPage() {
                         />
                       </TableCell>
                       <TableCell className="px-1">
+                        <div className="grid grid-cols-[minmax(0,1fr)_3.75rem] gap-1">
+                          <Select
+                            value={item.discountType ?? "none"}
+                            onChange={(event) => {
+                              const nextType = event.target.value as DiscountType;
+                              handleLineItemChange(index, "discountType", nextType);
+                              if (nextType === "none") {
+                                handleLineItemChange(index, "discountValue", 0);
+                              }
+                            }}
+                          >
+                            <option value="none">None</option>
+                            <option value="percentage">%</option>
+                            <option value="fixed">{invoice.currency}</option>
+                          </Select>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={(item.discountType ?? "none") === "percentage" ? 100 : undefined}
+                            step="0.01"
+                            value={item.discountValue ?? 0}
+                            disabled={(item.discountType ?? "none") === "none"}
+                            onFocus={handleNumberInputFocus}
+                            onChange={(event) =>
+                              handleLineItemChange(index, "discountValue", Math.max(0, parseNumberInput(event.target.value)))
+                            }
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell className="px-1">
                         <Select
                           value={String(vatRegistered ? item.taxRate : 0)}
                           disabled={!vatRegistered}
@@ -1495,7 +1611,7 @@ export default function InvoiceDetailPage() {
                           ))}
                         </Select>
                       </TableCell>
-                      <TableCell className="px-1 text-sm">{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                      <TableCell className="px-1 text-sm">{calculateLineNetAmount(item).toFixed(2)}</TableCell>
                       <TableCell className="w-10 px-1 text-center">
                         <Button
                           type="button"
@@ -1522,7 +1638,7 @@ export default function InvoiceDetailPage() {
                         Add Line Item
                       </Button>
                     </TableCell>
-                    <TableCell colSpan={6} />
+                    <TableCell colSpan={7} />
                   </TableRow>
                 </>
               ) : (
@@ -1531,8 +1647,15 @@ export default function InvoiceDetailPage() {
                     <TableCell>{item.description}</TableCell>
                     <TableCell>{item.quantity}</TableCell>
                     <TableCell>{item.unitPrice.toFixed(2)}</TableCell>
+                    <TableCell>
+                      {(item.discountValue ?? 0) > 0
+                        ? item.discountType === "percentage"
+                          ? `${item.discountValue}%`
+                          : `${invoice.currency} ${(item.discountValue ?? 0).toFixed(2)}`
+                        : "-"}
+                    </TableCell>
                     <TableCell>{item.taxRate}</TableCell>
-                    <TableCell>{(item.quantity * item.unitPrice).toFixed(2)}</TableCell>
+                    <TableCell>{calculateLineNetAmount(item).toFixed(2)}</TableCell>
                   </TableRow>
                 ))
               )}
@@ -1543,8 +1666,19 @@ export default function InvoiceDetailPage() {
           <div className="mt-6 space-y-1 text-right text-sm text-slate-700">
             <p>
               Subtotal: {invoice.currency}{" "}
-              {isEditing ? editedTotals.subtotal.toFixed(2) : invoice.subtotal.toFixed(2)}
+              {isEditing
+                ? (editedTotals.discountAmount > 0 ? editedTotals.grossSubtotal : editedTotals.subtotal).toFixed(2)
+                : ((invoice.lineItems ?? []).some((item) => (item.discountValue ?? 0) > 0) || (invoice.discountValue ?? 0) > 0
+                    ? calculateInvoiceTotals(invoice.lineItems, invoice).grossSubtotal
+                    : invoice.subtotal
+                  ).toFixed(2)}
             </p>
+            {(isEditing ? editedTotals.discountAmount : calculateInvoiceTotals(invoice.lineItems, invoice).discountAmount) > 0 ? (
+              <p>
+                Discount: - {invoice.currency}{" "}
+                {(isEditing ? editedTotals.discountAmount : calculateInvoiceTotals(invoice.lineItems, invoice).discountAmount).toFixed(2)}
+              </p>
+            ) : null}
             <p>
               {vatLabel}: {invoice.currency}{" "}
               {isEditing ? editedTotals.taxAmount.toFixed(2) : invoice.taxAmount.toFixed(2)}

@@ -99,9 +99,35 @@ describe("invoice helpers", () => {
         { quantity: 1, unitPrice: 100, taxRate: 8.1 },
       ])
     ).toEqual({
+      grossSubtotal: 200,
+      lineDiscountAmount: 0,
+      invoiceDiscountAmount: 0,
+      discountAmount: 0,
+      subtotalBeforeInvoiceDiscount: 200,
       subtotal: 200,
       taxAmount: 8.1,
       totalAmount: 208.1,
+    });
+  });
+
+  it("calculates line and invoice discounts before tax", () => {
+    expect(
+      calculateInvoiceTotals(
+        [
+          { quantity: 5, unitPrice: 40, taxRate: 0, discountType: "percentage", discountValue: 10 },
+          { quantity: 1, unitPrice: 100, taxRate: 8.1 },
+        ],
+        { discountType: "percentage", discountValue: 10 }
+      )
+    ).toEqual({
+      grossSubtotal: 300,
+      lineDiscountAmount: 20,
+      invoiceDiscountAmount: 28,
+      discountAmount: 48,
+      subtotalBeforeInvoiceDiscount: 280,
+      subtotal: 252,
+      taxAmount: 7.29,
+      totalAmount: 259.29,
     });
   });
 

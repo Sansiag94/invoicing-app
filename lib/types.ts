@@ -2,6 +2,7 @@ import type { InvoiceLanguage } from "@/lib/invoiceLanguage";
 
 export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
 export type InvoiceCurrency = "CHF" | "EUR";
+export type DiscountType = "none" | "percentage" | "fixed";
 export type AppLanguage = "en" | "de" | "es" | "fr" | "it";
 export type InvoiceSenderType = "company" | "owner";
 export type BusinessPlanTier = "free" | "pro";
@@ -50,6 +51,8 @@ export interface LineItemData {
   quantity: number;
   unitPrice: number;
   taxRate: number;
+  discountType?: DiscountType;
+  discountValue?: number;
   total?: number;
 }
 
@@ -130,6 +133,8 @@ export interface InvoiceSummary {
   totalAmount: number;
   notes: string | null;
   paymentNote: string | null;
+  discountType: DiscountType;
+  discountValue: number;
   publicToken: string | null;
 }
 
@@ -428,6 +433,7 @@ export interface InvoiceModel {
   client: InvoicePartyData;
   line_items: InvoiceLineItemModel[];
   subtotal: number;
+  discount_amount?: number;
   total_amount_due: number;
   invoice_title?: string | null;
   optional_message?: string | null;
@@ -499,6 +505,8 @@ export interface PublicInvoiceDetails {
   totalAmount: number;
   notes: string | null;
   paymentNote: string | null;
+  discountType: DiscountType;
+  discountValue: number;
   publicToken: string | null;
   lineItems: LineItemData[];
   client: PublicInvoiceClientData;

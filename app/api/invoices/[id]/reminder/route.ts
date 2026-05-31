@@ -110,7 +110,7 @@ export async function POST(
     const invoiceLink = buildPublicInvoiceLink(publicToken, request.url);
     const recipientName =
       invoice.client.contactName || invoice.client.companyName || invoice.client.email;
-    const computedTotals = calculateInvoiceTotals(invoice.lineItems);
+    const computedTotals = calculateInvoiceTotals(invoice.lineItems, invoice);
     const emailBusinessName = getInvoiceSenderName({
       ...invoice.business,
       ...senderPreferences,

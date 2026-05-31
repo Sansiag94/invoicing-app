@@ -29,7 +29,16 @@ type LineItemAmounts = {
   quantity: number;
   unitPrice: number;
   taxRate: number;
+  discountType?: string | null;
+  discountValue?: number | null;
 };
+
+type InvoiceDiscountInput = {
+  discountType?: string | null;
+  discountValue?: number | null;
+};
+
+export type DiscountType = "none" | "percentage" | "fixed";
 
 function normalizeTaxRateLabel(value: number): string {
   const rounded = Number(value.toFixed(2));
@@ -98,14 +107,75 @@ export function calculateLineTotal(quantity: number, unitPrice: number): number 
   return quantity * unitPrice;
 }
 
-export function calculateInvoiceTotals(lineItems: LineItemAmounts[]) {
-  const subtotal = lineItems.reduce((sum, item) => sum + calculateLineTotal(item.quantity, item.unitPrice), 0);
-  const taxAmount = lineItems.reduce(
-    (sum, item) => sum + (calculateLineTotal(item.quantity, item.unitPrice) * item.taxRate) / 100,
+export function normalizeDiscountType(value: string | null | undefined): DiscountType {
+  return value === "percentage" || value === "fixed" ? value : "none";
+}
+
+export function normalizeDiscountValue(value: number | null | undefined): number {
+  return Number.isFinite(value) && value && value > 0 ? value : 0;
+}
+
+export function calculateDiscountAmount(
+  baseAmount: number,
+  discountType: string | null | undefined,
+  discountValue: number | null | undefined
+): number {
+  const safeBaseAmount = Math.max(0, baseAmount);
+  const type = normalizeDiscountType(discountType);
+  const value = normalizeDiscountValue(discountValue);
+
+  if (safeBaseAmount <= 0 || value <= 0 || type === "none") {
+    return 0;
+  }
+
+  if (type === "percentage") {
+    return Math.min(safeBaseAmount, (safeBaseAmount * Math.min(value, 100)) / 100);
+  }
+
+  return Math.min(safeBaseAmount, value);
+}
+
+export function calculateLineNetAmount(item: LineItemAmounts): number {
+  const grossAmount = calculateLineTotal(item.quantity, item.unitPrice);
+  return Math.max(0, grossAmount - calculateDiscountAmount(grossAmount, item.discountType, item.discountValue));
+}
+
+export function calculateInvoiceTotals(
+  lineItems: LineItemAmounts[],
+  invoiceDiscount: InvoiceDiscountInput = {}
+) {
+  const grossSubtotal = lineItems.reduce((sum, item) => sum + calculateLineTotal(item.quantity, item.unitPrice), 0);
+  const lineDiscountAmount = lineItems.reduce(
+    (sum, item) =>
+      sum +
+      calculateDiscountAmount(
+        calculateLineTotal(item.quantity, item.unitPrice),
+        item.discountType,
+        item.discountValue
+      ),
     0
   );
+  const subtotalBeforeInvoiceDiscount = lineItems.reduce((sum, item) => sum + calculateLineNetAmount(item), 0);
+  const invoiceDiscountAmount = calculateDiscountAmount(
+    subtotalBeforeInvoiceDiscount,
+    invoiceDiscount.discountType,
+    invoiceDiscount.discountValue
+  );
+  const subtotal = Math.max(0, subtotalBeforeInvoiceDiscount - invoiceDiscountAmount);
+  const invoiceDiscountRatio =
+    subtotalBeforeInvoiceDiscount > 0 ? invoiceDiscountAmount / subtotalBeforeInvoiceDiscount : 0;
+  const taxAmount = lineItems.reduce((sum, item) => {
+    const lineNetAmount = calculateLineNetAmount(item);
+    const taxableLineAmount = Math.max(0, lineNetAmount - lineNetAmount * invoiceDiscountRatio);
+    return sum + (taxableLineAmount * item.taxRate) / 100;
+  }, 0);
 
   return {
+    grossSubtotal,
+    lineDiscountAmount,
+    invoiceDiscountAmount,
+    discountAmount: lineDiscountAmount + invoiceDiscountAmount,
+    subtotalBeforeInvoiceDiscount,
     subtotal,
     taxAmount,
     totalAmount: subtotal + taxAmount,

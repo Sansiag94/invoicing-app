@@ -13,6 +13,8 @@ type InvoiceCreateSidebarProps = {
   subtotal: number;
   taxAmount: number;
   totalAmount: number;
+  grossSubtotal?: number;
+  discountAmount?: number;
   vatLabel: string;
 };
 
@@ -24,6 +26,8 @@ export default function InvoiceCreateSidebar({
   subtotal,
   taxAmount,
   totalAmount,
+  grossSubtotal,
+  discountAmount = 0,
   vatLabel,
 }: InvoiceCreateSidebarProps) {
   return (
@@ -74,9 +78,25 @@ export default function InvoiceCreateSidebar({
               <div className="mb-2 flex items-center justify-between text-slate-600">
                 <span>Subtotal</span>
                 <span>
-                  {currency} {subtotal.toFixed(2)}
+                  {currency} {(discountAmount > 0 && grossSubtotal !== undefined ? grossSubtotal : subtotal).toFixed(2)}
                 </span>
               </div>
+              {discountAmount > 0 ? (
+                <div className="mb-2 flex items-center justify-between text-slate-600">
+                  <span>Discount</span>
+                  <span>
+                    - {currency} {discountAmount.toFixed(2)}
+                  </span>
+                </div>
+              ) : null}
+              {discountAmount > 0 && grossSubtotal !== undefined ? (
+                <div className="mb-2 flex items-center justify-between text-slate-600">
+                  <span>After discount</span>
+                  <span>
+                    {currency} {subtotal.toFixed(2)}
+                  </span>
+                </div>
+              ) : null}
               <div className="mb-2 flex items-center justify-between text-slate-600">
                 <span>{vatLabel}</span>
                 <span>

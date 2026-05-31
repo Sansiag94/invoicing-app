@@ -14,6 +14,7 @@ type InvoiceStrings = {
   unitPrice: string;
   amount: string;
   subtotal: string;
+  discount: string;
   vat: string;
   total: string;
   amountDue: string;
@@ -88,6 +89,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     unitPrice: "Unit price",
     amount: "Amount",
     subtotal: "Subtotal",
+    discount: "Discount",
     vat: "VAT",
     total: "Total",
     amountDue: "Amount due",
@@ -139,6 +141,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     unitPrice: "Einzelpreis",
     amount: "Betrag",
     subtotal: "Zwischensumme",
+    discount: "Rabatt",
     vat: "MWST",
     total: "Total",
     amountDue: "Offener Betrag",
@@ -190,6 +193,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     unitPrice: "Precio unitario",
     amount: "Importe",
     subtotal: "Subtotal",
+    discount: "Descuento",
     vat: "IVA",
     total: "Total",
     amountDue: "Importe pendiente",
@@ -241,6 +245,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     unitPrice: "Prix unitaire",
     amount: "Montant",
     subtotal: "Sous-total",
+    discount: "Remise",
     vat: "TVA",
     total: "Total",
     amountDue: "Montant du",
@@ -292,6 +297,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     unitPrice: "Prezzo unitario",
     amount: "Importo",
     subtotal: "Subtotale",
+    discount: "Sconto",
     vat: "IVA",
     total: "Totale",
     amountDue: "Importo dovuto",

@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "next/navigation";
 import { CreditCard, Download } from "lucide-react";
-import { calculateInvoiceTotals, getInvoiceVatLabel, parsePostalAddress } from "@/lib/invoice";
+import { calculateInvoiceTotals, calculateLineNetAmount, getInvoiceVatLabel, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
 import {
   buildInvoiceAdditionalInformation,
@@ -145,11 +145,13 @@ export default function PublicInvoicePage() {
       quantity: item.quantity,
       taxRate: item.taxRate,
       unitPrice: item.unitPrice,
-      lineTotal: item.quantity * item.unitPrice,
+      discountType: item.discountType,
+      discountValue: item.discountValue,
+      lineTotal: calculateLineNetAmount(item),
     }));
   }, [invoice]);
 
-  const totals = useMemo(() => calculateInvoiceTotals(lineItems), [lineItems]);
+  const totals = useMemo(() => calculateInvoiceTotals(lineItems, invoice ?? undefined), [invoice, lineItems]);
   const subtotal = totals.subtotal;
   const taxAmount = totals.taxAmount;
   const totalAmountDue = totals.totalAmount;
@@ -669,6 +671,14 @@ export default function PublicInvoicePage() {
                   <td>{index + 1}</td>
                   <td>
                     <div>{item.description}</div>
+                    {(item.discountValue ?? 0) > 0 && item.discountType !== "none" ? (
+                      <div className="text-[10px] text-slate-500">
+                        {strings.discount}:{" "}
+                        {item.discountType === "percentage"
+                          ? `${formatInvoiceMoney(item.discountValue ?? 0, invoiceLanguage)}%`
+                          : `${invoice.currency} ${formatInvoiceMoney(item.discountValue ?? 0, invoiceLanguage)}`}
+                      </div>
+                    ) : null}
                     <div className="invoice-line-mobile-meta">
                       <span>{strings.quantity}: {formatQuantity(item.quantity)}</span>
                       <span>{strings.unitPrice}: {formatInvoiceMoney(item.unitPrice, invoiceLanguage)}</span>
@@ -689,9 +699,17 @@ export default function PublicInvoicePage() {
             <div className="mb-1 flex items-center justify-between text-slate-700">
               <span>{strings.subtotal}</span>
               <span>
-                {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
+                {invoice.currency} {formatInvoiceMoney(totals.discountAmount > 0 ? totals.grossSubtotal : subtotal, invoiceLanguage)}
               </span>
             </div>
+            {totals.discountAmount > 0 ? (
+              <div className="mb-1 flex items-center justify-between text-slate-700">
+                <span>{strings.discount}</span>
+                <span>
+                  - {invoice.currency} {formatInvoiceMoney(totals.discountAmount, invoiceLanguage)}
+                </span>
+              </div>
+            ) : null}
             {taxAmount > 0 ? (
               <div className="mb-3 flex items-center justify-between text-slate-700">
                 <span>{vatLabel}</span>

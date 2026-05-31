@@ -9,9 +9,9 @@ import BillingPlanChip from "@/components/billing/BillingPlanChip";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails, isBillingStatus } from "@/lib/billingClient";
-import { getInvoiceVatLabel } from "@/lib/invoice";
+import { calculateInvoiceTotals, calculateLineNetAmount, getInvoiceVatLabel } from "@/lib/invoice";
 import { buildDefaultInvoiceMessage, buildDefaultInvoicePaymentNote } from "@/lib/invoiceLanguage";
-import { BillingLimitDetails, BillingStatus, BusinessSettingsData, ClientSummary, InvoiceSummary, LineItemData, PortfolioItemRecord } from "@/lib/types";
+import { BillingLimitDetails, BillingStatus, BusinessSettingsData, ClientSummary, DiscountType, InvoiceSummary, LineItemData, PortfolioItemRecord } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { getInvoiceSenderName } from "@/lib/business";
@@ -72,7 +72,7 @@ function parseNumber(value: string): number {
 }
 
 const MIN_QUANTITY = 0.01;
-const LINE_ITEM_GRID_COLUMNS = "2.5rem minmax(0, 1fr) 3.5rem 5.5rem 4.5rem 5rem 2.5rem";
+const LINE_ITEM_GRID_COLUMNS = "2.5rem minmax(0, 1fr) 3.5rem 5.5rem 7.5rem 4.5rem 5rem 2.5rem";
 const SWISS_VAT_RATE_OPTIONS = SWISS_VAT_RATES.map((rate) => ({
   value: String(rate),
   label: `${rate}%`,
@@ -223,6 +223,8 @@ function InvoicePageContent() {
   const [dueDate, setDueDate] = useState(getDefaultDueDate(defaultIssueDate, getBusinessPaymentTermDays(initialBusiness)));
   const [clientId, setClientId] = useState(requestedClientId);
   const [subject, setSubject] = useState("");
+  const [discountType, setDiscountType] = useState<DiscountType>("none");
+  const [discountValue, setDiscountValue] = useState(0);
   const [notes, setNotes] = useState(
     buildInvoiceNotesFromSettings(null, initialBusiness ? getInvoiceSenderName(initialBusiness) : "User_name", initialBusiness?.defaultInvoiceMessage)
   );
@@ -548,15 +550,10 @@ function InvoicePageContent() {
     );
   }, [vatRegistered]);
 
-  const totals = useMemo(() => {
-    const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-    const taxAmount = lineItems.reduce(
-      (sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate) / 100,
-      0
-    );
-
-    return { subtotal, taxAmount, totalAmount: subtotal + taxAmount };
-  }, [lineItems]);
+  const totals = useMemo(
+    () => calculateInvoiceTotals(lineItems, { discountType, discountValue }),
+    [discountType, discountValue, lineItems]
+  );
   const vatLabel = useMemo(() => getInvoiceVatLabel(lineItems), [lineItems]);
 
   const handleIssueDateChange = (nextIssueDate: string) => {
@@ -597,6 +594,8 @@ function InvoicePageContent() {
               quantity: 1,
               unitPrice: item.unitPrice,
               taxRate: vatRegistered ? lineItem.taxRate : 0,
+              discountType: lineItem.discountType ?? "none",
+              discountValue: lineItem.discountValue ?? 0,
             }
           : lineItem
       )
@@ -641,6 +640,8 @@ function InvoicePageContent() {
       ...item,
       quantity: item.quantity > 0 ? item.quantity : MIN_QUANTITY,
       taxRate: vatRegistered ? item.taxRate : 0,
+      discountType: item.discountType ?? "none",
+      discountValue: item.discountType === "none" ? 0 : item.discountValue ?? 0,
     }));
 
     const hasAdjustedQuantities = normalizedLineItems.some(
@@ -657,8 +658,18 @@ function InvoicePageContent() {
         item.quantity <= 0 ||
         item.unitPrice < 0 ||
         item.taxRate < 0 ||
+        (item.discountType === "percentage" && (item.discountValue ?? 0) > 100) ||
         (vatRegistered && !isSupportedSwissVatRate(item.taxRate))
     );
+
+    if (discountType === "percentage" && discountValue > 100) {
+      toast({
+        title: "Invalid invoice discount",
+        description: "Percentage discounts cannot be greater than 100%.",
+        variant: "error",
+      });
+      return;
+    }
 
     if (hasInvalidLineItems) {
       toast({
@@ -685,6 +696,8 @@ function InvoicePageContent() {
           status: "draft",
           notes,
           paymentNote,
+          discountType,
+          discountValue: discountType === "none" ? 0 : discountValue,
           lineItems: normalizedLineItems,
         }),
       });
@@ -706,6 +719,8 @@ function InvoicePageContent() {
       setDueDate(getDefaultDueDate(nextIssueDate, getBusinessPaymentTermDays(businessData)));
       setClientId("");
       setSubject("");
+      setDiscountType("none");
+      setDiscountValue(0);
       setNotesManuallyEdited(false);
       setNotes(buildInvoiceNotesFromSettings(null, invoiceSenderName || "User_name", businessData?.defaultInvoiceMessage));
       setPaymentNoteManuallyEdited(false);
@@ -1538,6 +1553,43 @@ function InvoicePageContent() {
                             </div>
                           </div>
 
+                          <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-3">
+                            <div className="space-y-2">
+                              <Label htmlFor={`discount-type-${index}`}>Discount</Label>
+                              <Select
+                                id={`discount-type-${index}`}
+                                value={item.discountType ?? "none"}
+                                onChange={(event) => {
+                                  const nextType = event.target.value as DiscountType;
+                                  updateLineItem(index, "discountType", nextType);
+                                  if (nextType === "none") {
+                                    updateLineItem(index, "discountValue", 0);
+                                  }
+                                }}
+                              >
+                                <option value="none">No discount</option>
+                                <option value="percentage">Percent %</option>
+                                <option value="fixed">Fixed {businessCurrency}</option>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor={`discount-value-${index}`}>Value</Label>
+                              <Input
+                                id={`discount-value-${index}`}
+                                type="number"
+                                min={0}
+                                max={(item.discountType ?? "none") === "percentage" ? 100 : undefined}
+                                step="0.01"
+                                value={item.discountValue ?? 0}
+                                disabled={(item.discountType ?? "none") === "none"}
+                                onFocus={handleNumberInputFocus}
+                                onChange={(event) =>
+                                  updateLineItem(index, "discountValue", Math.max(0, parseNumber(event.target.value)))
+                                }
+                              />
+                            </div>
+                          </div>
+
                           <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
                               <Label htmlFor={`tax-rate-${index}`}>Tax %</Label>
@@ -1560,7 +1612,7 @@ function InvoicePageContent() {
                             <div className="space-y-2">
                               <Label>Line Total</Label>
                               <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-medium">
-                                {(item.quantity * item.unitPrice).toFixed(2)}
+                                {calculateLineNetAmount(item).toFixed(2)}
                               </div>
                             </div>
                           </div>
@@ -1592,8 +1644,9 @@ function InvoicePageContent() {
                       <span className="col-start-2">Description</span>
                       <span className="col-start-3">Qty</span>
                       <span className="col-start-4">Unit Price</span>
-                      <span className="col-start-5">Tax %</span>
-                      <span className="col-start-6">Line Total</span>
+                      <span className="col-start-5">Discount</span>
+                      <span className="col-start-6">Tax %</span>
+                      <span className="col-start-7">Line Total</span>
                     </div>
 
                     <div className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -1659,6 +1712,34 @@ function InvoicePageContent() {
                               updateLineItem(index, "unitPrice", Math.max(0, parseNumber(event.target.value)))
                             }
                           />
+                          <div className="grid grid-cols-[minmax(0,1fr)_3.75rem] gap-1">
+                            <Select
+                              value={item.discountType ?? "none"}
+                              onChange={(event) => {
+                                const nextType = event.target.value as DiscountType;
+                                updateLineItem(index, "discountType", nextType);
+                                if (nextType === "none") {
+                                  updateLineItem(index, "discountValue", 0);
+                                }
+                              }}
+                            >
+                              <option value="none">None</option>
+                              <option value="percentage">%</option>
+                              <option value="fixed">{businessCurrency}</option>
+                            </Select>
+                            <Input
+                              type="number"
+                              min={0}
+                              max={(item.discountType ?? "none") === "percentage" ? 100 : undefined}
+                              step="0.01"
+                              value={item.discountValue ?? 0}
+                              disabled={(item.discountType ?? "none") === "none"}
+                              onFocus={handleNumberInputFocus}
+                              onChange={(event) =>
+                                updateLineItem(index, "discountValue", Math.max(0, parseNumber(event.target.value)))
+                              }
+                            />
+                          </div>
                           <Select
                             value={String(vatRegistered ? item.taxRate : 0)}
                             disabled={!vatRegistered}
@@ -1672,7 +1753,7 @@ function InvoicePageContent() {
                               </option>
                             ))}
                           </Select>
-                          <span className="text-sm">{(item.quantity * item.unitPrice).toFixed(2)}</span>
+                          <span className="text-sm">{calculateLineNetAmount(item).toFixed(2)}</span>
                           <Button variant="ghost" size="icon" onClick={() => removeLineItem(index)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -1684,6 +1765,41 @@ function InvoicePageContent() {
                       <Plus className="h-4 w-4" />
                       Add Line Item
                     </Button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 sm:grid-cols-[minmax(0,1fr)_7rem]">
+                  <div className="space-y-2">
+                    <Label htmlFor="invoice-discount-type">Invoice discount</Label>
+                    <Select
+                      id="invoice-discount-type"
+                      value={discountType}
+                      onChange={(event) => {
+                        const nextType = event.target.value as DiscountType;
+                        setDiscountType(nextType);
+                        if (nextType === "none") {
+                          setDiscountValue(0);
+                        }
+                      }}
+                    >
+                      <option value="none">No full-bill discount</option>
+                      <option value="percentage">Percent %</option>
+                      <option value="fixed">Fixed {businessCurrency}</option>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="invoice-discount-value">Value</Label>
+                    <Input
+                      id="invoice-discount-value"
+                      type="number"
+                      min={0}
+                      max={discountType === "percentage" ? 100 : undefined}
+                      step="0.01"
+                      value={discountValue}
+                      disabled={discountType === "none"}
+                      onFocus={handleNumberInputFocus}
+                      onChange={(event) => setDiscountValue(Math.max(0, parseNumber(event.target.value)))}
+                    />
                   </div>
                 </div>
 
@@ -1702,6 +1818,8 @@ function InvoicePageContent() {
                 subtotal={totals.subtotal}
                 taxAmount={totals.taxAmount}
                 totalAmount={totals.totalAmount}
+                grossSubtotal={totals.grossSubtotal}
+                discountAmount={totals.discountAmount}
                 vatLabel={vatLabel}
               />
             </div>

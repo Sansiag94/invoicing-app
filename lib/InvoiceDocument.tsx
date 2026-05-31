@@ -2,7 +2,7 @@ import React from "react";
 /* eslint-disable jsx-a11y/alt-text */
 import { Document, Image, Page, Rect, StyleSheet, Svg, Text, View } from "@react-pdf/renderer";
 import { Prisma } from "@prisma/client";
-import { calculateInvoiceTotals, getInvoiceVatLabel, parsePostalAddress } from "@/lib/invoice";
+import { calculateInvoiceTotals, calculateLineNetAmount, getInvoiceVatLabel, parsePostalAddress } from "@/lib/invoice";
 import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
 import { generateSwissQRCodeRects, getSwissQRBillMetadata, type SwissQRBillMetadata } from "@/lib/qrbill";
 import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business";
@@ -78,7 +78,18 @@ function buildPreparedLineItemRows(
   language: ReturnType<typeof normalizeInvoiceLanguage>
 ): PreparedLineItemRow[] {
   return lineItems.flatMap((item, index) => {
-    const descriptionLines = wrapTextLines(item.description, 46);
+    const discountType = item.discountType ?? "none";
+    const discountValue = item.discountValue ?? 0;
+    const discountLabel =
+      discountValue > 0 && discountType !== "none"
+        ? discountType === "percentage"
+          ? `${getInvoiceStrings(language).discount}: ${formatInvoiceMoney(discountValue, language)}%`
+          : `${getInvoiceStrings(language).discount}: ${formatInvoiceMoney(discountValue, language)}`
+        : null;
+    const descriptionLines = [
+      ...wrapTextLines(item.description, 46),
+      ...(discountLabel ? wrapTextLines(discountLabel, 46) : []),
+    ];
     const lines = descriptionLines.length > 0 ? descriptionLines : [""];
 
     return lines.map((line, lineIndex) => ({
@@ -88,7 +99,7 @@ function buildPreparedLineItemRows(
       rowHeight: TABLE_ROW_MIN_HEIGHT,
       quantityText: lineIndex === 0 ? formatQuantity(item.quantity) : "",
       unitPriceText: lineIndex === 0 ? formatInvoiceMoney(item.unitPrice, language) : "",
-      amountText: lineIndex === 0 ? formatInvoiceMoney(item.quantity * item.unitPrice, language) : "",
+      amountText: lineIndex === 0 ? formatInvoiceMoney(calculateLineNetAmount(item), language) : "",
       isTerminalRow: lineIndex === lines.length - 1,
     }));
   });
@@ -801,7 +812,7 @@ const InvoiceDocument = ({
     invoiceSenderType: "company" | "owner";
   };
 }) => {
-  const totals = calculateInvoiceTotals(invoice.lineItems);
+  const totals = calculateInvoiceTotals(invoice.lineItems, invoice);
   const subtotal = totals.subtotal;
   const taxAmount = totals.taxAmount;
   const totalAmountDue = totals.totalAmount;
@@ -915,7 +926,10 @@ const InvoiceDocument = ({
   const firstPageTableHeight =
     TABLE_HEADER_HEIGHT + firstPagePreparedRows.reduce((sum, row) => sum + row.rowHeight, 0);
   const firstPageTotalsTop = firstPageTableTop + firstPageTableHeight + mm(8);
-  const firstPageTotalsHeight = mm(taxAmount > 0 ? 22 : 16) + (amountDue !== totalAmountDue ? mm(9) : 0);
+  const firstPageTotalsHeight =
+    mm(taxAmount > 0 ? 22 : 16) +
+    (totals.discountAmount > 0 ? mm(6) : 0) +
+    (amountDue !== totalAmountDue ? mm(9) : 0);
   const firstPageClosingHeight = measureMessageHeight(closingLines);
   const firstPageTotalsBottom = firstPageTotalsTop + firstPageTotalsHeight;
   const pageContentBottomLimit = A4_PAGE_HEIGHT - PAGE_BOTTOM_MARGIN;
@@ -968,9 +982,17 @@ const InvoiceDocument = ({
         <View style={styles.totalsRow}>
           <Text style={styles.totalsLabel}>{strings.subtotal}</Text>
           <Text style={styles.totalsValue}>
-            {invoice.currency} {formatInvoiceMoney(subtotal, invoiceLanguage)}
+            {invoice.currency} {formatInvoiceMoney(totals.discountAmount > 0 ? totals.grossSubtotal : subtotal, invoiceLanguage)}
           </Text>
         </View>
+        {totals.discountAmount > 0 ? (
+          <View style={styles.totalsRow}>
+            <Text style={styles.totalsLabel}>{strings.discount}</Text>
+            <Text style={styles.totalsValue}>
+              - {invoice.currency} {formatInvoiceMoney(totals.discountAmount, invoiceLanguage)}
+            </Text>
+          </View>
+        ) : null}
         {taxAmount > 0 ? (
           <View style={styles.totalsRow}>
             <Text style={styles.totalsLabel}>{vatLabel}</Text>

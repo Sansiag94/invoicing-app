@@ -80,7 +80,7 @@ export async function POST(
       return apiError(vatConfigurationError, 400);
     }
 
-    const totals = calculateInvoiceTotals(duplicatedLineItems);
+    const totals = calculateInvoiceTotals(duplicatedLineItems, sourceInvoice);
 
     const duplicatedInvoice = await prisma.$transaction(async (tx) => {
       return tx.invoice.create({
@@ -97,6 +97,8 @@ export async function POST(
           subtotal: totals.subtotal,
           taxAmount: totals.taxAmount,
           totalAmount: totals.totalAmount,
+          discountType: sourceInvoice.discountType,
+          discountValue: sourceInvoice.discountValue,
           notes: sourceInvoice.notes,
           paymentNote: sourceInvoice.paymentNote,
           publicToken: crypto.randomUUID(),
@@ -107,6 +109,8 @@ export async function POST(
               quantity: item.quantity,
               unitPrice: item.unitPrice,
               taxRate: item.taxRate,
+              discountType: item.discountType,
+              discountValue: item.discountValue,
               total: item.total,
             })),
           },

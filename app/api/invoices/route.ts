@@ -9,11 +9,14 @@ import { logInvoiceEvent } from "@/lib/invoiceActivity";
 import { assertBusinessCanIssueInvoice, isBillingLimitError } from "@/lib/billing";
 import {
   calculateInvoiceTotals,
+  calculateLineNetAmount,
   deriveOfficialInvoicePrefix,
   formatDraftInvoiceNumber,
   formatSequentialInvoiceNumber,
   isSupportedInvoiceCurrency,
   isDraftInvoiceNumber,
+  normalizeDiscountType,
+  normalizeDiscountValue,
   normalizeInvoiceCurrency,
 } from "@/lib/invoice";
 import { getInvoiceVatConfigurationError } from "@/lib/vat";
@@ -23,6 +26,8 @@ type LineItemInput = {
   quantity: unknown;
   unitPrice: unknown;
   taxRate: unknown;
+  discountType?: unknown;
+  discountValue?: unknown;
 };
 
 type CreateInvoiceBody = {
@@ -35,6 +40,8 @@ type CreateInvoiceBody = {
   currency?: unknown;
   notes?: unknown;
   paymentNote?: unknown;
+  discountType?: unknown;
+  discountValue?: unknown;
   lineItems?: unknown;
 };
 
@@ -97,6 +104,8 @@ export async function GET(request: Request) {
         subtotal: true,
         taxAmount: true,
         totalAmount: true,
+        discountType: true,
+        discountValue: true,
         notes: true,
         paymentNote: true,
         publicToken: true,
@@ -133,6 +142,8 @@ export async function POST(request: Request) {
     const subject = asString(body.subject);
     const reference = asString(body.reference);
     const paymentNote = asString(body.paymentNote);
+    const discountType = normalizeDiscountType(asString(body.discountType));
+    const discountValue = normalizeDiscountValue(asNumber(body.discountValue));
 
     if (!clientId || !issueDate || !dueDate) {
       return apiError("Missing required fields", 400);
@@ -154,22 +165,38 @@ export async function POST(request: Request) {
         const unitPrice = asNumber(item.unitPrice);
         const taxRateRaw = asNumber(item.taxRate);
         const taxRate = taxRateRaw === null ? 0 : taxRateRaw;
+        const lineDiscountType = normalizeDiscountType(asString(item.discountType));
+        const lineDiscountValue = normalizeDiscountValue(asNumber(item.discountValue));
 
         if (!description || quantity === null || unitPrice === null) {
           return null;
         }
 
-        if (quantity <= 0 || unitPrice < 0 || taxRate < 0) {
+        if (
+          quantity <= 0 ||
+          unitPrice < 0 ||
+          taxRate < 0 ||
+          (lineDiscountType === "percentage" && lineDiscountValue > 100)
+        ) {
           return null;
         }
 
         const lineSubtotal = quantity * unitPrice;
+        const lineNetAmount = calculateLineNetAmount({
+          quantity,
+          unitPrice,
+          taxRate,
+          discountType: lineDiscountType,
+          discountValue: lineDiscountValue,
+        });
         return {
           description,
           quantity,
           unitPrice,
           taxRate,
-          total: lineSubtotal,
+          discountType: lineDiscountType,
+          discountValue: lineDiscountValue,
+          total: lineNetAmount,
           lineSubtotal,
           taxValue: (lineSubtotal * taxRate) / 100,
         };
@@ -216,7 +243,11 @@ export async function POST(request: Request) {
       return apiError("Client not found for this business", 404);
     }
 
-    const computedTotals = calculateInvoiceTotals(parsedLineItems);
+    if (discountType === "percentage" && discountValue > 100) {
+      return apiError("discountValue cannot be greater than 100 for percentage discounts", 400);
+    }
+
+    const computedTotals = calculateInvoiceTotals(parsedLineItems, { discountType, discountValue });
     const subtotal = computedTotals.subtotal;
     const taxAmount = computedTotals.taxAmount;
     const totalAmount = computedTotals.totalAmount;
@@ -253,6 +284,8 @@ export async function POST(request: Request) {
         subtotal,
         taxAmount,
         totalAmount,
+        discountType,
+        discountValue,
         status: normalizedStatus,
         currency: selectedCurrency,
         notes: asString(body.notes),
@@ -265,6 +298,8 @@ export async function POST(request: Request) {
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             taxRate: item.taxRate,
+            discountType: item.discountType,
+            discountValue: item.discountValue,
             total: item.total,
           })),
         },

@@ -102,6 +102,8 @@ export async function POST(
         invoiceNumber: true,
         status: true,
         totalAmount: true,
+        discountType: true,
+        discountValue: true,
         currency: true,
         publicToken: true,
         stripeCheckoutSessionId: true,
@@ -111,6 +113,8 @@ export async function POST(
             quantity: true,
             unitPrice: true,
             taxRate: true,
+            discountType: true,
+            discountValue: true,
           },
         },
       },
@@ -137,7 +141,7 @@ export async function POST(
       return apiError("Online card payments are not enabled for this business", 400);
     }
 
-    const computedTotals = calculateInvoiceTotals(invoice.lineItems);
+    const computedTotals = calculateInvoiceTotals(invoice.lineItems, invoice);
     const totalAmountDue =
       computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount;
     const amountInMinorUnit = Math.round(totalAmountDue * 100);

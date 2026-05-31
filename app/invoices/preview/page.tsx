@@ -4,7 +4,7 @@ import { Suspense, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { LineItemData } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
-import { getInvoiceVatLabel } from "@/lib/invoice";
+import { calculateInvoiceTotals, calculateLineNetAmount, getInvoiceVatLabel } from "@/lib/invoice";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -44,13 +44,9 @@ function InvoicePreviewContent() {
     [searchParams]
   );
 
-  const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
-  const taxAmount = lineItems.reduce(
-    (sum, item) => sum + (item.quantity * item.unitPrice * item.taxRate) / 100,
-    0
-  );
-  const totalAmount = subtotal + taxAmount;
+  const totals = useMemo(() => calculateInvoiceTotals(lineItems), [lineItems]);
   const vatLabel = useMemo(() => getInvoiceVatLabel(lineItems), [lineItems]);
+  const hasDiscount = totals.discountAmount > 0;
 
   const canCreate = Boolean(clientId && issueDate && dueDate && currency && lineItems.length > 0);
 
@@ -154,7 +150,7 @@ function InvoicePreviewContent() {
                         <p className="mt-1 text-sm font-medium leading-6 text-slate-900 dark:text-slate-100">{item.description}</p>
                       </div>
                       <p className="shrink-0 text-sm font-semibold text-slate-900 dark:text-slate-100">
-                        {formatMoney(item.quantity * item.unitPrice)}
+                        {formatMoney(calculateLineNetAmount(item))}
                       </p>
                     </div>
 
@@ -171,10 +167,18 @@ function InvoicePreviewContent() {
                         <p className="text-xs uppercase tracking-wide text-slate-500">VAT %</p>
                         <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">{item.taxRate.toFixed(2)}</p>
                       </div>
+                      {item.discountType !== "none" && (item.discountValue ?? 0) > 0 ? (
+                        <div className="rounded-lg border border-white bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
+                          <p className="text-xs uppercase tracking-wide text-slate-500">Discount</p>
+                          <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">
+                            {item.discountType === "percentage" ? `${item.discountValue}%` : formatMoney(item.discountValue ?? 0)}
+                          </p>
+                        </div>
+                      ) : null}
                       <div className="rounded-lg border border-white bg-white px-3 py-2 dark:border-slate-800 dark:bg-slate-900">
                         <p className="text-xs uppercase tracking-wide text-slate-500">Total</p>
                         <p className="mt-1 font-medium text-slate-900 dark:text-slate-100">
-                          {formatMoney(item.quantity * item.unitPrice)}
+                          {formatMoney(calculateLineNetAmount(item))}
                         </p>
                       </div>
                     </div>
@@ -189,6 +193,7 @@ function InvoicePreviewContent() {
                       <TableHead>Description</TableHead>
                       <TableHead>Quantity</TableHead>
                       <TableHead>Unit Price</TableHead>
+                      {hasDiscount ? <TableHead>Discount</TableHead> : null}
                       <TableHead>VAT %</TableHead>
                       <TableHead>Total</TableHead>
                     </TableRow>
@@ -199,8 +204,17 @@ function InvoicePreviewContent() {
                         <TableCell className="max-w-[26rem] leading-6">{item.description}</TableCell>
                         <TableCell>{item.quantity}</TableCell>
                         <TableCell>{formatMoney(item.unitPrice)}</TableCell>
+                        {hasDiscount ? (
+                          <TableCell>
+                            {item.discountType !== "none" && (item.discountValue ?? 0) > 0
+                              ? item.discountType === "percentage"
+                                ? `${item.discountValue}%`
+                                : formatMoney(item.discountValue ?? 0)
+                              : "-"}
+                          </TableCell>
+                        ) : null}
                         <TableCell>{item.taxRate.toFixed(2)}</TableCell>
-                        <TableCell>{formatMoney(item.quantity * item.unitPrice)}</TableCell>
+                        <TableCell>{formatMoney(calculateLineNetAmount(item))}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -218,15 +232,21 @@ function InvoicePreviewContent() {
         <CardContent className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
           <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
             <span>Subtotal</span>
-            <span className="font-medium text-slate-900 dark:text-slate-100">{formatMoney(subtotal)}</span>
+            <span className="font-medium text-slate-900 dark:text-slate-100">{formatMoney(totals.grossSubtotal)}</span>
           </div>
+          {hasDiscount ? (
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <span>Discount</span>
+              <span className="font-medium text-slate-900 dark:text-slate-100">-{formatMoney(totals.discountAmount)}</span>
+            </div>
+          ) : null}
           <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
             <span>{vatLabel}</span>
-            <span className="font-medium text-slate-900 dark:text-slate-100">{formatMoney(taxAmount)}</span>
+            <span className="font-medium text-slate-900 dark:text-slate-100">{formatMoney(totals.taxAmount)}</span>
           </div>
           <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-300 bg-slate-100 px-4 py-4 text-base font-semibold text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-50">
             <span>Total</span>
-            <span>{formatMoney(totalAmount)}</span>
+            <span>{formatMoney(totals.totalAmount)}</span>
           </div>
         </CardContent>
       </Card>

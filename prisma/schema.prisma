@@ -112,6 +112,8 @@ model Invoice {
   subtotal      Float
   taxAmount     Float
   totalAmount   Float
+  discountType  String        @default("none")
+  discountValue Float         @default(0)
   notes         String?
   paymentNote   String?
   publicToken   String?
@@ -143,6 +145,8 @@ model LineItem {
   quantity    Float
   unitPrice   Float
   taxRate     Float
+  discountType String   @default("none")
+  discountValue Float   @default(0)
   total       Float
   createdAt   DateTime @default(now())
   invoice     Invoice  @relation("InvoiceLineItems", fields: [invoiceId], references: [id], onDelete: Cascade)

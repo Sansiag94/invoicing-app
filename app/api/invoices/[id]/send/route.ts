@@ -245,7 +245,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   const senderPreferences = getBusinessSenderPreferences(existingInvoice.business);
   const emailDefaults = await loadBusinessInvoiceEmailDefaults(existingInvoice.businessId);
 
-  const computedTotals = calculateInvoiceTotals(existingInvoice.lineItems);
+  const computedTotals = calculateInvoiceTotals(existingInvoice.lineItems, existingInvoice);
   const totalAmountForEmail =
     computedTotals.totalAmount > 0 ? computedTotals.totalAmount : existingInvoice.totalAmount;
   const amountDueForEmail = getInvoiceAmountDue(existingInvoice.status, totalAmountForEmail);

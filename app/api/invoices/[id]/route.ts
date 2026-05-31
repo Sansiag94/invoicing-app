@@ -3,7 +3,12 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
-import { calculateInvoiceTotals } from "@/lib/invoice";
+import {
+  calculateInvoiceTotals,
+  calculateLineNetAmount,
+  normalizeDiscountType,
+  normalizeDiscountValue,
+} from "@/lib/invoice";
 import { listInvoiceEvents, logInvoiceEvent } from "@/lib/invoiceActivity";
 import { getInvoiceVatConfigurationError } from "@/lib/vat";
 
@@ -13,6 +18,8 @@ type UpdateLineItemInput = {
   quantity?: unknown;
   unitPrice?: unknown;
   taxRate?: unknown;
+  discountType?: unknown;
+  discountValue?: unknown;
 };
 
 type UpdateInvoiceBody = {
@@ -22,6 +29,8 @@ type UpdateInvoiceBody = {
   reference?: unknown;
   notes?: unknown;
   paymentNote?: unknown;
+  discountType?: unknown;
+  discountValue?: unknown;
   lineItems?: unknown;
 };
 
@@ -109,7 +118,7 @@ export async function GET(
       return apiError("Invoice not found", 404);
     }
 
-    const computedTotals = calculateInvoiceTotals(invoice.lineItems);
+    const computedTotals = calculateInvoiceTotals(invoice.lineItems, invoice);
     const events = await listInvoiceEvents(invoice.id);
 
     return NextResponse.json({
@@ -151,6 +160,8 @@ export async function PATCH(
         reference: true,
         notes: true,
         paymentNote: true,
+        discountType: true,
+        discountValue: true,
         lineItems: {
           select: { id: true },
         },
@@ -199,23 +210,39 @@ export async function PATCH(
         const unitPrice = asNumber(item.unitPrice);
         const taxRateRaw = asNumber(item.taxRate);
         const taxRate = taxRateRaw === null ? 0 : taxRateRaw;
+        const discountType = normalizeDiscountType(asNullableString(item.discountType));
+        const discountValue = normalizeDiscountValue(asNumber(item.discountValue));
 
         if (!description || quantity === null || unitPrice === null) {
           return null;
         }
 
-        if (quantity <= 0 || unitPrice < 0 || taxRate < 0) {
+        if (
+          quantity <= 0 ||
+          unitPrice < 0 ||
+          taxRate < 0 ||
+          (discountType === "percentage" && discountValue > 100)
+        ) {
           return null;
         }
 
         const lineSubtotal = quantity * unitPrice;
+        const lineTotal = calculateLineNetAmount({
+          quantity,
+          unitPrice,
+          taxRate,
+          discountType,
+          discountValue,
+        });
         return {
           id: lineItemId,
           description,
           quantity,
           unitPrice,
           taxRate,
-          total: lineSubtotal,
+          discountType,
+          discountValue,
+          total: lineTotal,
           lineSubtotal,
           lineTaxAmount: (lineSubtotal * taxRate) / 100,
         };
@@ -246,10 +273,6 @@ export async function PATCH(
       position: index,
     }));
 
-    const computedTotals = calculateInvoiceTotals(lineItemsWithPosition);
-    const subtotal = computedTotals.subtotal;
-    const taxAmount = computedTotals.taxAmount;
-    const totalAmount = computedTotals.totalAmount;
     const subject =
       body.subject === undefined ? existingInvoice.subject : asNullableString(body.subject);
     const reference =
@@ -258,6 +281,23 @@ export async function PATCH(
       body.notes === undefined ? existingInvoice.notes : asNullableString(body.notes);
     const paymentNote =
       body.paymentNote === undefined ? existingInvoice.paymentNote : asNullableString(body.paymentNote);
+    const discountType =
+      body.discountType === undefined
+        ? normalizeDiscountType(existingInvoice.discountType)
+        : normalizeDiscountType(asNullableString(body.discountType));
+    const discountValue =
+      body.discountValue === undefined
+        ? normalizeDiscountValue(existingInvoice.discountValue)
+        : normalizeDiscountValue(asNumber(body.discountValue));
+
+    if (discountType === "percentage" && discountValue > 100) {
+      return apiError("discountValue cannot be greater than 100 for percentage discounts", 400);
+    }
+
+    const computedTotals = calculateInvoiceTotals(lineItemsWithPosition, { discountType, discountValue });
+    const subtotal = computedTotals.subtotal;
+    const taxAmount = computedTotals.taxAmount;
+    const totalAmount = computedTotals.totalAmount;
 
     const updatedInvoice = await prisma.$transaction(async (tx) => {
       await tx.invoice.update({
@@ -269,6 +309,8 @@ export async function PATCH(
           reference,
           notes,
           paymentNote,
+          discountType,
+          discountValue,
           subtotal,
           taxAmount,
           totalAmount,
@@ -303,6 +345,8 @@ export async function PATCH(
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             taxRate: item.taxRate,
+            discountType: item.discountType,
+            discountValue: item.discountValue,
             total: item.total,
           },
         });
@@ -317,6 +361,8 @@ export async function PATCH(
             quantity: item.quantity,
             unitPrice: item.unitPrice,
             taxRate: item.taxRate,
+            discountType: item.discountType,
+            discountValue: item.discountValue,
             total: item.total,
           })),
         });
@@ -344,7 +390,7 @@ export async function PATCH(
       return apiError("Invoice not found", 404);
     }
 
-    const updatedTotals = calculateInvoiceTotals(updatedInvoice.lineItems);
+    const updatedTotals = calculateInvoiceTotals(updatedInvoice.lineItems, updatedInvoice);
     await logInvoiceEvent({
       invoiceId: updatedInvoice.id,
       type: "edited",

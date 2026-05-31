@@ -106,7 +106,7 @@ export async function GET(
       });
     }
 
-    const computedTotals = calculateInvoiceTotals(invoice.lineItems);
+    const computedTotals = calculateInvoiceTotals(invoice.lineItems, invoice);
 
     const senderPreferences = getBusinessSenderPreferences(invoice.business);
 
