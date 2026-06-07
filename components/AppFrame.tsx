@@ -11,6 +11,7 @@ import { AppLanguageProvider, StaticAppLanguageProvider } from "@/components/ui/
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch, AUTH_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
+import { prefetchPrivatePageData } from "@/utils/prefetchPageData";
 import { ensureSupabaseSessionRestored, isClientLogoutInProgress, startClientLogout, supabase } from "@/utils/supabase";
 
 type AppFrameProps = {
@@ -179,6 +180,7 @@ export default function AppFrame({ children }: AppFrameProps) {
       ["/dashboard", "/clients", "/invoices", "/catalog", "/expenses", "/analytics", "/settings"].forEach((route) => {
         router.prefetch(route);
       });
+      void prefetchPrivatePageData();
     };
 
     const requestIdleCallback =
