@@ -35,6 +35,8 @@ function shouldHideShell(pathname: string): boolean {
     pathname === "/privacy" ||
     pathname === "/terms" ||
     pathname === "/help" ||
+    pathname === "/rechnung-software-schweiz" ||
+    pathname === "/invoice-software-switzerland" ||
     pathname === "/verify-email" ||
     pathname === "/forgot-password" ||
     pathname === "/reset-password" ||
