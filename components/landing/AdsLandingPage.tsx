@@ -2,13 +2,17 @@ import Link from "next/link";
 import {
   ArrowRight,
   Banknote,
+  BarChart3,
+  BellRing,
   CheckCircle2,
   Clock3,
   FileText,
   Languages,
   LockKeyhole,
   ReceiptText,
-  ShieldCheck,
+  Send,
+  UserPlus,
+  Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { APP_NAME } from "@/lib/appBrand";
@@ -19,6 +23,7 @@ type LandingCopy = {
   lead: string;
   primaryCta: string;
   secondaryCta: string;
+  secondaryHref: string;
   switchLabel: string;
   switchHref: string;
   badges: string[];
@@ -33,12 +38,24 @@ type LandingCopy = {
   };
   proof: Array<{ label: string; value: string }>;
   sections: {
-    whyTitle: string;
-    whyLead: string;
-    features: Array<{ title: string; text: string }>;
+    painTitle: string;
+    painLead: string;
+    painPoints: string[];
+    solutionTitle: string;
+    solutionText: string;
+    benefitsTitle: string;
+    benefitsLead: string;
+    benefits: Array<{ title: string; text: string }>;
     workflowTitle: string;
     workflowLead: string;
     workflow: Array<{ title: string; text: string }>;
+    socialTitle: string;
+    socialLead: string;
+    socialItems: Array<{ label: string; value: string }>;
+    comparisonTitle: string;
+    comparisonLead: string;
+    comparisonHeaders: [string, string];
+    comparisonRows: Array<{ label: string; sierra: string; traditional: string }>;
     pricingTitle: string;
     pricingLead: string;
     freeTitle: string;
@@ -57,13 +74,13 @@ type LandingCopy = {
   };
 };
 
-const featureIcons = [FileText, ReceiptText, Clock3];
-const workflowIcons = [Banknote, Languages, ShieldCheck];
+const benefitIcons = [ReceiptText, Clock3, Banknote, BellRing, Users, BarChart3];
+const workflowIcons = [UserPlus, FileText, Send, CheckCircle2];
 
 function ProductPreview({ copy }: { copy: LandingCopy["preview"] }) {
   return (
-    <div className="relative mx-auto w-full max-w-[34rem] overflow-hidden rounded-[2rem] border border-white/16 bg-white/10 p-4 shadow-[0_30px_90px_rgba(2,6,23,0.35)] backdrop-blur">
-      <div className="rounded-[1.35rem] bg-slate-950/70 p-4 text-white">
+    <div className="relative mx-auto w-full max-w-[35rem] overflow-hidden rounded-[2rem] border border-white/16 bg-white/10 p-4 shadow-[0_30px_90px_rgba(2,6,23,0.35)] backdrop-blur">
+      <div className="rounded-[1.35rem] bg-slate-950/72 p-4 text-white">
         <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
           <div>
             <p className="text-sm font-semibold">{copy.title}</p>
@@ -104,6 +121,14 @@ function ProductPreview({ copy }: { copy: LandingCopy["preview"] }) {
   );
 }
 
+function SectionEyebrow({ children }: { children: string }) {
+  return (
+    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+      {children}
+    </p>
+  );
+}
+
 export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
   return (
     <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
@@ -136,7 +161,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
                 </Link>
               </Button>
               <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
-                <Link href="/help">{copy.secondaryCta}</Link>
+                <Link href={copy.secondaryHref}>{copy.secondaryCta}</Link>
               </Button>
             </div>
 
@@ -167,62 +192,139 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
 
       <section className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:px-8 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Fit</p>
-          <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.whyTitle}</h2>
-          <p className="text-base leading-8 text-slate-600">{copy.sections.whyLead}</p>
+          <SectionEyebrow>Problem</SectionEyebrow>
+          <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.painTitle}</h2>
+          <p className="text-base leading-8 text-slate-600">{copy.sections.painLead}</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-3">
-          {copy.sections.features.map((feature, index) => {
-            const Icon = featureIcons[index] ?? FileText;
+        <div className="grid gap-4">
+          <div className="rounded-3xl border border-slate-200 bg-white p-5">
+            <div className="grid gap-3 md:grid-cols-2">
+              {copy.sections.painPoints.map((point) => (
+                <div key={point} className="flex gap-3 border-t border-slate-200 pt-4 text-sm leading-6 text-slate-700">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400" />
+                  <span>{point}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="rounded-3xl bg-slate-950 p-6 text-white">
+            <p className="text-xl font-semibold">{copy.sections.solutionTitle}</p>
+            <p className="mt-3 text-sm leading-7 text-slate-300">{copy.sections.solutionText}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-white">
+        <div className="mx-auto max-w-7xl px-5 py-16 md:px-8">
+          <div className="max-w-3xl space-y-4">
+            <SectionEyebrow>Benefits</SectionEyebrow>
+            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.benefitsTitle}</h2>
+            <p className="text-base leading-8 text-slate-600">{copy.sections.benefitsLead}</p>
+          </div>
+          <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {copy.sections.benefits.map((benefit, index) => {
+              const Icon = benefitIcons[index] ?? FileText;
+              return (
+                <div key={benefit.title} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                  <Icon className="h-5 w-5 text-slate-700" />
+                  <p className="mt-4 font-semibold">{benefit.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">{benefit.text}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:px-8 lg:grid-cols-[0.85fr_1.15fr]">
+        <div className="space-y-4">
+          <SectionEyebrow>How it works</SectionEyebrow>
+          <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.workflowTitle}</h2>
+          <p className="text-base leading-8 text-slate-600">{copy.sections.workflowLead}</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-4">
+          {copy.sections.workflow.map((step, index) => {
+            const Icon = workflowIcons[index] ?? CheckCircle2;
             return (
-              <div key={feature.title} className="rounded-2xl border border-slate-200 bg-white p-5">
-                <Icon className="h-5 w-5 text-slate-700" />
-                <p className="mt-4 font-semibold">{feature.title}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{feature.text}</p>
+              <div key={step.title} className="border-t border-slate-200 pt-5">
+                <div className="flex items-center justify-between gap-3">
+                  <Icon className="h-5 w-5 text-slate-700" />
+                  <span className="text-sm font-semibold text-slate-400">0{index + 1}</span>
+                </div>
+                <p className="mt-4 font-semibold">{step.title}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{step.text}</p>
               </div>
             );
           })}
         </div>
       </section>
 
-      <section className="bg-white">
-        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:px-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="grid gap-4 md:grid-cols-3">
-            {copy.sections.workflow.map((step, index) => {
-              const Icon = workflowIcons[index] ?? ShieldCheck;
-              return (
-                <div key={step.title} className="border-t border-slate-200 pt-5">
-                  <Icon className="h-5 w-5 text-slate-700" />
-                  <p className="mt-4 font-semibold">{step.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">{step.text}</p>
-                </div>
-              );
-            })}
-          </div>
+      <section className="bg-slate-950 text-white">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:px-8 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Workflow</p>
-            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.workflowTitle}</h2>
-            <p className="text-base leading-8 text-slate-600">{copy.sections.workflowLead}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">Proof</p>
+            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.socialTitle}</h2>
+            <p className="text-base leading-8 text-slate-300">{copy.sections.socialLead}</p>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {copy.sections.socialItems.map((item) => (
+              <div key={item.label} className="rounded-3xl border border-white/12 bg-white/6 p-5">
+                <p className="text-3xl font-semibold">{item.value}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-300">{item.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-6 px-5 py-16 md:px-8 lg:grid-cols-[0.85fr_1.15fr]">
+      <section className="mx-auto grid max-w-7xl gap-8 px-5 py-16 md:px-8 lg:grid-cols-[0.8fr_1.2fr]">
         <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Pricing</p>
-          <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.pricingTitle}</h2>
-          <p className="text-base leading-8 text-slate-600">{copy.sections.pricingLead}</p>
+          <SectionEyebrow>Comparison</SectionEyebrow>
+          <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.comparisonTitle}</h2>
+          <p className="text-base leading-8 text-slate-600">{copy.sections.comparisonLead}</p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6">
-            <p className="text-lg font-semibold">{copy.sections.freeTitle}</p>
-            <p className="mt-3 text-4xl font-semibold">{copy.sections.freePrice}</p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">{copy.sections.freeText}</p>
+        <div className="overflow-x-auto rounded-3xl border border-slate-200 bg-white">
+          <div className="min-w-[44rem]">
+            <div className="grid grid-cols-[1.15fr_1fr_1fr] bg-slate-100 text-sm font-semibold text-slate-700">
+              <div className="p-4" />
+              <div className="p-4">{copy.sections.comparisonHeaders[0]}</div>
+              <div className="p-4">{copy.sections.comparisonHeaders[1]}</div>
+            </div>
+            {copy.sections.comparisonRows.map((row) => (
+              <div key={row.label} className="grid grid-cols-[1.15fr_1fr_1fr] border-t border-slate-200 text-sm">
+                <div className="p-4 font-semibold">{row.label}</div>
+                <div className="p-4 text-slate-700">{row.sierra}</div>
+                <div className="p-4 text-slate-500">{row.traditional}</div>
+              </div>
+            ))}
           </div>
-          <div className="rounded-3xl bg-slate-950 p-6 text-white">
-            <p className="text-lg font-semibold">{copy.sections.proTitle}</p>
-            <p className="mt-3 text-4xl font-semibold">{copy.sections.proPrice}</p>
-            <p className="mt-3 text-sm leading-7 text-slate-300">{copy.sections.proText}</p>
+        </div>
+      </section>
+
+      <section id="pricing" className="bg-white">
+        <div className="mx-auto grid max-w-7xl gap-6 px-5 py-16 md:px-8 lg:grid-cols-[0.85fr_1.15fr]">
+          <div className="space-y-4">
+            <SectionEyebrow>Pricing</SectionEyebrow>
+            <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.pricingTitle}</h2>
+            <p className="text-base leading-8 text-slate-600">{copy.sections.pricingLead}</p>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
+              <p className="text-lg font-semibold">{copy.sections.freeTitle}</p>
+              <p className="mt-3 text-4xl font-semibold">{copy.sections.freePrice}</p>
+              <p className="mt-3 text-sm leading-7 text-slate-600">{copy.sections.freeText}</p>
+              <Button asChild variant="outline" className="mt-6 w-full">
+                <Link href="/signup">{copy.primaryCta}</Link>
+              </Button>
+            </div>
+            <div className="rounded-3xl bg-slate-950 p-6 text-white">
+              <p className="text-lg font-semibold">{copy.sections.proTitle}</p>
+              <p className="mt-3 text-4xl font-semibold">{copy.sections.proPrice}</p>
+              <p className="mt-3 text-sm leading-7 text-slate-300">{copy.sections.proText}</p>
+              <Button asChild className="mt-6 w-full bg-white text-slate-950 hover:bg-slate-100">
+                <Link href="/signup">{copy.primaryCta}</Link>
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -247,7 +349,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
 
       <section className="mx-auto grid max-w-7xl gap-8 px-5 py-16 md:px-8 lg:grid-cols-[0.8fr_1.2fr]">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">FAQ</p>
+          <SectionEyebrow>FAQ</SectionEyebrow>
           <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.faqTitle}</h2>
         </div>
         <div className="divide-y divide-slate-200 rounded-3xl border border-slate-200 bg-white">

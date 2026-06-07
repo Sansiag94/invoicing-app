@@ -4,11 +4,12 @@ import { APP_NAME } from "@/lib/appBrand";
 import { getPublicInvoiceBaseUrl } from "@/lib/publicInvoiceLink";
 
 const baseUrl = getPublicInvoiceBaseUrl();
+const pageUrl = `${baseUrl}/invoice-software-switzerland`;
 
 export const metadata: Metadata = {
-  title: `Invoice software Switzerland | ${APP_NAME}`,
+  title: "Swiss Invoice Software | QR-Bill Invoicing for Freelancers & Small Businesses",
   description:
-    "Swiss invoice software with QR-bills, payment links, reminders, and 3 free issued invoices per month.",
+    "Create Swiss-compliant invoices with QR-bills, payment tracking and reminders. Designed for freelancers and small businesses. Start free today.",
   alternates: {
     canonical: "/invoice-software-switzerland",
     languages: {
@@ -17,38 +18,39 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: `Invoice software Switzerland | ${APP_NAME}`,
+    title: "Swiss Invoice Software | QR-Bill Invoicing for Freelancers & Small Businesses",
     description:
-      "Create Swiss invoices with QR-bills, payment tracking, reminders, and a focused workspace for small businesses.",
-    url: `${baseUrl}/invoice-software-switzerland`,
+      "Create Swiss-compliant invoices with QR-bills, payment tracking and reminders. Designed for freelancers and small businesses.",
+    url: pageUrl,
     siteName: APP_NAME,
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: `Invoice software Switzerland | ${APP_NAME}`,
+    title: "Swiss Invoice Software | QR-Bill Invoicing for Freelancers & Small Businesses",
     description:
-      "Swiss invoices, QR-bills, payment status, and reminders in one focused workspace.",
+      "Create Swiss-compliant invoices with QR-bills, payment tracking and reminders. Start free today.",
   },
 };
 
 const copy: LandingCopy = {
-  eyebrow: "Invoice software for Switzerland",
-  h1: "Send Swiss invoices without adopting a heavy accounting system.",
+  eyebrow: "Simple invoicing software for Switzerland",
+  h1: "Swiss QR-Bill invoicing without accounting software.",
   lead:
-    "Sierra Invoices helps freelancers and small businesses create clean invoices, track payments, and follow up on overdue work from one focused workspace.",
+    "Create professional invoices, generate QR-bills, track payments, and send reminders from one simple platform.",
   primaryCta: "Start free",
-  secondaryCta: "See setup guide",
+  secondaryCta: "See pricing",
+  secondaryHref: "#pricing",
   switchLabel: "Deutsche Version",
   switchHref: "/rechnung-software-schweiz",
   badges: [
+    "Swiss QR-bill ready",
+    "Made for freelancers and small businesses",
     "3 issued invoices per month free",
-    "QR-bill and bank transfer ready",
-    "Pro for CHF 19/month",
   ],
   preview: {
-    title: "Invoice overview",
-    subtitle: "Status, payments, and open balances",
+    title: "Invoice dashboard",
+    subtitle: "Invoices, payment status, and open balances",
     totalLabel: "Issued",
     totalValue: "CHF 1'971",
     openLabel: "Open",
@@ -60,57 +62,104 @@ const copy: LandingCopy = {
     ],
   },
   proof: [
-    { label: "Start free", value: "CHF 0" },
-    { label: "Pro", value: "CHF 19/month" },
+    { label: "Free plan", value: "CHF 0" },
+    { label: "Pro plan", value: "CHF 19/month" },
     { label: "Built for", value: "Switzerland" },
   ],
   sections: {
-    whyTitle: "For invoices that look serious and leave quickly.",
-    whyLead:
-      "A good fit when you need clients, services, payment status, and reminders in one place, but do not want a complex accounting suite.",
-    features: [
+    painTitle: "Still creating invoices in Word or Excel?",
+    painLead:
+      "Manual invoices work at the beginning, then the admin starts leaking time: payment status, reminders, customer details, and old files all live in different places.",
+    painPoints: [
+      "Manual invoice templates are easy to break and slow to reuse.",
+      "Tracking paid and unpaid invoices in spreadsheets becomes messy.",
+      "Following up on overdue invoices takes attention you need elsewhere.",
+      "Full accounting platforms can feel too heavy when you only need invoicing.",
+    ],
+    solutionTitle: "Sierra Invoices keeps the invoicing part simple.",
+    solutionText:
+      "Create the customer, add services, send a Swiss invoice with QR-bill details, and track whether it has been paid. No accounting knowledge required.",
+    benefitsTitle: "Everything needed to invoice professionally.",
+    benefitsLead:
+      "The app focuses on the practical work around invoices: creating them, sending them, tracking payment, and keeping client information organized.",
+    benefits: [
       {
-        title: "Swiss invoices",
-        text: "PDF invoices with QR-bill support, VAT overview, numbering, and a public invoice page.",
+        title: "Swiss QR-Bill ready",
+        text: "Generate Swiss invoices with QR-bill payment details that local customers recognize.",
       },
       {
-        title: "Payment tracking",
-        text: "Bank transfer, optional card links, statuses, due dates, and reminders in one workflow.",
+        title: "Professional invoices in minutes",
+        text: "Reuse customers, services, invoice text, due dates, and payment notes without rebuilding every invoice.",
       },
       {
-        title: "Less admin",
-        text: "Clients, services, drafts, expenses, unbilled work, and monthly overview in a focused workspace.",
+        title: "Track paid and unpaid invoices",
+        text: "See what is open, paid, overdue, or still in draft before cash flow becomes guesswork.",
+      },
+      {
+        title: "Payment reminders",
+        text: "Follow up on unpaid invoices with reminders instead of writing every message from scratch.",
+      },
+      {
+        title: "Customer management",
+        text: "Keep addresses, language preferences, invoice messages, and ongoing work connected to each client.",
+      },
+      {
+        title: "Simple reporting",
+        text: "Review monthly totals, open balances, paid invoices, and business activity without a complex dashboard.",
       },
     ],
-    workflowTitle: "From draft to paid invoice.",
+    workflowTitle: "How it works",
     workflowLead:
-      "Set up your business once, save repeated services, and prepare the next invoice in minutes.",
+      "A focused invoice workflow for the jobs you actually repeat every month.",
     workflow: [
       {
-        title: "Set up your business",
-        text: "Add logo, payment details, VAT status, and default invoice text for future invoices.",
+        title: "Create your customer",
+        text: "Save client details once so future invoices start with the right address and message.",
       },
       {
-        title: "Save clients and services",
-        text: "Keep recurring clients, catalog items, ongoing work, and drafts ready for monthly billing.",
+        title: "Generate invoice",
+        text: "Add services, supplies, discounts, notes, due date, and attachments before sending.",
       },
       {
-        title: "Send and follow up",
-        text: "Send a PDF and online payment link, track payment, and use reminders when needed.",
+        title: "Send invoice",
+        text: "Send a PDF and online invoice link with payment details ready for your client.",
+      },
+      {
+        title: "Get paid",
+        text: "Track status, record payment, and send reminders when needed.",
       },
     ],
-    pricingTitle: "Start simple, upgrade later.",
+    socialTitle: "Built for the way small Swiss businesses invoice.",
+    socialLead:
+      "Public proof will grow as users adopt the product. The landing page already has space for testimonials, logos, and usage numbers without pretending they exist today.",
+    socialItems: [
+      { label: "Customer testimonials", value: "Soon" },
+      { label: "Swiss small-business focus", value: "100%" },
+      { label: "Invoices included on Free", value: "3/month" },
+    ],
+    comparisonTitle: "Why not use full accounting software?",
+    comparisonLead:
+      "Traditional accounting platforms are powerful. Sierra Invoices is intentionally narrower: it helps you send invoices and get paid with less setup.",
+    comparisonHeaders: ["Sierra Invoices", "Traditional accounting platforms"],
+    comparisonRows: [
+      { label: "Setup", sierra: "Quick invoice setup", traditional: "More accounting setup" },
+      { label: "Main focus", sierra: "Invoices and payments", traditional: "Full bookkeeping and ERP" },
+      { label: "Learning curve", sierra: "Designed for non-accountants", traditional: "More concepts to learn" },
+      { label: "Best for", sierra: "Freelancers and small service businesses", traditional: "Teams needing full accounting" },
+      { label: "Monthly price", sierra: "Free plan, then CHF 19", traditional: "Often higher or modular" },
+    ],
+    pricingTitle: "Simple pricing for simple invoicing.",
     pricingLead:
       "Drafts stay free. You only need Pro when you want to issue more than three invoices in a calendar month.",
     freeTitle: "Free",
     freePrice: "CHF 0",
-    freeText: "3 issued invoices per calendar month, clients, drafts, and the core invoicing workflow.",
+    freeText: "3 issued invoices per calendar month, customer management, drafts, and the core Swiss invoicing workflow.",
     proTitle: "Pro",
     proPrice: "CHF 19",
-    proText: "Unlimited issued invoices, extended workflows, and a clean workspace for day-to-day billing.",
-    trustTitle: "Clear for clients, calm for you.",
+    proText: "Unlimited issued invoices, extended workflows, payment tracking, reminders, and a clean workspace for daily billing.",
+    trustTitle: "Trustworthy enough for your clients.",
     trustLead:
-      "The app is built around trustworthy invoices, clear payment information, and a small workflow that stays manageable.",
+      "Sierra Invoices is built around clear invoice PDFs, public invoice links, transparent payment details, and protected business data.",
     trustItems: [
       "Public help, privacy, terms, and imprint pages.",
       "Business data is separated by workspace and protected by authentication.",
@@ -120,32 +169,84 @@ const copy: LandingCopy = {
     faqTitle: "Questions before starting",
     faq: [
       {
-        question: "Is Sierra Invoices made for Switzerland?",
+        question: "Is this Swiss compliant?",
         answer:
-          "Yes. The focus is Swiss invoicing, QR-bills, CHF, VAT handling, and payment information that local clients understand.",
+          "Sierra Invoices is built for Swiss invoice workflows, including CHF, Swiss QR-bill payment details, VAT-aware invoice totals, and local payment expectations.",
       },
       {
-        question: "Can I start for free?",
+        question: "Does it support QR-bills?",
         answer:
-          "Yes. You can start free and issue up to 3 invoices per calendar month. Drafts do not count as issued invoices.",
+          "Yes. The invoice workflow supports Swiss QR-bill payment details so your clients can pay by bank transfer more easily.",
       },
       {
-        question: "Do I need Stripe?",
+        question: "Can freelancers use it?",
         answer:
-          "No. You can send invoices with bank transfer and QR-bill details. Stripe is only for optional online card payments.",
+          "Yes. It is designed for freelancers, consultants, self-employed professionals, tradespeople, agencies, and small service businesses.",
       },
       {
-        question: "Who is this for?",
+        question: "Do I need accounting knowledge?",
         answer:
-          "Freelancers, sole proprietors, and small Swiss service businesses that want professional invoices without heavy accounting software.",
+          "No. Sierra Invoices is not full accounting software. It focuses on creating invoices, sending them, and tracking payment.",
+      },
+      {
+        question: "Can I track payments?",
+        answer:
+          "Yes. You can see invoice status, open balances, paid invoices, due dates, and reminders from the app.",
+      },
+      {
+        question: "Is there a free plan?",
+        answer:
+          "Yes. You can issue up to 3 invoices per calendar month on the Free plan. Drafts do not count as issued invoices.",
       },
     ],
-    finalTitle: "Ready to send the next invoice cleanly?",
+    finalTitle: "Start sending professional Swiss invoices today.",
     finalLead:
-      "Start free, set up your business, and test the workflow with your next Swiss invoice.",
+      "Create your account, set up your business, and send your first Swiss invoice without wrestling with accounting software.",
   },
 };
 
+const softwareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: APP_NAME,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  url: pageUrl,
+  offers: [
+    {
+      "@type": "Offer",
+      name: "Free",
+      price: "0",
+      priceCurrency: "CHF",
+    },
+    {
+      "@type": "Offer",
+      name: "Pro",
+      price: "19",
+      priceCurrency: "CHF",
+    },
+  ],
+};
+
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: copy.sections.faq.map((item) => ({
+    "@type": "Question",
+    name: item.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.answer,
+    },
+  })),
+};
+
 export default function InvoiceSoftwareSwitzerlandPage() {
-  return <AdsLandingPage copy={copy} />;
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
+      <AdsLandingPage copy={copy} />
+    </>
+  );
 }
