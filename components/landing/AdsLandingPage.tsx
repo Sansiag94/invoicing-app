@@ -79,32 +79,32 @@ const workflowIcons = [UserPlus, FileText, Send, CheckCircle2];
 
 function ProductPreview({ copy }: { copy: LandingCopy["preview"] }) {
   return (
-    <div className="relative mx-auto w-full max-w-[35rem] overflow-hidden rounded-[2rem] border border-white/16 bg-white/10 p-4 shadow-[0_30px_90px_rgba(2,6,23,0.35)] backdrop-blur">
-      <div className="rounded-[1.35rem] bg-slate-950/72 p-4 text-white">
-        <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+    <div className="relative mx-auto w-full max-w-[35rem] overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+      <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4 text-slate-950">
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
           <div>
             <p className="text-sm font-semibold">{copy.title}</p>
-            <p className="mt-1 text-xs text-white/55">{copy.subtitle}</p>
+            <p className="mt-1 text-xs text-slate-500">{copy.subtitle}</p>
           </div>
-          <span className="rounded-full bg-emerald-300 px-3 py-1 text-xs font-semibold text-slate-950">
+          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">
             QR-bill
           </span>
         </div>
 
         <div className="grid grid-cols-2 gap-3 py-4">
-          <div className="rounded-2xl border border-white/10 bg-white/8 p-3">
-            <p className="text-[0.68rem] uppercase tracking-[0.18em] text-white/45">{copy.totalLabel}</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[0.68rem] uppercase tracking-[0.18em] text-slate-500">{copy.totalLabel}</p>
             <p className="mt-2 text-2xl font-semibold">{copy.totalValue}</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/8 p-3">
-            <p className="text-[0.68rem] uppercase tracking-[0.18em] text-white/45">{copy.openLabel}</p>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[0.68rem] uppercase tracking-[0.18em] text-slate-500">{copy.openLabel}</p>
             <p className="mt-2 text-2xl font-semibold">{copy.openValue}</p>
           </div>
         </div>
 
         <div className="space-y-2">
           {copy.rows.map((row) => (
-            <div key={row.label} className="grid grid-cols-[1fr_auto] gap-4 rounded-2xl bg-white px-3 py-3 text-slate-950">
+            <div key={row.label} className="grid grid-cols-[1fr_auto] gap-4 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-slate-950">
               <div>
                 <p className="text-sm font-semibold">{row.label}</p>
                 <p className="text-xs text-slate-500">{row.client}</p>
@@ -132,43 +132,43 @@ function SectionEyebrow({ children }: { children: string }) {
 export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
   return (
     <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
-      <section className="min-h-[calc(100svh-2rem)] overflow-hidden bg-slate-950 text-white">
+      <section className="min-h-[calc(100svh-2rem)] overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-950">
         <div className="mx-auto grid min-h-[calc(100svh-2rem)] max-w-7xl gap-10 px-5 py-8 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:py-10">
           <div className="max-w-2xl space-y-7">
             <div className="flex flex-wrap items-center gap-3">
-              <span className="rounded-full border border-white/14 bg-white/8 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/70">
+              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 shadow-sm">
                 {APP_NAME}
               </span>
-              <Link href={copy.switchHref} className="inline-flex items-center gap-2 text-sm text-white/70 underline-offset-4 hover:text-white hover:underline">
+              <Link href={copy.switchHref} className="inline-flex items-center gap-2 text-sm text-slate-600 underline-offset-4 hover:text-slate-950 hover:underline">
                 <Languages className="h-4 w-4" />
                 {copy.switchLabel}
               </Link>
             </div>
 
             <div className="space-y-4">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-300">{copy.eyebrow}</p>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">{copy.eyebrow}</p>
               <h1 className="max-w-3xl text-4xl font-semibold tracking-tight md:text-6xl md:leading-[0.96]">
                 {copy.h1}
               </h1>
-              <p className="max-w-xl text-lg leading-8 text-slate-300">{copy.lead}</p>
+              <p className="max-w-xl text-lg leading-8 text-slate-600">{copy.lead}</p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Button asChild size="lg" className="bg-white text-slate-950 hover:bg-slate-100">
+              <Button asChild size="lg">
                 <Link href="/signup">
                   {copy.primaryCta}
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild size="lg" variant="outline" className="border-white/20 bg-transparent text-white hover:bg-white/10 hover:text-white">
+              <Button asChild size="lg" variant="outline" className="bg-white">
                 <Link href={copy.secondaryHref}>{copy.secondaryCta}</Link>
               </Button>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
               {copy.badges.map((badge) => (
-                <div key={badge} className="flex items-start gap-2 rounded-2xl border border-white/12 bg-white/6 px-3 py-3 text-sm text-slate-200">
-                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                <div key={badge} className="flex items-start gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
                   <span>{badge}</span>
                 </div>
               ))}
@@ -207,9 +207,9 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               ))}
             </div>
           </div>
-          <div className="rounded-3xl bg-slate-950 p-6 text-white">
+          <div className="rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-950">
             <p className="text-xl font-semibold">{copy.sections.solutionTitle}</p>
-            <p className="mt-3 text-sm leading-7 text-slate-300">{copy.sections.solutionText}</p>
+            <p className="mt-3 text-sm leading-7 text-emerald-900/80">{copy.sections.solutionText}</p>
           </div>
         </div>
       </section>
@@ -259,18 +259,18 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
         </div>
       </section>
 
-      <section className="bg-slate-950 text-white">
+      <section className="border-y border-slate-200 bg-white text-slate-950">
         <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:px-8 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">Proof</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Proof</p>
             <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.socialTitle}</h2>
-            <p className="text-base leading-8 text-slate-300">{copy.sections.socialLead}</p>
+            <p className="text-base leading-8 text-slate-600">{copy.sections.socialLead}</p>
           </div>
           <div className="grid gap-3 md:grid-cols-3">
             {copy.sections.socialItems.map((item) => (
-              <div key={item.label} className="rounded-3xl border border-white/12 bg-white/6 p-5">
+              <div key={item.label} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                 <p className="text-3xl font-semibold">{item.value}</p>
-                <p className="mt-2 text-sm leading-6 text-slate-300">{item.label}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">{item.label}</p>
               </div>
             ))}
           </div>
@@ -329,17 +329,17 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
         </div>
       </section>
 
-      <section className="bg-slate-950 text-white">
+      <section className="border-y border-slate-200 bg-white text-slate-950">
         <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:px-8 lg:grid-cols-[0.9fr_1.1fr]">
           <div className="space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300">Trust</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Trust</p>
             <h2 className="text-3xl font-semibold tracking-tight md:text-5xl">{copy.sections.trustTitle}</h2>
-            <p className="text-base leading-8 text-slate-300">{copy.sections.trustLead}</p>
+            <p className="text-base leading-8 text-slate-600">{copy.sections.trustLead}</p>
           </div>
           <div className="grid gap-3 md:grid-cols-2">
             {copy.sections.trustItems.map((item) => (
-              <div key={item} className="flex items-start gap-3 border-t border-white/12 pt-4 text-sm leading-6 text-slate-200">
-                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+              <div key={item} className="flex items-start gap-3 border-t border-slate-200 pt-4 text-sm leading-6 text-slate-700">
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
                 <span>{item}</span>
               </div>
             ))}
