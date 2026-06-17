@@ -46,7 +46,6 @@ export default function ServiceDescriptionInput({
       `${item.description} ${item.name}`.toLowerCase().includes(normalizedQuery)
     );
   }, [activeItems, normalizedQuery]);
-  const visibleItems = filteredItems.slice(0, 8);
   const shouldShowMenu = isOpen && activeItems.length > 0;
 
   useEffect(() => {
@@ -82,7 +81,7 @@ export default function ServiceDescriptionInput({
     shouldShowMenu && menuRect
       ? createPortal(
           <div
-            className="z-[80] max-h-64 overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-950"
+            className="z-[80] max-h-[26rem] overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg dark:border-slate-700 dark:bg-slate-950"
             style={{
               position: "absolute",
               top: menuRect.top,
@@ -90,8 +89,8 @@ export default function ServiceDescriptionInput({
               width: menuRect.width,
             }}
           >
-            {visibleItems.length > 0 ? (
-              visibleItems.map((item) => (
+            {filteredItems.length > 0 ? (
+              filteredItems.map((item) => (
                 <button
                   key={item.id}
                   type="button"
