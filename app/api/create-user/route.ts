@@ -35,15 +35,31 @@ export async function POST(request: Request) {
 
     const legalAcceptance = getLegalAcceptanceFromMetadata(authUser.user_metadata);
 
-    const existingUser = await prisma.user.findUnique({
+    const existingUserById = await prisma.user.findUnique({
       where: { id: authUser.id },
       select: {
         id: true,
+        email: true,
         acceptedPrivacyAt: true,
         acceptedTermsAt: true,
         acceptedLegalVersion: true,
       },
     });
+
+    const existingUserByEmail = existingUserById
+      ? null
+      : await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            email: true,
+            acceptedPrivacyAt: true,
+            acceptedTermsAt: true,
+            acceptedLegalVersion: true,
+          },
+        });
+
+    const existingUser = existingUserById ?? existingUserByEmail;
 
     if (!existingUser && !hasCurrentLegalAcceptance(legalAcceptance)) {
       return apiError(
@@ -52,19 +68,30 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = existingUser
+    const user = existingUserById
       ? await prisma.user.update({
           where: { id: authUser.id },
           data: {
             email,
             name: email,
-            acceptedPrivacyAt:
-              existingUser.acceptedPrivacyAt ?? legalAcceptance.acceptedPrivacyAt,
-            acceptedTermsAt: existingUser.acceptedTermsAt ?? legalAcceptance.acceptedTermsAt,
-            acceptedLegalVersion:
-              existingUser.acceptedLegalVersion ?? legalAcceptance.acceptedLegalVersion,
+            acceptedPrivacyAt: existingUserById.acceptedPrivacyAt ?? legalAcceptance.acceptedPrivacyAt,
+            acceptedTermsAt: existingUserById.acceptedTermsAt ?? legalAcceptance.acceptedTermsAt,
+            acceptedLegalVersion: existingUserById.acceptedLegalVersion ?? legalAcceptance.acceptedLegalVersion,
           },
         })
+      : existingUserByEmail
+        ? await prisma.user.update({
+            where: { id: existingUserByEmail.id },
+            data: {
+              id: authUser.id,
+              email,
+              name: email,
+              acceptedPrivacyAt: existingUserByEmail.acceptedPrivacyAt ?? legalAcceptance.acceptedPrivacyAt,
+              acceptedTermsAt: existingUserByEmail.acceptedTermsAt ?? legalAcceptance.acceptedTermsAt,
+              acceptedLegalVersion:
+                existingUserByEmail.acceptedLegalVersion ?? legalAcceptance.acceptedLegalVersion,
+            },
+          })
       : await prisma.user.create({
           data: {
             id: authUser.id,

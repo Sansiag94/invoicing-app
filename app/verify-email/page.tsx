@@ -131,8 +131,13 @@ function VerifyEmailContent() {
           if (!response.ok) {
             let message = "Email verified, but the workspace could not be prepared.";
             try {
-              const result = (await response.json()) as { error?: string };
-              message = result.error ?? message;
+              const result = (await response.json()) as { code?: string; error?: string };
+              const setupError = result.error?.trim();
+              if (setupError && setupError !== "Server Error" && result.code !== "internal_error") {
+                message = setupError;
+              } else {
+                message = "Email verified, but account setup failed. Please try logging in again.";
+              }
             } catch {
               // Keep the fallback message.
             }
