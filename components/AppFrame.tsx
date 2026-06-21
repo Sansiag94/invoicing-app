@@ -28,6 +28,13 @@ type ShellBusinessBrand = {
 
 type AuthStatus = "checking" | "authenticated" | "unauthenticated";
 
+const SESSION_RECHECK_DELAY_MS = 700;
+const SESSION_RECHECK_ATTEMPTS = 3;
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
 function shouldHideShell(pathname: string): boolean {
   return (
     pathname === "/" ||
@@ -77,10 +84,32 @@ export default function AppFrame({ children }: AppFrameProps) {
     let mounted = true;
     let unsubscribe = () => {};
 
-    function redirectToLogin(destination = "/login") {
+    async function getSessionWithGracePeriod() {
+      await ensureSupabaseSessionRestored();
+
+      for (let attempt = 0; attempt < SESSION_RECHECK_ATTEMPTS; attempt += 1) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (session?.access_token) {
+          return session;
+        }
+
+        if (attempt < SESSION_RECHECK_ATTEMPTS - 1) {
+          await wait(SESSION_RECHECK_DELAY_MS);
+        }
+      }
+
+      return null;
+    }
+
+    function redirectToLogin(destination = "/login", options: { clearSession?: boolean } = {}) {
       setBusinessBrand(null);
-      startClientLogout();
-      void clearPwaAppCache();
+      if (options.clearSession) {
+        startClientLogout();
+        void clearPwaAppCache();
+      }
 
       if (mounted) {
         setAuthStatus("unauthenticated");
@@ -89,7 +118,7 @@ export default function AppFrame({ children }: AppFrameProps) {
     }
 
     function handleAuthenticationRequired() {
-      redirectToLogin();
+      redirectToLogin("/login", { clearSession: true });
     }
 
     function handleEmailVerificationRequired(event: Event) {
@@ -140,14 +169,7 @@ export default function AppFrame({ children }: AppFrameProps) {
     }
 
     async function initializeAuthState() {
-      await ensureSupabaseSessionRestored();
-      if (!mounted) {
-        return;
-      }
-
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const session = await getSessionWithGracePeriod();
 
       if (!mounted) {
         return;
@@ -181,16 +203,33 @@ export default function AppFrame({ children }: AppFrameProps) {
         }
 
         if (!nextSession?.access_token) {
-          if (isClientLogoutInProgress()) {
-            setBusinessBrand(null);
-            setAuthStatus("unauthenticated");
-            window.location.replace("/");
-            return;
-          }
-
           setBusinessBrand(null);
           setAuthStatus("checking");
-          redirectToLogin("/login");
+          void getSessionWithGracePeriod().then((restoredSession) => {
+            if (!mounted) {
+              return;
+            }
+
+            if (restoredSession?.access_token) {
+              void ensureWorkspaceReady(restoredSession).then((workspaceReady) => {
+                if (!mounted || !workspaceReady) {
+                  return;
+                }
+
+                setAuthStatus("authenticated");
+              });
+              return;
+            }
+
+            if (isClientLogoutInProgress()) {
+              setBusinessBrand(null);
+              setAuthStatus("unauthenticated");
+              window.location.replace("/");
+              return;
+            }
+
+            redirectToLogin("/login");
+          });
           return;
         }
 
