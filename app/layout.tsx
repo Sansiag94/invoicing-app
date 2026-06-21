@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import React from "react";
 import { getGoogleSiteVerification, validateRequiredEnv } from "@/lib/env";
@@ -77,6 +78,23 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <Script
+          id="google-ads-global-site-tag"
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18188019032"
+          strategy="afterInteractive"
+        />
+        <Script
+          id="google-ads-config"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'AW-18188019032');
+            `,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
