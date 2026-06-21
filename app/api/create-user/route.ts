@@ -17,6 +17,14 @@ import {
 } from "@/lib/legalAcceptance";
 import { assertWorkspaceOpen, isWorkspaceClosedError } from "@/lib/workspaceClosure";
 
+type ExistingUserForSetup = {
+  id: string;
+  email: string;
+  acceptedPrivacyAt: Date | null;
+  acceptedTermsAt: Date | null;
+  acceptedLegalVersion: string | null;
+};
+
 export async function POST(request: Request) {
   try {
     const authUser = await getAuthenticatedUser(request);
@@ -35,7 +43,7 @@ export async function POST(request: Request) {
 
     const legalAcceptance = getLegalAcceptanceFromMetadata(authUser.user_metadata);
 
-    const existingUserById = await prisma.user.findUnique({
+    const existingUserById: ExistingUserForSetup | null = await prisma.user.findUnique({
       where: { id: authUser.id },
       select: {
         id: true,
@@ -46,18 +54,19 @@ export async function POST(request: Request) {
       },
     });
 
-    const existingUserByEmail = existingUserById
+    const existingUserByEmail: ExistingUserForSetup | null =
+      existingUserById?.email === email
       ? null
       : await prisma.user.findUnique({
-          where: { email },
-          select: {
-            id: true,
-            email: true,
-            acceptedPrivacyAt: true,
-            acceptedTermsAt: true,
-            acceptedLegalVersion: true,
-          },
-        });
+        where: { email },
+        select: {
+          id: true,
+          email: true,
+          acceptedPrivacyAt: true,
+          acceptedTermsAt: true,
+          acceptedLegalVersion: true,
+        },
+      });
 
     const existingUser = existingUserById ?? existingUserByEmail;
 
@@ -68,28 +77,45 @@ export async function POST(request: Request) {
       );
     }
 
-    const user = existingUserById
+    const existingPrivacyAcceptance =
+      existingUserById?.acceptedPrivacyAt ?? existingUserByEmail?.acceptedPrivacyAt ?? null;
+    const existingTermsAcceptance =
+      existingUserById?.acceptedTermsAt ?? existingUserByEmail?.acceptedTermsAt ?? null;
+    const existingLegalVersion =
+      existingUserById?.acceptedLegalVersion ?? existingUserByEmail?.acceptedLegalVersion ?? null;
+    const setupData = {
+      email,
+      name: email,
+      acceptedPrivacyAt: existingPrivacyAcceptance ?? legalAcceptance.acceptedPrivacyAt,
+      acceptedTermsAt: existingTermsAcceptance ?? legalAcceptance.acceptedTermsAt,
+      acceptedLegalVersion: existingLegalVersion ?? legalAcceptance.acceptedLegalVersion,
+    };
+
+    const user = existingUserById && existingUserByEmail && existingUserById.id !== existingUserByEmail.id
+      ? await prisma.$transaction(async (tx) => {
+          await tx.business.updateMany({
+            where: { userId: existingUserByEmail.id },
+            data: { userId: existingUserById.id },
+          });
+          await tx.user.delete({
+            where: { id: existingUserByEmail.id },
+          });
+          return tx.user.update({
+            where: { id: existingUserById.id },
+            data: setupData,
+          });
+        })
+      : existingUserById
       ? await prisma.user.update({
           where: { id: authUser.id },
-          data: {
-            email,
-            name: email,
-            acceptedPrivacyAt: existingUserById.acceptedPrivacyAt ?? legalAcceptance.acceptedPrivacyAt,
-            acceptedTermsAt: existingUserById.acceptedTermsAt ?? legalAcceptance.acceptedTermsAt,
-            acceptedLegalVersion: existingUserById.acceptedLegalVersion ?? legalAcceptance.acceptedLegalVersion,
-          },
+          data: setupData,
         })
       : existingUserByEmail
         ? await prisma.user.update({
             where: { id: existingUserByEmail.id },
             data: {
               id: authUser.id,
-              email,
-              name: email,
-              acceptedPrivacyAt: existingUserByEmail.acceptedPrivacyAt ?? legalAcceptance.acceptedPrivacyAt,
-              acceptedTermsAt: existingUserByEmail.acceptedTermsAt ?? legalAcceptance.acceptedTermsAt,
-              acceptedLegalVersion:
-                existingUserByEmail.acceptedLegalVersion ?? legalAcceptance.acceptedLegalVersion,
+              ...setupData,
             },
           })
       : await prisma.user.create({
