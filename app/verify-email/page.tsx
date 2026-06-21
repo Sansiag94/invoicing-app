@@ -9,44 +9,163 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 import { buildVerifyEmailPath } from "@/lib/authClient";
-import { ensureSupabaseSessionRestored, supabase } from "@/utils/supabase";
+import { ensureSupabaseSessionRestored, supabase, syncSessionPersistence } from "@/utils/supabase";
+
+type VerificationStatus = "checking" | "waiting" | "verified" | "error";
+
+function getHashParams(): URLSearchParams {
+  if (typeof window === "undefined") {
+    return new URLSearchParams();
+  }
+
+  const hash = window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash;
+
+  return new URLSearchParams(hash);
+}
+
+function getOtpType(value: string | null): "signup" | "magiclink" | "recovery" | "invite" | "email_change" | "email" {
+  if (
+    value === "magiclink" ||
+    value === "recovery" ||
+    value === "invite" ||
+    value === "email_change" ||
+    value === "email"
+  ) {
+    return value;
+  }
+
+  return "signup";
+}
 
 function VerifyEmailContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const queryString = searchParams.toString();
   const { toast } = useToast();
   const [email, setEmail] = useState(searchParams.get("email")?.trim() ?? "");
   const [isResending, setIsResending] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
+  const [status, setStatus] = useState<VerificationStatus>("checking");
+  const [statusMessage, setStatusMessage] = useState("Checking your verification link...");
 
   useEffect(() => {
     let cancelled = false;
 
     (async () => {
-      await ensureSupabaseSessionRestored();
-      const { data } = await supabase.auth.getUser();
+      try {
+        const currentSearchParams = new URLSearchParams(queryString);
+        const errorDescription = currentSearchParams.get("error_description") ?? currentSearchParams.get("error");
+        if (errorDescription) {
+          throw new Error(errorDescription);
+        }
 
-      if (cancelled) {
-        return;
+        const code = currentSearchParams.get("code");
+        const tokenHash = currentSearchParams.get("token_hash");
+        const hashParams = getHashParams();
+        const hashAccessToken = hashParams.get("access_token");
+        const hashRefreshToken = hashParams.get("refresh_token");
+
+        if (code) {
+          setStatusMessage("Confirming your email...");
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+          if (error) {
+            throw error;
+          }
+          syncSessionPersistence(data.session);
+        } else if (tokenHash) {
+          setStatusMessage("Confirming your email...");
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: tokenHash,
+            type: getOtpType(currentSearchParams.get("type")),
+          });
+          if (error) {
+            throw error;
+          }
+          syncSessionPersistence(data.session);
+        } else if (hashAccessToken && hashRefreshToken) {
+          setStatusMessage("Restoring your verified session...");
+          const { data, error } = await supabase.auth.setSession({
+            access_token: hashAccessToken,
+            refresh_token: hashRefreshToken,
+          });
+          if (error) {
+            throw error;
+          }
+          syncSessionPersistence(data.session);
+        } else {
+          await ensureSupabaseSessionRestored();
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const { data } = await supabase.auth.getUser();
+        const userEmail = data.user?.email?.trim() ?? "";
+        if (userEmail) {
+          setEmail((current) => current || userEmail);
+        }
+
+        if (data.user?.email_confirmed_at) {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+
+          if (!session?.access_token) {
+            setStatus("verified");
+            setStatusMessage("Email verified. Please log in to open your workspace.");
+            setIsChecking(false);
+            return;
+          }
+
+          setStatusMessage("Preparing your workspace...");
+          const response = await fetch("/api/create-user", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+            },
+          });
+
+          if (!response.ok) {
+            let message = "Email verified, but the workspace could not be prepared.";
+            try {
+              const result = (await response.json()) as { error?: string };
+              message = result.error ?? message;
+            } catch {
+              // Keep the fallback message.
+            }
+            throw new Error(message);
+          }
+
+          if (!cancelled) {
+            setStatus("verified");
+            setStatusMessage("Email verified. Opening your workspace...");
+            router.replace("/dashboard");
+          }
+          return;
+        }
+
+        setStatus("waiting");
+        setStatusMessage("Open the verification email, then return here.");
+        setIsChecking(false);
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+
+        const message = error instanceof Error ? error.message : "The verification link could not be used.";
+        setStatus("error");
+        setStatusMessage(message);
+        setIsChecking(false);
       }
-
-      const userEmail = data.user?.email?.trim() ?? "";
-      if (userEmail) {
-        setEmail((current) => current || userEmail);
-      }
-
-      if (data.user?.email_confirmed_at) {
-        router.replace("/dashboard");
-        return;
-      }
-
-      setIsChecking(false);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, queryString]);
 
   async function handleResend() {
     if (!email.trim()) {
@@ -111,12 +230,23 @@ function VerifyEmailContent() {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/60 dark:text-slate-300">
-            <p className="font-medium text-slate-900 dark:text-slate-100">What to do next</p>
-            <ol className="mt-2 space-y-1.5 leading-6">
-              <li>1. Open the confirmation email we sent to this address.</li>
-              <li>2. Click the verification link.</li>
-              <li>3. Return here and log in to open your workspace.</li>
-            </ol>
+            <p className="font-medium text-slate-900 dark:text-slate-100">
+              {status === "checking"
+                ? "Verification in progress"
+                : status === "verified"
+                  ? "Email confirmed"
+                  : status === "error"
+                    ? "Verification needs attention"
+                    : "What to do next"}
+            </p>
+            <p className="mt-2 leading-6">{statusMessage}</p>
+            {status === "waiting" ? (
+              <ol className="mt-2 space-y-1.5 leading-6">
+                <li>1. Open the confirmation email we sent to this address.</li>
+                <li>2. Click the verification link.</li>
+                <li>3. The app will open your workspace after confirmation.</li>
+              </ol>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
