@@ -7,7 +7,7 @@ import { ArrowLeft } from "lucide-react";
 import { supabase } from "@/utils/supabase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/toast";
 
@@ -121,9 +121,8 @@ export default function ChangePasswordPage() {
             >
               <div className="space-y-2">
                 <Label htmlFor="currentPassword">Current Password</Label>
-                <Input
+                <PasswordInput
                   id="currentPassword"
-                  type="password"
                   value={currentPassword}
                   onChange={(event) => setCurrentPassword(event.target.value)}
                   autoComplete="current-password"
@@ -132,9 +131,8 @@ export default function ChangePasswordPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
-                <Input
+                <PasswordInput
                   id="newPassword"
-                  type="password"
                   value={newPassword}
                   onChange={(event) => setNewPassword(event.target.value)}
                   autoComplete="new-password"
@@ -143,9 +141,8 @@ export default function ChangePasswordPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="repeatPassword">Repeat New Password</Label>
-                <Input
+                <PasswordInput
                   id="repeatPassword"
-                  type="password"
                   value={repeatPassword}
                   onChange={(event) => setRepeatPassword(event.target.value)}
                   autoComplete="new-password"
