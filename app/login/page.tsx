@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getRememberSessionPreference, setRememberSession, supabase } from "@/utils/supabase";
+import {
+  getRememberSessionPreference,
+  setRememberSession,
+  supabase,
+  syncSessionPersistence,
+} from "@/utils/supabase";
 import AuthSplitShell from "@/components/AuthSplitShell";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
 import { buildVerifyEmailPath, isEmailConfirmationRequiredMessage } from "@/lib/authClient";
@@ -69,6 +74,8 @@ export default function LoginPage() {
         return;
       }
 
+      syncSessionPersistence(data.session);
+
       const syncResponse = await fetch("/api/create-user", {
         method: "POST",
         headers: {
@@ -77,7 +84,12 @@ export default function LoginPage() {
       });
 
       if (!syncResponse.ok) {
-        const result = (await syncResponse.json()) as { error?: string };
+        let result: { error?: string } = {};
+        try {
+          result = (await syncResponse.json()) as { error?: string };
+        } catch {
+          result = {};
+        }
         await supabase.auth.signOut({ scope: "local" });
 
         if (isEmailConfirmationRequiredMessage(result?.error)) {
@@ -96,13 +108,16 @@ export default function LoginPage() {
 
         toast({
           title: "Account setup failed",
-          description: result?.error ?? "Failed to initialize account",
+          description:
+            result?.error === "Server Error"
+              ? "Login worked, but the workspace could not be prepared. Please try again in a moment."
+              : result?.error ?? "Failed to initialize account",
           variant: "error",
         });
         return;
       }
 
-      router.push("/dashboard");
+      router.replace("/dashboard");
     } finally {
       setIsLoading(false);
     }

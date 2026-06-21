@@ -16,7 +16,6 @@ export default function RedirectIfAuthenticated({
 
   useEffect(() => {
     let cancelled = false;
-    let unsubscribe = () => {};
 
     async function redirectIfSessionExists() {
       await ensureSupabaseSessionRestored();
@@ -39,36 +38,12 @@ export default function RedirectIfAuthenticated({
 
         router.replace(href);
       }
-
-      const {
-        data: { subscription },
-      } = supabase.auth.onAuthStateChange((_event, session) => {
-        if (!cancelled && session?.access_token) {
-          void supabase.auth.getUser().then(({ data: userData }) => {
-            if (cancelled) {
-              return;
-            }
-
-            if (userData.user && !userData.user.email_confirmed_at) {
-              router.replace(buildVerifyEmailPath(userData.user.email));
-              return;
-            }
-
-            router.replace(href);
-          });
-        }
-      });
-
-      unsubscribe = () => {
-        subscription.unsubscribe();
-      };
     }
 
     void redirectIfSessionExists();
 
     return () => {
       cancelled = true;
-      unsubscribe();
     };
   }, [href, router]);
 

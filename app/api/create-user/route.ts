@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     await assertRateLimit({
       request,
       route: "create-user",
-      limit: 10,
+      limit: 60,
       windowMs: 10 * 60 * 1000,
       identifier: buildRateLimitIdentifier(request, authUser.id, authUser.email ?? null),
     });
