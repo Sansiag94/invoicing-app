@@ -17,14 +17,23 @@ import {
   Wallet,
   AlertTriangle,
   Send,
+  Loader2,
 } from "lucide-react";
 
 function DashboardLoadingSkeleton() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <div className="h-10 w-48 animate-pulse rounded-xl bg-slate-200/80 dark:bg-slate-800/80" />
-        <div className="h-4 w-80 max-w-full animate-pulse rounded bg-slate-200/70 dark:bg-slate-800/70" />
+    <div className="space-y-6" role="status" aria-live="polite" aria-busy="true">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading dashboard
+          </div>
+          <h1 className="mt-3 text-3xl font-bold text-slate-900 dark:text-slate-50">Preparing your workspace</h1>
+          <p className="mt-2 max-w-xl text-sm text-slate-600 dark:text-slate-300">
+            Fetching your invoices, payment status, and recent activity.
+          </p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
