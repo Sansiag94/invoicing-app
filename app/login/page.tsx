@@ -79,6 +79,16 @@ export default function LoginPage() {
         const result = (await syncResponse.json()) as { error?: string };
         await supabase.auth.signOut({ scope: "local" });
 
+        if (isEmailConfirmationRequiredMessage(result?.error)) {
+          toast({
+            title: "Confirm your email first",
+            description: "Open the verification email, then log in again.",
+            variant: "info",
+          });
+          router.replace(buildVerifyEmailPath(email));
+          return;
+        }
+
         if (syncResponse.status === 423) {
           router.replace("/login?workspace=closed");
         }

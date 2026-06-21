@@ -10,7 +10,8 @@ import SupportAssistant from "@/components/SupportAssistant";
 import { AppLanguageProvider, StaticAppLanguageProvider } from "@/components/ui/i18n";
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
-import { authenticatedFetch, AUTH_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
+import { authenticatedFetch, AUTH_REQUIRED_EVENT, EMAIL_VERIFICATION_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
+import { buildVerifyEmailPath } from "@/lib/authClient";
 import { prefetchPrivatePageData } from "@/utils/prefetchPageData";
 import { ensureSupabaseSessionRestored, isClientLogoutInProgress, startClientLogout, supabase } from "@/utils/supabase";
 
@@ -90,6 +91,13 @@ export default function AppFrame({ children }: AppFrameProps) {
       redirectToLogin();
     }
 
+    function handleEmailVerificationRequired(event: Event) {
+      const email = (event as CustomEvent<{ email?: string | null }>).detail?.email;
+      setBusinessBrand(null);
+      setAuthStatus("unauthenticated");
+      window.location.replace(buildVerifyEmailPath(email));
+    }
+
     async function initializeAuthState() {
       await ensureSupabaseSessionRestored();
       if (!mounted) {
@@ -163,11 +171,13 @@ export default function AppFrame({ children }: AppFrameProps) {
     void initializeAuthState();
 
     window.addEventListener(AUTH_REQUIRED_EVENT, handleAuthenticationRequired);
+    window.addEventListener(EMAIL_VERIFICATION_REQUIRED_EVENT, handleEmailVerificationRequired);
 
     return () => {
       mounted = false;
       unsubscribe();
       window.removeEventListener(AUTH_REQUIRED_EVENT, handleAuthenticationRequired);
+      window.removeEventListener(EMAIL_VERIFICATION_REQUIRED_EVENT, handleEmailVerificationRequired);
     };
   }, [hideShell]);
 

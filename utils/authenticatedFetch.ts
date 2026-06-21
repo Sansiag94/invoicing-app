@@ -1,8 +1,10 @@
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/utils/supabase";
+import { isEmailConfirmationRequiredMessage } from "@/lib/authClient";
 import { clearPrivatePageCache } from "@/utils/privatePageCache";
 
 export const AUTH_REQUIRED_EVENT = "sierra-invoices-auth-required";
+export const EMAIL_VERIFICATION_REQUIRED_EVENT = "sierra-invoices-email-verification-required";
 const AUTH_TOKEN_REFRESH_BUFFER_MS = 30_000;
 
 let cachedAccessToken: string | null = null;
@@ -15,6 +17,30 @@ function notifyAuthenticationRequired() {
   }
 
   window.dispatchEvent(new CustomEvent(AUTH_REQUIRED_EVENT));
+}
+
+async function notifyEmailVerificationRequired() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const { data } = await supabase.auth.getUser();
+  window.dispatchEvent(
+    new CustomEvent<{ email?: string | null }>(EMAIL_VERIFICATION_REQUIRED_EVENT, {
+      detail: {
+        email: data.user?.email ?? null,
+      },
+    })
+  );
+}
+
+async function responseRequiresEmailVerification(response: Response): Promise<boolean> {
+  try {
+    const body = (await response.clone().json()) as { error?: unknown };
+    return isEmailConfirmationRequiredMessage(typeof body.error === "string" ? body.error : null);
+  } catch {
+    return false;
+  }
 }
 
 function clearTokenCache() {
@@ -126,7 +152,11 @@ export async function authenticatedFetch(
   }
 
   if (response.status === 401) {
-    notifyAuthenticationRequired();
+    if (await responseRequiresEmailVerification(response)) {
+      await notifyEmailVerificationRequired();
+    } else {
+      notifyAuthenticationRequired();
+    }
   }
 
   if (response.ok && requestMethod !== "GET" && requestMethod !== "HEAD") {

@@ -185,6 +185,10 @@ export async function getAuthenticatedUser(request: Request): Promise<User> {
     throw new AuthenticationError("Invalid or expired authentication token");
   }
 
+  if (!data.user.email_confirmed_at) {
+    throw new AuthenticationError("Email confirmation required");
+  }
+
   return data.user;
 }
 

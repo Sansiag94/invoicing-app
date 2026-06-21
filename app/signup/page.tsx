@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { setRememberSession, supabase } from "@/utils/supabase";
 import AuthSplitShell from "@/components/AuthSplitShell";
 import RedirectIfAuthenticated from "@/components/RedirectIfAuthenticated";
-import { buildVerifyEmailPath, isEmailConfirmationRequiredMessage } from "@/lib/authClient";
+import { buildVerifyEmailPath } from "@/lib/authClient";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -67,57 +67,13 @@ export default function SignupPage() {
         return;
       }
 
-      let accessToken = data.session?.access_token ?? null;
-
-      if (!accessToken) {
-        const signInResult = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (!signInResult.error) {
-          accessToken = signInResult.data.session?.access_token ?? null;
-        } else if (isEmailConfirmationRequiredMessage(signInResult.error.message)) {
-          toast({
-            title: "Check your inbox",
-            description: "Confirm your email before opening the workspace.",
-            variant: "info",
-          });
-          router.replace(buildVerifyEmailPath(email));
-          return;
-        }
-      }
-
-      if (accessToken) {
-        const syncResponse = await fetch("/api/create-user", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (!syncResponse.ok) {
-          const result = (await syncResponse.json()) as { error?: string };
-          toast({
-            title: "Account setup incomplete",
-            description: result?.error ?? "Signup succeeded, but account initialization failed.",
-            variant: "error",
-          });
-          return;
-        }
-
-        toast({
-          title: "Account created",
-          description: `Welcome to ${APP_NAME}.`,
-          variant: "success",
-        });
-        router.push("/dashboard");
-        return;
+      if (data.session?.access_token) {
+        await supabase.auth.signOut({ scope: "local" });
       }
 
       toast({
-        title: "Account created",
-        description: "Confirm your email before you enter the workspace.",
+        title: "Check your inbox",
+        description: "Confirm your email before opening the workspace.",
         variant: "info",
       });
       router.replace(buildVerifyEmailPath(email));
@@ -218,8 +174,7 @@ export default function SignupPage() {
                 {isLoading ? "Creating account..." : "Create account"}
               </Button>
               <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-                If verification is enabled for this project, we&apos;ll ask you to confirm the email
-                before opening the workspace.
+                We&apos;ll ask you to confirm the email before opening the workspace.
               </p>
             </div>
           </div>

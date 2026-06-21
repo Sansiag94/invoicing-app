@@ -4,6 +4,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { DashboardOverview } from "@/lib/types";
+import { isEmailConfirmationRequiredMessage } from "@/lib/authClient";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -187,6 +188,7 @@ export default function DashboardPage() {
   const initialDashboardRef = useRef(readPrivatePageCache<DashboardOverview>(DASHBOARD_CACHE_KEY));
   const [dashboard, setDashboard] = useState<DashboardOverview | null>(initialDashboardRef.current);
   const [isLoading, setIsLoading] = useState(() => !initialDashboardRef.current);
+  const [isAwaitingAuthRedirect, setIsAwaitingAuthRedirect] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -198,7 +200,14 @@ export default function DashboardPage() {
         const data = (await response.json()) as DashboardOverview | { error?: string };
 
         if (!response.ok || ("error" in data && data.error)) {
-          throw new Error(("error" in data ? data.error : null) ?? "Failed to load dashboard");
+          const message = ("error" in data ? data.error : null) ?? "Failed to load dashboard";
+          if (isEmailConfirmationRequiredMessage(message)) {
+            if (mounted) {
+              setIsAwaitingAuthRedirect(true);
+            }
+            return;
+          }
+          throw new Error(message);
         }
 
         writePrivatePageCache(DASHBOARD_CACHE_KEY, data as DashboardOverview);
@@ -226,6 +235,10 @@ export default function DashboardPage() {
   }, []);
 
   if (isLoading) {
+    return <DashboardLoadingSkeleton />;
+  }
+
+  if (isAwaitingAuthRedirect) {
     return <DashboardLoadingSkeleton />;
   }
 
