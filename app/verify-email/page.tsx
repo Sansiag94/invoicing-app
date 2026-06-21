@@ -74,6 +74,7 @@ function VerifyEmailContent() {
         title: "Verification email sent",
         description: "Check your inbox and spam folder for the confirmation link.",
         variant: "success",
+        durationMs: null,
       });
       router.replace(buildVerifyEmailPath(email));
     } catch (error) {

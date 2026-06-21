@@ -32,11 +32,21 @@ In Supabase, go to:
 Make sure these redirect URLs are allowed:
 
 ```text
+https://invoices.sierraservices.ch/verify-email
 https://invoices.sierraservices.ch/reset-password
+http://localhost:3000/verify-email
 http://localhost:3000/reset-password
 ```
 
-The production URL is what users need. The localhost URL is only for local testing.
+The production URLs are what users need. The localhost URLs are only for local testing.
+
+## Email Confirmation
+
+In Supabase, go to:
+
+`Authentication` -> `Sign In / Providers` -> `Email`
+
+Make sure email confirmation is enabled. If it is disabled, Supabase will not send signup confirmation emails and new accounts may be treated as confirmed immediately.
 
 ## Reset Password
 

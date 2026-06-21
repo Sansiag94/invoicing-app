@@ -50,6 +50,7 @@ export default function SignupPage() {
         email,
         password,
         options: {
+          emailRedirectTo: `${window.location.origin}/verify-email`,
           data: {
             accepted_legal_version: LEGAL_LAST_UPDATED_ISO,
             accepted_terms_at: acceptedAt,
@@ -73,8 +74,9 @@ export default function SignupPage() {
 
       toast({
         title: "Check your inbox",
-        description: "Confirm your email before opening the workspace.",
+        description: "Confirm your email before opening the workspace. Please check your inbox and spam folder.",
         variant: "info",
+        durationMs: null,
       });
       router.replace(buildVerifyEmailPath(email));
     } finally {

@@ -19,12 +19,14 @@ type ToastItem = {
   title: string;
   description?: string;
   variant: ToastVariant;
+  durationMs: number | null;
 };
 
 type ToastInput = {
   title: string;
   description?: string;
   variant?: ToastVariant;
+  durationMs?: number | null;
 };
 
 type ToastContextValue = {
@@ -82,10 +84,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         title: input.title,
         description: input.description,
         variant: input.variant ?? "info",
+        durationMs: input.durationMs === undefined ? 4200 : input.durationMs,
       };
 
       setToasts((current) => [...current, nextToast]);
-      window.setTimeout(() => dismissToast(id), 4200);
+      if (nextToast.durationMs !== null && nextToast.durationMs > 0) {
+        window.setTimeout(() => dismissToast(id), nextToast.durationMs);
+      }
     },
     [dismissToast]
   );
