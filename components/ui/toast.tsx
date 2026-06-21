@@ -35,6 +35,10 @@ type ToastContextValue = {
 
 const ToastContext = createContext<ToastContextValue | null>(null);
 
+function getDefaultDurationMs(variant: ToastVariant): number | null {
+  return variant === "error" ? null : 5200;
+}
+
 function getToastStyles(variant: ToastVariant) {
   switch (variant) {
     case "success":
@@ -84,7 +88,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         title: input.title,
         description: input.description,
         variant: input.variant ?? "info",
-        durationMs: input.durationMs === undefined ? 4200 : input.durationMs,
+        durationMs:
+          input.durationMs === undefined
+            ? getDefaultDurationMs(input.variant ?? "info")
+            : input.durationMs,
       };
 
       setToasts((current) => [...current, nextToast]);
@@ -116,7 +123,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed right-4 top-4 z-[100] flex w-full max-w-sm flex-col gap-3">
+      <div className="pointer-events-none fixed left-4 right-4 top-4 z-[100] flex flex-col gap-3 sm:left-auto sm:w-full sm:max-w-sm">
         {toasts.map((item) => {
           const styles = getToastStyles(item.variant);
           return (
