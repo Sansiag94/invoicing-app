@@ -2,6 +2,7 @@
 
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import type { Session } from "@supabase/supabase-js";
 import { cn } from "@/lib/utils";
 import Sidebar from "@/components/Sidebar";
 import Navbar from "@/components/Navbar";
@@ -11,7 +12,7 @@ import { AppLanguageProvider, StaticAppLanguageProvider } from "@/components/ui/
 import { clearPwaAppCache } from "@/lib/pwaCache";
 import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch, AUTH_REQUIRED_EVENT, EMAIL_VERIFICATION_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
-import { buildVerifyEmailPath } from "@/lib/authClient";
+import { buildVerifyEmailPath, isEmailConfirmationRequiredMessage } from "@/lib/authClient";
 import { prefetchPrivatePageData } from "@/utils/prefetchPageData";
 import { ensureSupabaseSessionRestored, isClientLogoutInProgress, startClientLogout, supabase } from "@/utils/supabase";
 
@@ -98,6 +99,46 @@ export default function AppFrame({ children }: AppFrameProps) {
       window.location.replace(buildVerifyEmailPath(email));
     }
 
+    async function ensureWorkspaceReady(session: Session) {
+      const response = await fetch("/api/create-user", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (response.ok) {
+        return true;
+      }
+
+      let errorMessage = "Account setup failed.";
+      try {
+        const result = (await response.json()) as { error?: string };
+        errorMessage = result.error ?? errorMessage;
+      } catch {
+        // Keep the fallback message.
+      }
+
+      setBusinessBrand(null);
+      setAuthStatus("unauthenticated");
+
+      if (isEmailConfirmationRequiredMessage(errorMessage)) {
+        window.location.replace(buildVerifyEmailPath(session.user.email));
+        return false;
+      }
+
+      if (response.status === 423) {
+        startClientLogout();
+        void clearPwaAppCache();
+        window.location.replace("/login?workspace=closed");
+        return false;
+      }
+
+      console.error("Unable to initialize workspace:", errorMessage);
+      window.location.replace(`/login?setup=failed`);
+      return false;
+    }
+
     async function initializeAuthState() {
       await ensureSupabaseSessionRestored();
       if (!mounted) {
@@ -119,6 +160,11 @@ export default function AppFrame({ children }: AppFrameProps) {
           window.location.replace(
             email ? `/verify-email?email=${encodeURIComponent(email)}` : "/verify-email"
           );
+          return;
+        }
+
+        const workspaceReady = await ensureWorkspaceReady(session);
+        if (!mounted || !workspaceReady) {
           return;
         }
 
@@ -158,7 +204,13 @@ export default function AppFrame({ children }: AppFrameProps) {
             return;
           }
 
-          setAuthStatus("authenticated");
+          void ensureWorkspaceReady(nextSession).then((workspaceReady) => {
+            if (!mounted || !workspaceReady) {
+              return;
+            }
+
+            setAuthStatus("authenticated");
+          });
           return;
         }
       });
