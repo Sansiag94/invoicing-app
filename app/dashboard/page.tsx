@@ -182,6 +182,11 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
 }
 
 const DASHBOARD_CACHE_KEY = "dashboard-overview";
+const DASHBOARD_RETRY_DELAY_MS = 900;
+
+function wait(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -196,28 +201,40 @@ export default function DashboardPage() {
 
     (async () => {
       try {
-        const response = await authenticatedFetch("/api/dashboard", { cache: "no-store" });
-        const data = (await response.json()) as DashboardOverview | { error?: string };
+        let lastError: unknown = null;
 
-        if (!response.ok || ("error" in data && data.error)) {
-          const message = ("error" in data ? data.error : null) ?? "Failed to load dashboard";
-          if (isEmailConfirmationRequiredMessage(message)) {
+        for (let attempt = 0; attempt < 2; attempt += 1) {
+          try {
+            const response = await authenticatedFetch("/api/dashboard", { cache: "no-store" });
+            const data = (await response.json()) as DashboardOverview | { error?: string };
+
+            if (!response.ok || ("error" in data && data.error)) {
+              const message = ("error" in data ? data.error : null) ?? "Failed to load dashboard";
+              if (isEmailConfirmationRequiredMessage(message)) {
+                if (mounted) {
+                  setIsAwaitingAuthRedirect(true);
+                }
+                return;
+              }
+              throw new Error(message);
+            }
+
+            writePrivatePageCache(DASHBOARD_CACHE_KEY, data as DashboardOverview);
+
             if (mounted) {
-              setIsAwaitingAuthRedirect(true);
+              setDashboard(data as DashboardOverview);
+              setLoadError(null);
             }
             return;
+          } catch (error) {
+            lastError = error;
+            if (attempt === 0) {
+              await wait(DASHBOARD_RETRY_DELAY_MS);
+            }
           }
-          throw new Error(message);
         }
 
-        writePrivatePageCache(DASHBOARD_CACHE_KEY, data as DashboardOverview);
-
-        if (mounted) {
-          setDashboard(data as DashboardOverview);
-          setLoadError(null);
-        }
-      } catch (error) {
-        console.error("Error loading dashboard:", error);
+        console.error("Error loading dashboard:", lastError);
         if (mounted && !initialDashboardRef.current) {
           setDashboard(null);
           setLoadError("Unable to load dashboard.");

@@ -2,17 +2,8 @@ import { NextResponse } from "next/server";
 import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
+import { ensureBusiness } from "@/lib/ensureBusiness";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
-
-type RecentInvoiceRow = {
-  id: string;
-  invoiceNumber: string;
-  issueDate: Date;
-  totalAmount: number;
-  status: "draft" | "sent" | "paid" | "overdue" | "cancelled";
-  currency: "CHF" | "EUR";
-  clientName: string;
-};
 
 function getMonthRange(today: Date): { startOfMonth: Date; startOfNextMonth: Date } {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -26,15 +17,7 @@ const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
 export async function GET(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
-
-    const business = await prisma.business.findFirst({
-      where: { userId: user.id },
-      select: { id: true, currency: true },
-    });
-
-    if (!business) {
-      return apiError("Business not found", 404);
-    }
+    const business = await ensureBusiness(user.id);
 
     await markOverdueInvoicesForBusiness(business.id);
 
@@ -167,50 +150,44 @@ export async function GET(request: Request) {
       }),
     ]);
 
-    const recentInvoices = await prisma.$queryRaw<RecentInvoiceRow[]>`
-      SELECT
-        ranked."id",
-        ranked."invoiceNumber",
-        ranked."issueDate",
-        ranked."totalAmount",
-        ranked."status",
-        ranked."currency",
-        ranked."clientName"
-      FROM (
-        SELECT
-          i."uuid" AS "id",
-          i."invoiceNumber",
-          i."issueDate",
-          i."totalAmount",
-          i."status",
-          i."currency",
-          i."issuedAt",
-          i."createdAt",
-          COALESCE(c."companyName", c."contactName", c."email") AS "clientName",
-          CASE WHEN i."status" = 'draft' THEN 0 ELSE 1 END AS "sortGroup",
-          CASE
-            WHEN i."invoiceNumber" ~ '^[A-Z0-9]+([0-9]{4})-([0-9]+)$' AND i."invoiceNumber" NOT LIKE 'DRAFT-%'
-              THEN ((regexp_match(i."invoiceNumber", '^[A-Z0-9]+([0-9]{4})-([0-9]+)$'))[1])::integer
-            ELSE NULL
-          END AS "sortYear",
-          CASE
-            WHEN i."invoiceNumber" ~ '^[A-Z0-9]+([0-9]{4})-([0-9]+)$' AND i."invoiceNumber" NOT LIKE 'DRAFT-%'
-              THEN ((regexp_match(i."invoiceNumber", '^[A-Z0-9]+([0-9]{4})-([0-9]+)$'))[2])::integer
-            ELSE NULL
-          END AS "sortSequence"
-        FROM "Invoice" i
-        INNER JOIN "Client" c
-          ON c."uuid" = i."clientId"
-        WHERE i."businessId" = ${business.id}
-      ) AS ranked
-      ORDER BY
-        ranked."sortGroup" ASC,
-        COALESCE(ranked."issuedAt", ranked."createdAt") DESC,
-        ranked."createdAt" DESC,
-        ranked."sortYear" DESC NULLS LAST,
-        ranked."sortSequence" DESC NULLS LAST
-      LIMIT 5
-    `;
+    const recentInvoiceRows = await prisma.invoice.findMany({
+      where: {
+        businessId: business.id,
+      },
+      orderBy: [
+        { issuedAt: "desc" },
+        { createdAt: "desc" },
+      ],
+      take: 5,
+      select: {
+        id: true,
+        invoiceNumber: true,
+        issueDate: true,
+        totalAmount: true,
+        status: true,
+        currency: true,
+        client: {
+          select: {
+            companyName: true,
+            contactName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    const recentInvoices = recentInvoiceRows.map((invoice) => ({
+      id: invoice.id,
+      invoiceNumber: invoice.invoiceNumber,
+      issueDate: invoice.issueDate,
+      totalAmount: invoice.totalAmount,
+      status: invoice.status,
+      currency: invoice.currency,
+      clientName:
+        invoice.client.companyName?.trim() ||
+        invoice.client.contactName?.trim() ||
+        invoice.client.email,
+    }));
 
     return NextResponse.json({
       currency: business.currency,
