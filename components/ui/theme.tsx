@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { usePathname } from "next/navigation";
 
 export type ThemeMode = "light" | "dark";
 
@@ -18,6 +19,14 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 const THEME_STORAGE_KEY = "sierra-invoices-theme";
+const LIGHT_ONLY_PATHS = new Set([
+  "/invoice-software-switzerland",
+  "/rechnung-software-schweiz",
+]);
+
+function isLightOnlyPath(pathname: string | null): boolean {
+  return Boolean(pathname && LIGHT_ONLY_PATHS.has(pathname));
+}
 
 function applyTheme(theme: ThemeMode) {
   if (typeof document === "undefined") {
@@ -29,6 +38,8 @@ function applyTheme(theme: ThemeMode) {
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+  const forceLightTheme = isLightOnlyPath(pathname);
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") {
       return "light";
@@ -43,21 +54,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+    applyTheme(forceLightTheme ? "light" : theme);
+  }, [forceLightTheme, theme]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({
-      theme,
+      theme: forceLightTheme ? "light" : theme,
       setTheme: (nextTheme) => {
         setThemeState(nextTheme);
         if (typeof window !== "undefined") {
           window.localStorage.setItem(THEME_STORAGE_KEY, nextTheme);
         }
-        applyTheme(nextTheme);
+        applyTheme(forceLightTheme ? "light" : nextTheme);
       },
     }),
-    [theme]
+    [forceLightTheme, theme]
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

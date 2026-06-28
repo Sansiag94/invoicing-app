@@ -100,9 +100,14 @@ export default function RootLayout({
             __html: `
               (function () {
                 try {
+                  var lightOnlyPaths = {
+                    "/invoice-software-switzerland": true,
+                    "/rechnung-software-schweiz": true
+                  };
                   var theme = localStorage.getItem("sierra-invoices-theme");
                   var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-                  var nextTheme = theme === "dark" || theme === "light" ? theme : (prefersDark ? "dark" : "light");
+                  var forceLightTheme = Boolean(lightOnlyPaths[window.location.pathname]);
+                  var nextTheme = forceLightTheme ? "light" : (theme === "dark" || theme === "light" ? theme : (prefersDark ? "dark" : "light"));
                   document.documentElement.classList.toggle("dark", nextTheme === "dark");
                   document.documentElement.dataset.theme = nextTheme;
                 } catch (error) {}
