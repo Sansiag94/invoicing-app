@@ -14,6 +14,7 @@ import { APP_NAME } from "@/lib/appBrand";
 import { authenticatedFetch, AUTH_REQUIRED_EVENT, EMAIL_VERIFICATION_REQUIRED_EVENT } from "@/utils/authenticatedFetch";
 import { buildVerifyEmailPath, isEmailConfirmationRequiredMessage } from "@/lib/authClient";
 import { prefetchPrivatePageData } from "@/utils/prefetchPageData";
+import { disableClarityTracking, isClarityMarketingPath } from "@/utils/clarityPrivacy";
 import { ensureSupabaseSessionRestored, isClientLogoutInProgress, startClientLogout, supabase } from "@/utils/supabase";
 
 type AppFrameProps = {
@@ -75,6 +76,12 @@ export default function AppFrame({ children }: AppFrameProps) {
   const [authStatus, setAuthStatus] = useState<AuthStatus>(hideShell ? "authenticated" : "checking");
   const mobileSidebarOpen =
     mobileSidebarState.open && mobileSidebarState.pathname === pathname;
+
+  useEffect(() => {
+    if (!isClarityMarketingPath(pathname)) {
+      disableClarityTracking();
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (hideShell) {

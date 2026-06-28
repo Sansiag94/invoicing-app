@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import ClarityExitLink from "@/components/landing/ClarityExitLink";
 import { APP_NAME } from "@/lib/appBrand";
 
 type LandingCopy = {
@@ -172,10 +173,10 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
 
             <div className="flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
-                <Link href="/signup">
+                <ClarityExitLink href="/signup">
                   {copy.primaryCta}
                   <ArrowRight className="h-4 w-4" />
-                </Link>
+                </ClarityExitLink>
               </Button>
               <Button asChild size="lg" variant="outline" className="bg-white">
                 <Link href={copy.secondaryHref}>{copy.secondaryCta}</Link>
@@ -331,7 +332,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               <p className="mt-3 text-4xl font-semibold">{copy.sections.freePrice}</p>
               <p className="mt-3 text-sm leading-7 text-slate-600">{copy.sections.freeText}</p>
               <Button asChild variant="outline" className="mt-6 w-full">
-                <Link href="/signup">{copy.primaryCta}</Link>
+                <ClarityExitLink href="/signup">{copy.primaryCta}</ClarityExitLink>
               </Button>
             </div>
             <div className="rounded-3xl bg-slate-950 p-6 text-white">
@@ -339,7 +340,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               <p className="mt-3 text-4xl font-semibold">{copy.sections.proPrice}</p>
               <p className="mt-3 text-sm leading-7 text-slate-300">{copy.sections.proText}</p>
               <Button asChild className="mt-6 w-full bg-white text-slate-950 hover:bg-slate-100">
-                <Link href="/signup">{copy.primaryCta}</Link>
+                <ClarityExitLink href="/signup">{copy.primaryCta}</ClarityExitLink>
               </Button>
             </div>
           </div>
@@ -387,10 +388,10 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               <p className="mt-4 text-base leading-8 text-slate-600">{copy.sections.finalLead}</p>
             </div>
             <Button asChild size="lg" className="w-full md:w-auto">
-              <Link href="/signup">
+              <ClarityExitLink href="/signup">
                 {copy.primaryCta}
                 <ArrowRight className="h-4 w-4" />
-              </Link>
+              </ClarityExitLink>
             </Button>
           </div>
         </div>
