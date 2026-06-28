@@ -38,6 +38,8 @@ const copy: LandingCopy = {
   h1: "Schweizer QR-Rechnungen ohne Buchhaltungssoftware.",
   lead:
     "Erstellen Sie professionelle Rechnungen, generieren Sie QR-Rechnungen, verfolgen Sie Zahlungen und senden Sie Erinnerungen von einer einfachen Plattform.",
+  installText:
+    "Funktioniert im Browser und laesst sich wie eine App auf Windows, Mac, Android und iPhone installieren.",
   primaryCta: "Kostenlos starten",
   secondaryCta: "Preise ansehen",
   secondaryHref: "#pricing",
@@ -210,7 +212,7 @@ const softwareJsonLd = {
   "@type": "SoftwareApplication",
   name: APP_NAME,
   applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
+  operatingSystem: "Web, Windows, macOS, Android, iOS",
   url: pageUrl,
   offers: [
     {

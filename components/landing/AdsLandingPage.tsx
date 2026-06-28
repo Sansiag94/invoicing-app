@@ -9,6 +9,7 @@ import {
   FileText,
   Languages,
   LockKeyhole,
+  MonitorSmartphone,
   ReceiptText,
   Send,
   UserPlus,
@@ -21,6 +22,7 @@ type LandingCopy = {
   eyebrow: string;
   h1: string;
   lead: string;
+  installText: string;
   primaryCta: string;
   secondaryCta: string;
   secondaryHref: string;
@@ -151,6 +153,10 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
                 {copy.h1}
               </h1>
               <p className="max-w-xl text-lg leading-8 text-slate-600">{copy.lead}</p>
+              <div className="inline-flex max-w-xl items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold leading-6 text-emerald-950">
+                <MonitorSmartphone className="mt-0.5 h-5 w-5 shrink-0 text-emerald-700" />
+                <span>{copy.installText}</span>
+              </div>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">

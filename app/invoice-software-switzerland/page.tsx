@@ -38,6 +38,8 @@ const copy: LandingCopy = {
   h1: "Swiss QR-Bill invoicing without accounting software.",
   lead:
     "Create professional invoices, generate QR-bills, track payments, and send reminders from one simple platform.",
+  installText:
+    "Works in your browser and installs like an app on Windows, Mac, Android, and iPhone.",
   primaryCta: "Start free",
   secondaryCta: "See pricing",
   secondaryHref: "#pricing",
@@ -210,7 +212,7 @@ const softwareJsonLd = {
   "@type": "SoftwareApplication",
   name: APP_NAME,
   applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
+  operatingSystem: "Web, Windows, macOS, Android, iOS",
   url: pageUrl,
   offers: [
     {
