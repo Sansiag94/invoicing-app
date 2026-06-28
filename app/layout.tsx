@@ -90,6 +90,29 @@ export default function RootLayout({
             __html: `
               window.dataLayer = window.dataLayer || [];
               function gtag(){dataLayer.push(arguments);}
+              gtag('consent', 'default', {
+                ad_storage: 'denied',
+                ad_user_data: 'denied',
+                ad_personalization: 'denied',
+                analytics_storage: 'denied'
+              });
+              try {
+                var marketingPaths = {
+                  "/invoice-software-switzerland": true,
+                  "/rechnung-software-schweiz": true
+                };
+                if (
+                  marketingPaths[window.location.pathname] &&
+                  window.localStorage.getItem("sierra-invoices-analytics-consent") === "accepted"
+                ) {
+                  gtag('consent', 'update', {
+                    ad_storage: 'granted',
+                    ad_user_data: 'granted',
+                    ad_personalization: 'granted',
+                    analytics_storage: 'granted'
+                  });
+                }
+              } catch (error) {}
               gtag('js', new Date());
               gtag('config', 'AW-18188019032');
             `,

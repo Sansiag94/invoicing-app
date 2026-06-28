@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import ClarityExitLink from "@/components/landing/ClarityExitLink";
+import CookieConsentBanner from "@/components/landing/CookieConsentBanner";
 import { APP_NAME } from "@/lib/appBrand";
 
 type LandingCopy = {
@@ -143,6 +144,14 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
               y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
           })(window, document, "clarity", "script", "xe5kuqauwg");
+          try {
+            window.clarity(
+              "consent",
+              window.localStorage.getItem("sierra-invoices-analytics-consent") === "accepted"
+            );
+          } catch (error) {
+            window.clarity("consent", false);
+          }
         `}
       </Script>
       <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
@@ -397,6 +406,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
         </div>
       </section>
       </div>
+      <CookieConsentBanner />
     </>
   );
 }
