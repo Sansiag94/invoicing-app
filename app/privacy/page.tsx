@@ -233,9 +233,18 @@ export default async function PrivacyPage({
           similar service functionality.
         </p>
         <p>
-          This build does not describe advertising trackers or a separate marketing analytics stack.
-          If non-essential tracking, advertising cookies, or profiling technologies are added later,
-          we will update this Privacy Policy and obtain consent where required.
+          We may use Google Ads measurement tags to understand whether advertising campaigns lead
+          to useful site visits or account creation. Advertising landing pages may also use
+          Microsoft Clarity to understand how visitors interact with the page through analytics,
+          heatmaps, and session recordings. These tools may process technical identifiers, browser
+          and device information, page views, referral information, clicks, taps, scrolls, and
+          similar interaction data.
+        </p>
+        <p>
+          Microsoft Clarity is intended for public marketing pages and is not intentionally loaded
+          inside the logged-in invoicing workspace in this build. Where consent is required for
+          non-essential tracking, advertising cookies, profiling, or comparable technologies, we
+          will request it before relying on that processing.
         </p>
       </Section>
 

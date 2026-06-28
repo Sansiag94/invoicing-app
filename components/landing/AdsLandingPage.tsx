@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Script from "next/script";
 import {
   ArrowRight,
   Banknote,
@@ -133,7 +134,17 @@ function SectionEyebrow({ children }: { children: string }) {
 
 export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
   return (
-    <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
+    <>
+      <Script id="microsoft-clarity-ads" strategy="afterInteractive">
+        {`
+          (function(c,l,a,r,i,t,y){
+              c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+              t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+              y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+          })(window, document, "clarity", "script", "xe5kuqauwg");
+        `}
+      </Script>
+      <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
       <section className="min-h-[calc(100svh-2rem)] overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-950">
         <div className="mx-auto grid min-h-[calc(100svh-2rem)] max-w-7xl gap-10 px-5 py-8 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:py-10">
           <div className="max-w-2xl space-y-7">
@@ -384,7 +395,8 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
 
