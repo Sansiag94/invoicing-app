@@ -73,6 +73,10 @@ function parseNumber(value: string): number {
 
 const MIN_QUANTITY = 0.01;
 const LINE_ITEM_GRID_COLUMNS = "2.5rem minmax(0, 1fr) 3.5rem 5.5rem 7.5rem 4.5rem 5rem 2.5rem";
+const ACTION_MENU_WIDTH = 208;
+const ACTION_MENU_VIEWPORT_PADDING = 12;
+const ACTION_MENU_ROW_HEIGHT = 40;
+const ACTION_MENU_VERTICAL_PADDING = 12;
 const SWISS_VAT_RATE_OPTIONS = SWISS_VAT_RATES.map((rate) => ({
   value: String(rate),
   label: `${rate}%`,
@@ -84,6 +88,16 @@ function handleNumberInputFocus(event: FocusEvent<HTMLInputElement>) {
 
 function getInvoiceClientName(invoice: InvoiceRow): string {
   return invoice.client?.companyName || invoice.client?.contactName || invoice.client?.email || "-";
+}
+
+function getInvoiceActionMenuHeight(invoice: InvoiceRow): number {
+  let actionCount = 4;
+
+  if (invoice.status === "sent" || invoice.status === "overdue") {
+    actionCount += 1;
+  }
+
+  return ACTION_MENU_VERTICAL_PADDING + actionCount * ACTION_MENU_ROW_HEIGHT;
 }
 
 function getClientFirstName(client: ClientSummary | null): string {
@@ -1198,24 +1212,31 @@ function InvoicePageContent() {
     };
   }, [openActionsInvoiceId]);
 
-  const toggleActionMenu = (invoiceId: string, button: HTMLButtonElement) => {
-    if (openActionsInvoiceId === invoiceId) {
+  const toggleActionMenuForInvoice = (invoice: InvoiceRow, button: HTMLButtonElement) => {
+    if (openActionsInvoiceId === invoice.id) {
       setOpenActionsInvoiceId(null);
       setActionsMenuPosition(null);
       return;
     }
 
     const rect = button.getBoundingClientRect();
-    const menuWidth = 208;
-    const viewportPadding = 12;
+    const estimatedMenuHeight = getInvoiceActionMenuHeight(invoice);
+    const spaceBelow = window.innerHeight - rect.bottom - ACTION_MENU_VIEWPORT_PADDING;
+    const shouldOpenAbove = spaceBelow < estimatedMenuHeight && rect.top > spaceBelow;
     const left = Math.min(
-      Math.max(rect.right - menuWidth, viewportPadding),
-      window.innerWidth - menuWidth - viewportPadding
+      Math.max(rect.right - ACTION_MENU_WIDTH, ACTION_MENU_VIEWPORT_PADDING),
+      window.innerWidth - ACTION_MENU_WIDTH - ACTION_MENU_VIEWPORT_PADDING
     );
+    const top = shouldOpenAbove
+      ? Math.max(ACTION_MENU_VIEWPORT_PADDING, rect.top - estimatedMenuHeight - 8)
+      : Math.min(
+          rect.bottom + 8,
+          window.innerHeight - estimatedMenuHeight - ACTION_MENU_VIEWPORT_PADDING
+        );
 
-    setOpenActionsInvoiceId(invoiceId);
+    setOpenActionsInvoiceId(invoice.id);
     setActionsMenuPosition({
-      top: rect.bottom + 8,
+      top: Math.max(ACTION_MENU_VIEWPORT_PADDING, top),
       left,
     });
   };
@@ -1237,7 +1258,7 @@ function InvoicePageContent() {
         className={cn("justify-center", buttonClassName ?? "w-[7rem]")}
         onClick={(event) => {
           event.stopPropagation();
-          toggleActionMenu(invoice.id, event.currentTarget);
+          toggleActionMenuForInvoice(invoice, event.currentTarget);
         }}
       >
         <MoreHorizontal className="h-4 w-4" />
@@ -1250,6 +1271,8 @@ function InvoicePageContent() {
           style={{
             top: actionsMenuPosition.top,
             left: actionsMenuPosition.left,
+            maxHeight: `calc(100vh - ${ACTION_MENU_VIEWPORT_PADDING * 2}px)`,
+            overflowY: "auto",
           }}
           onClick={(event) => event.stopPropagation()}
         >

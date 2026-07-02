@@ -81,7 +81,7 @@ export default function BillingStatusCard({
               {billingStatus.isComplimentaryPro
                 ? "This workspace has complimentary Pro access. No Stripe subscription is required."
                 : billingStatus.monthlyInvoiceLimit === null
-                ? `Current subscription status: ${billingStatus.stripeSubscriptionStatus.replaceAll("_", " ")}.`
+                ? `Current subscription status: ${billingStatus.stripeSubscriptionStatus.replaceAll("_", " ")}. Open billing to review or cancel the subscription.`
                 : `Upgrade to Pro for CHF ${billingStatus.proPriceMonthlyChf}/month when you need more than ${billingStatus.monthlyInvoiceLimit} issued invoices.`}
             </p>
           </div>
@@ -99,7 +99,7 @@ export default function BillingStatusCard({
               ) : null}
               {canManageBilling ? (
                 <Button variant="outline" onClick={onManageBilling} disabled={isSubmitting}>
-                  {isSubmitting ? "Opening portal..." : "Manage billing"}
+                  {isSubmitting ? "Opening portal..." : "Manage or cancel subscription"}
                 </Button>
               ) : null}
               {!billingStatus.checkoutAvailable && !billingStatus.hasUnlimitedInvoices ? (

@@ -154,8 +154,8 @@ export default function BillingPlanChip({
                   <p>Complimentary Pro is active on this workspace. No Stripe subscription is required.</p>
                 ) : (
                   <p>
-                    Pro is active for this workspace. Use the billing portal if you need to review or
-                    cancel the subscription.
+                    Pro is active for this workspace. Open billing to review invoices, payment
+                    method, or cancel the subscription.
                   </p>
                 )}
               </div>
@@ -178,7 +178,7 @@ export default function BillingPlanChip({
                   disabled={isSubmitting}
                   className="w-full"
                 >
-                  {isSubmitting ? "Opening portal..." : "Manage billing"}
+                  {isSubmitting ? "Opening portal..." : "Manage or cancel subscription"}
                 </Button>
               ) : null}
             </div>
