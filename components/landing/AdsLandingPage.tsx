@@ -286,7 +286,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
       </Script>
       <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
       <section className="overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-950">
-        <div className="mx-auto flex min-h-[calc(100svh-10rem)] max-w-7xl items-center px-5 py-16 md:px-8 lg:py-20">
+        <div className="mx-auto grid max-w-7xl gap-10 px-5 py-16 md:px-8 lg:grid-cols-[minmax(0,3fr)_minmax(18rem,1fr)] lg:items-center lg:py-20">
           <div className="max-w-3xl space-y-7">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 shadow-sm">
@@ -331,17 +331,17 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               ))}
             </div>
           </div>
-        </div>
-      </section>
 
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto grid max-w-7xl gap-4 px-5 py-5 md:grid-cols-3 md:px-8">
-          {copy.proof.map((item) => (
-            <div key={item.label} className="flex items-center justify-between gap-4 border-b border-slate-200 py-3 last:border-b-0 md:border-b-0 md:border-r md:pr-6 md:last:border-r-0">
-              <span className="text-sm text-slate-500">{item.label}</span>
-              <span className="text-lg font-semibold text-slate-950">{item.value}</span>
+          <aside className="w-full max-w-xl lg:justify-self-end lg:border-l lg:border-slate-200 lg:pl-8">
+            <div className="divide-y divide-slate-200 border-y border-slate-200 bg-white/60 lg:bg-transparent">
+              {copy.proof.map((item) => (
+                <div key={item.label} className="grid grid-cols-[1fr_auto] items-baseline gap-5 py-5">
+                  <span className="text-sm text-slate-500">{item.label}</span>
+                  <span className="text-xl font-semibold tracking-tight text-slate-950">{item.value}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </aside>
         </div>
       </section>
 
