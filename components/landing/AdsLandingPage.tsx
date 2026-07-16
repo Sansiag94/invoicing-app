@@ -142,13 +142,13 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
 
   return (
     <div className="mx-auto grid w-full max-w-[52rem] gap-4 xl:grid-cols-[minmax(0,37rem)_14rem] xl:items-center">
-      <div className="rounded-[1.5rem] border border-slate-200 bg-slate-100 p-3 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
-        <div className="relative overflow-hidden rounded-xl bg-white text-slate-950">
-          <div className="relative min-h-[39rem] p-6 sm:p-8">
+      <div className="overflow-x-auto rounded-[1.5rem] border border-slate-200 bg-slate-100 p-3 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
+        <div className="relative w-[34rem] overflow-hidden rounded-xl bg-white text-slate-950">
+          <div className="relative min-h-[39rem] p-8">
             <Pin number={1} className="left-5 top-5" />
             <Pin number={2} className="right-5 top-[23rem]" />
 
-            <div className="grid gap-10 sm:grid-cols-2">
+            <div className="grid grid-cols-2 gap-10">
               <div>
                 <Image
                   src="/apple-touch-icon.svg"
@@ -162,7 +162,7 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
                 <p className="text-sm leading-5 text-slate-700">Musterstrasse 10<br />8001 Zurich, Switzerland</p>
                 <p className="mt-1 text-sm leading-5 text-slate-700">hello@example.ch<br />+41 44 000 00 00</p>
               </div>
-              <div className="pt-12 sm:pt-20">
+              <div className="pt-20">
                 <p className="text-lg font-bold leading-tight">{copy.clientName}</p>
                 <p className="mt-1 text-sm leading-5 text-slate-700">Beispielweg 8<br />3000 Bern, Switzerland</p>
               </div>
@@ -177,8 +177,8 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
               <p className="text-sm leading-5 text-slate-600">{copy.subjectLabel}: {copy.subjectValue}</p>
             </div>
 
-            <div className="mt-4 overflow-hidden text-xs sm:text-sm">
-              <div className="grid grid-cols-[2rem_minmax(0,1fr)_3rem_4rem_4rem] border-b-2 border-slate-950 py-2 text-[0.62rem] font-bold uppercase text-slate-600 sm:grid-cols-[3rem_minmax(0,1fr)_4rem_5.5rem_5.5rem] sm:text-xs">
+            <div className="mt-4 overflow-hidden text-sm">
+              <div className="grid grid-cols-[3rem_minmax(0,1fr)_4rem_5.5rem_5.5rem] border-b-2 border-slate-950 py-2 text-xs font-bold uppercase text-slate-600">
                 {copy.lineHeaders.map((header, index) => (
                   <span key={header} className={index === 0 || index === 1 ? "" : "text-right"}>
                     {header}
@@ -186,7 +186,7 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
                 ))}
               </div>
               {copy.rows.map((row) => (
-                <div key={row.position} className="grid grid-cols-[2rem_minmax(0,1fr)_3rem_4rem_4rem] border-b border-slate-200 py-3 sm:grid-cols-[3rem_minmax(0,1fr)_4rem_5.5rem_5.5rem]">
+                <div key={row.position} className="grid grid-cols-[3rem_minmax(0,1fr)_4rem_5.5rem_5.5rem] border-b border-slate-200 py-3">
                   <span className="text-center text-slate-700">{row.position}</span>
                   <span>{row.label}</span>
                   <span className="text-right">{row.quantity}</span>
@@ -211,7 +211,7 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
 
           <div className="relative border-t border-dashed border-slate-950 bg-white p-4 text-[0.68rem]">
             <Pin number={4} className="left-5 top-4" />
-            <div className="grid gap-4 sm:grid-cols-[0.74fr_1px_1.26fr]">
+            <div className="grid grid-cols-[0.74fr_1px_1.26fr] gap-4">
               <div>
                 <p className="text-sm font-bold">{copy.receiptTitle}</p>
                 <dl className="mt-4 space-y-3 leading-4">
@@ -234,11 +234,11 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
                 </dl>
               </div>
 
-              <div className="hidden border-l border-dashed border-slate-950 sm:block" />
+              <div className="border-l border-dashed border-slate-950" />
 
               <div>
                 <p className="text-sm font-bold">{copy.paymentPartTitle}</p>
-                <div className="mt-4 grid gap-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
+                <div className="mt-4 grid grid-cols-[6rem_minmax(0,1fr)] gap-4">
                   <FakeQrCode />
                   <dl className="space-y-3 leading-4">
                     <div>
@@ -259,7 +259,7 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
                     </div>
                   </dl>
                 </div>
-                <div className="mt-3 grid gap-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
+                <div className="mt-3 grid grid-cols-[6rem_minmax(0,1fr)] gap-4">
                   <span />
                   <div>
                     <p className="font-bold">{copy.payableToLabel}</p>
