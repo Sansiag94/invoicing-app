@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import Script from "next/script";
 import {
   ArrowRight,
@@ -27,8 +26,6 @@ type LandingCopy = {
   h1: string;
   lead: string;
   installText: string;
-  heroQrTitle: string;
-  heroQrText: string;
   primaryCta: string;
   secondaryCta: string;
   secondaryHref: string;
@@ -110,12 +107,6 @@ type LandingCopy = {
 const benefitIcons = [ReceiptText, Clock3, Banknote, BellRing, Users, BarChart3];
 const workflowIcons = [UserPlus, FileText, Send, CheckCircle2];
 
-const qrPattern = new Set([
-  0, 1, 2, 3, 5, 6, 7, 8, 10, 13, 17, 18, 20, 22, 24, 26, 27, 31, 35, 36, 38,
-  39, 41, 44, 45, 47, 49, 50, 53, 54, 56, 58, 62, 63, 64, 66, 67, 70, 72, 73,
-  74, 75, 77, 78, 79, 80,
-]);
-
 function SvgPin({ number, x, y }: { number: number; x: number; y: number }) {
   return (
     <g>
@@ -127,34 +118,8 @@ function SvgPin({ number, x, y }: { number: number; x: number; y: number }) {
   );
 }
 
-function SvgQrCode({ x, y, size }: { x: number; y: number; size: number }) {
-  const gap = 3;
-  const cell = (size - gap * 8) / 9;
-
-  return (
-    <g transform={`translate(${x} ${y})`}>
-      <rect width={size} height={size} fill="#ffffff" />
-      {Array.from({ length: 81 }).map((_, index) => {
-        const row = Math.floor(index / 9);
-        const col = index % 9;
-        return (
-          <rect
-            key={index}
-            x={col * (cell + gap)}
-            y={row * (cell + gap)}
-            width={cell}
-            height={cell}
-            rx="1"
-            fill={qrPattern.has(index) ? "#020617" : "#e2e8f0"}
-          />
-        );
-      })}
-    </g>
-  );
-}
-
 function InvoiceCanvas({ copy }: { copy: LandingCopy["preview"] }) {
-  const rowY = [382, 427, 472];
+  const rowY = [452, 497, 542];
 
   return (
     <svg
@@ -166,8 +131,8 @@ function InvoiceCanvas({ copy }: { copy: LandingCopy["preview"] }) {
       <rect width="595" height="930" rx="14" fill="#ffffff" />
 
       <SvgPin number={1} x={38} y={32} />
-      <SvgPin number={2} x={560} y={382} />
-      <SvgPin number={3} x={286} y={620} />
+      <SvgPin number={2} x={560} y={442} />
+      <SvgPin number={3} x={286} y={626} />
       <SvgPin number={4} x={38} y={690} />
 
       <rect x="55" y="45" width="64" height="64" rx="12" fill="#0f172a" />
@@ -189,29 +154,30 @@ function InvoiceCanvas({ copy }: { copy: LandingCopy["preview"] }) {
       />
 
       <text x="55" y="142" fontSize="20" fontWeight="700" fill="#020617">{copy.title}</text>
-      <text x="55" y="166" fontSize="14" fill="#334155">{copy.subtitle}</text>
-      <text x="55" y="188" fontSize="14" fill="#334155">Musterstrasse 10</text>
-      <text x="55" y="209" fontSize="14" fill="#334155">8001 Zurich, Switzerland</text>
-      <text x="55" y="230" fontSize="14" fill="#334155">hello@example.ch</text>
-      <text x="55" y="251" fontSize="14" fill="#334155">+41 44 000 00 00</text>
+      <text x="55" y="166" fontSize="13" fill="#334155">Your logo and business details</text>
+      <text x="55" y="186" fontSize="13" fill="#334155">appear at the top.</text>
+      <text x="55" y="212" fontSize="14" fill="#334155">Musterstrasse 10</text>
+      <text x="55" y="233" fontSize="14" fill="#334155">8001 Zurich, Switzerland</text>
+      <text x="55" y="254" fontSize="14" fill="#334155">hello@example.ch</text>
+      <text x="55" y="275" fontSize="14" fill="#334155">+41 44 000 00 00</text>
 
-      <text x="345" y="142" fontSize="20" fontWeight="700" fill="#020617">{copy.clientName}</text>
-      <text x="345" y="166" fontSize="14" fill="#334155">Beispielweg 8</text>
-      <text x="345" y="187" fontSize="14" fill="#334155">3000 Bern, Switzerland</text>
+      <text x="360" y="142" fontSize="20" fontWeight="700" fill="#020617">{copy.clientName}</text>
+      <text x="360" y="166" fontSize="14" fill="#334155">Beispielweg 8</text>
+      <text x="360" y="187" fontSize="14" fill="#334155">3000 Bern, Switzerland</text>
 
-      <text x="55" y="310" fontSize="28" fontWeight="800" fill="#020617">
+      <text x="55" y="325" fontSize="28" fontWeight="800" fill="#020617">
         {copy.documentLabel}: {copy.invoiceMeta}
       </text>
-      <text x="55" y="335" fontSize="14" fill="#334155">30.06.2026</text>
-      <text x="55" y="356" fontSize="14" fill="#334155">{copy.dueLabel}: {copy.dueValue}</text>
-      <text x="55" y="377" fontSize="14" fill="#334155">{copy.subjectLabel}: {copy.subjectValue}</text>
+      <text x="55" y="350" fontSize="14" fill="#334155">30.06.2026</text>
+      <text x="55" y="371" fontSize="14" fill="#334155">{copy.dueLabel}: {copy.dueValue}</text>
+      <text x="55" y="392" fontSize="14" fill="#334155">{copy.subjectLabel}: {copy.subjectValue}</text>
 
-      <line x1="55" y1="415" x2="540" y2="415" stroke="#020617" strokeWidth="2" />
-      <text x="55" y="402" fontSize="12" fontWeight="700" fill="#334155">{copy.lineHeaders[0].toUpperCase()}</text>
-      <text x="103" y="402" fontSize="12" fontWeight="700" fill="#334155">{copy.lineHeaders[1].toUpperCase()}</text>
-      <text x="365" y="402" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[2].toUpperCase()}</text>
-      <text x="455" y="402" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[3].toUpperCase()}</text>
-      <text x="540" y="402" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[4].toUpperCase()}</text>
+      <line x1="55" y1="430" x2="540" y2="430" stroke="#020617" strokeWidth="2" />
+      <text x="55" y="417" fontSize="12" fontWeight="700" fill="#334155">{copy.lineHeaders[0].toUpperCase()}</text>
+      <text x="103" y="417" fontSize="12" fontWeight="700" fill="#334155">{copy.lineHeaders[1].toUpperCase()}</text>
+      <text x="365" y="417" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[2].toUpperCase()}</text>
+      <text x="455" y="417" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[3].toUpperCase()}</text>
+      <text x="540" y="417" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[4].toUpperCase()}</text>
 
       {copy.rows.map((row, index) => (
         <g key={row.position}>
@@ -224,11 +190,11 @@ function InvoiceCanvas({ copy }: { copy: LandingCopy["preview"] }) {
         </g>
       ))}
 
-      <line x1="320" y1="545" x2="540" y2="545" stroke="#cbd5e1" />
-      <text x="320" y="575" fontSize="15" fill="#334155">Subtotal</text>
-      <text x="540" y="575" fontSize="15" textAnchor="end" fill="#334155">{copy.totalValue}</text>
-      <text x="320" y="610" fontSize="28" fontWeight="800" fill="#020617">Total</text>
-      <text x="540" y="610" fontSize="24" fontWeight="800" textAnchor="end" fill="#020617">{copy.totalValue}</text>
+      <line x1="320" y1="585" x2="540" y2="585" stroke="#cbd5e1" />
+      <text x="320" y="615" fontSize="15" fill="#334155">Subtotal</text>
+      <text x="540" y="615" fontSize="15" textAnchor="end" fill="#334155">{copy.totalValue}</text>
+      <text x="320" y="650" fontSize="28" fontWeight="800" fill="#020617">Total</text>
+      <text x="540" y="650" fontSize="24" fontWeight="800" textAnchor="end" fill="#020617">{copy.totalValue}</text>
 
       <line x1="0" y1="665" x2="595" y2="665" stroke="#020617" strokeDasharray="3 3" />
       <line x1="200" y1="680" x2="200" y2="880" stroke="#020617" strokeDasharray="3 3" />
@@ -245,7 +211,7 @@ function InvoiceCanvas({ copy }: { copy: LandingCopy["preview"] }) {
       <text x="145" y="875" fontSize="10" fontWeight="800" textAnchor="end" fill="#020617">{copy.totalValue.replace("CHF ", "")}</text>
 
       <text x="225" y="695" fontSize="15" fontWeight="800" fill="#020617">{copy.paymentPartTitle}</text>
-      <SvgQrCode x={225} y={720} size={112} />
+      <image href="/qr-invoices-sierraservices.svg" x="225" y="720" width="112" height="112" />
       <text x="360" y="730" fontSize="10" fontWeight="800" fill="#020617">{copy.accountLabel}</text>
       <text x="360" y="746" fontSize="10" fill="#020617">CH00 0000 0000 0000 0000 0</text>
       <text x="360" y="762" fontSize="10" fill="#020617">{copy.title}</text>
@@ -307,34 +273,6 @@ function SectionEyebrow({ children }: { children: string }) {
   );
 }
 
-function HeroQrCode({ title, text }: { title: string; text: string }) {
-  return (
-    <Link
-      href="/"
-      aria-label="Open Sierra Invoices"
-      className="group relative mx-auto hidden w-full max-w-[18rem] lg:block"
-    >
-      <div className="absolute inset-0 rounded-[2rem] bg-emerald-200/60 blur-3xl transition group-hover:bg-emerald-300/70" />
-      <div className="relative rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-        <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
-          <Image
-            src="/qr-invoices-sierraservices.svg"
-            width={410}
-            height={410}
-            alt="QR code that opens Sierra Invoices"
-            priority
-            className="h-auto w-full rounded-xl bg-white"
-          />
-        </div>
-        <div className="mt-4">
-          <p className="text-sm font-semibold text-slate-950">{title}</p>
-          <p className="mt-1 text-sm leading-6 text-slate-600">{text}</p>
-        </div>
-      </div>
-    </Link>
-  );
-}
-
 export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
   return (
     <>
@@ -357,7 +295,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
       </Script>
       <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
       <section className="overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-950">
-        <div className="mx-auto grid min-h-[calc(100svh-10rem)] max-w-7xl items-center gap-10 px-5 py-16 md:px-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:py-20">
+        <div className="mx-auto flex min-h-[calc(100svh-10rem)] max-w-7xl items-center px-5 py-16 md:px-8 lg:py-20">
           <div className="max-w-3xl space-y-7">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 shadow-sm">
@@ -402,7 +340,6 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               ))}
             </div>
           </div>
-          <HeroQrCode title={copy.heroQrTitle} text={copy.heroQrText} />
         </div>
       </section>
 
