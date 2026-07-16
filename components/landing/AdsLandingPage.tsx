@@ -66,7 +66,8 @@ type LandingCopy = {
     };
     rows: Array<{ position: string; label: string; quantity: string; unitPrice: string; value: string }>;
   };
-  proof: Array<{ label: string; value: string }>;
+  proofTitle: string;
+  proof: Array<{ label: string; value: string; text: string }>;
   sections: {
     painTitle: string;
     painLead: string;
@@ -333,11 +334,17 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
           </div>
 
           <aside className="w-full max-w-xl lg:justify-self-end lg:border-l lg:border-slate-200 lg:pl-8">
-            <div className="divide-y divide-slate-200 border-y border-slate-200 bg-white/60 lg:bg-transparent">
+            <p className="max-w-sm text-xl font-semibold leading-7 tracking-tight text-slate-950">
+              {copy.proofTitle}
+            </p>
+            <div className="mt-6 divide-y divide-slate-200 border-y border-slate-200 bg-white/60 lg:bg-transparent">
               {copy.proof.map((item) => (
-                <div key={item.label} className="grid grid-cols-[1fr_auto] items-baseline gap-5 py-5">
-                  <span className="text-sm text-slate-500">{item.label}</span>
-                  <span className="text-xl font-semibold tracking-tight text-slate-950">{item.value}</span>
+                <div key={item.label} className="py-5">
+                  <div className="grid grid-cols-[1fr_auto] items-baseline gap-5">
+                    <span className="text-sm text-slate-500">{item.label}</span>
+                    <span className="text-xl font-semibold tracking-tight text-slate-950">{item.value}</span>
+                  </div>
+                  <p className="mt-2 max-w-sm text-sm leading-6 text-slate-600">{item.text}</p>
                 </div>
               ))}
             </div>

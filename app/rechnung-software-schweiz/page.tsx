@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 const copy: LandingCopy = {
   eyebrow: "Einfache Rechnungssoftware fuer die Schweiz",
-  h1: "Schweizer QR-Rechnungen ohne Buchhaltungssoftware.",
+  h1: "Schweizer Rechnungen mit QR-Zahlteil in Minuten.",
   lead:
     "Erstellen Sie professionelle Rechnungen, generieren Sie QR-Rechnungen, verfolgen Sie Zahlungen und senden Sie Erinnerungen von einer einfachen Plattform.",
   installText:
@@ -89,10 +89,11 @@ const copy: LandingCopy = {
       { position: "3", label: "Rabatt fuer Neukunden", quantity: "1.00", unitPrice: "-50.00", value: "-50.00" },
     ],
   },
+  proofTitle: "Kostenlos starten. Erst upgraden, wenn Rechnungen regelmaessig werden.",
   proof: [
-    { label: "Free Plan", value: "CHF 0" },
-    { label: "Pro Plan", value: "CHF 19/Monat" },
-    { label: "Fokus", value: "Schweiz" },
+    { label: "Kostenlos starten", value: "CHF 0", text: "Bis zu 3 ausgestellte Rechnungen pro Monat." },
+    { label: "Pro nutzen", value: "CHF 19/Monat", text: "Unlimitierte Rechnungen, Erinnerungen und Zahlungsstatus." },
+    { label: "Gemacht fuer", value: "Schweiz", text: "QR-Rechnungen, CHF und Schweizer Rechnungsablaeufe." },
   ],
   sections: {
     painTitle: "Erstellen Sie Rechnungen noch in Word oder Excel?",

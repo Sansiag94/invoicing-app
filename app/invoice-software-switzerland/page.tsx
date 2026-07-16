@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 
 const copy: LandingCopy = {
   eyebrow: "Simple invoicing software for Switzerland",
-  h1: "Swiss QR-Bill invoicing without accounting software.",
+  h1: "Swiss invoices with QR-bills in minutes.",
   lead:
     "Create professional invoices, generate QR-bills, track payments, and send reminders from one simple platform.",
   installText:
@@ -89,10 +89,11 @@ const copy: LandingCopy = {
       { position: "3", label: "New client discount", quantity: "1.00", unitPrice: "-50.00", value: "-50.00" },
     ],
   },
+  proofTitle: "Start free. Upgrade only when invoicing becomes regular.",
   proof: [
-    { label: "Free plan", value: "CHF 0" },
-    { label: "Pro plan", value: "CHF 19/month" },
-    { label: "Built for", value: "Switzerland" },
+    { label: "Start free", value: "CHF 0", text: "Send up to 3 issued invoices per month." },
+    { label: "Go Pro", value: "CHF 19/month", text: "Unlimited invoices, reminders, and payment tracking." },
+    { label: "Made for", value: "Switzerland", text: "QR-bills, CHF, and Swiss invoice workflows." },
   ],
   sections: {
     painTitle: "Still creating invoices in Word or Excel?",
