@@ -40,6 +40,8 @@ const copy: LandingCopy = {
     "Erstellen Sie professionelle Rechnungen, generieren Sie QR-Rechnungen, verfolgen Sie Zahlungen und senden Sie Erinnerungen von einer einfachen Plattform.",
   installText:
     "Funktioniert im Browser und laesst sich wie eine App auf Windows, Mac, Android und iPhone installieren.",
+  heroQrTitle: "Scannen und Sierra Invoices oeffnen",
+  heroQrText: "Ein QR-Code im Schweizer Stil, der invoices.sierraservices.ch oeffnet.",
   primaryCta: "Kostenlos starten",
   secondaryCta: "Preise ansehen",
   secondaryHref: "#pricing",

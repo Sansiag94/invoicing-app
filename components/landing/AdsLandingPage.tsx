@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import Script from "next/script";
 import {
   ArrowRight,
@@ -26,6 +27,8 @@ type LandingCopy = {
   h1: string;
   lead: string;
   installText: string;
+  heroQrTitle: string;
+  heroQrText: string;
   primaryCta: string;
   secondaryCta: string;
   secondaryHref: string;
@@ -304,6 +307,34 @@ function SectionEyebrow({ children }: { children: string }) {
   );
 }
 
+function HeroQrCode({ title, text }: { title: string; text: string }) {
+  return (
+    <Link
+      href="/"
+      aria-label="Open Sierra Invoices"
+      className="group relative mx-auto hidden w-full max-w-[18rem] lg:block"
+    >
+      <div className="absolute inset-0 rounded-[2rem] bg-emerald-200/60 blur-3xl transition group-hover:bg-emerald-300/70" />
+      <div className="relative rounded-[2rem] border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+        <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 p-4">
+          <Image
+            src="/qr-invoices-sierraservices.svg"
+            width={410}
+            height={410}
+            alt="QR code that opens Sierra Invoices"
+            priority
+            className="h-auto w-full rounded-xl bg-white"
+          />
+        </div>
+        <div className="mt-4">
+          <p className="text-sm font-semibold text-slate-950">{title}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-600">{text}</p>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
 export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
   return (
     <>
@@ -326,7 +357,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
       </Script>
       <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
       <section className="overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-950">
-        <div className="mx-auto flex min-h-[calc(100svh-10rem)] max-w-7xl items-center px-5 py-16 md:px-8 lg:py-20">
+        <div className="mx-auto grid min-h-[calc(100svh-10rem)] max-w-7xl items-center gap-10 px-5 py-16 md:px-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:py-20">
           <div className="max-w-3xl space-y-7">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 shadow-sm">
@@ -371,6 +402,7 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               ))}
             </div>
           </div>
+          <HeroQrCode title={copy.heroQrTitle} text={copy.heroQrText} />
         </div>
       </section>
 
