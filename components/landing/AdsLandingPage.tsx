@@ -159,12 +159,12 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
                 />
                 <p className="mt-3 text-lg font-bold leading-tight">{copy.title}</p>
                 <p className="mt-1 text-sm leading-5 text-slate-600">{copy.subtitle}</p>
-                <p className="text-sm leading-5 text-slate-700">Hofwiesenstrasse 29<br />8136 Gattikon, Switzerland</p>
-                <p className="mt-1 text-sm leading-5 text-slate-700">hello@example.ch<br />+41 76 231 02 35</p>
+                <p className="text-sm leading-5 text-slate-700">Musterstrasse 10<br />8001 Zurich, Switzerland</p>
+                <p className="mt-1 text-sm leading-5 text-slate-700">hello@example.ch<br />+41 44 000 00 00</p>
               </div>
               <div className="pt-12 sm:pt-20">
                 <p className="text-lg font-bold leading-tight">{copy.clientName}</p>
-                <p className="mt-1 text-sm leading-5 text-slate-700">Blickensdorferstrasse 21A<br />6340 Baar, Switzerland</p>
+                <p className="mt-1 text-sm leading-5 text-slate-700">Beispielweg 8<br />3000 Bern, Switzerland</p>
               </div>
             </div>
 
@@ -217,11 +217,11 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
                 <dl className="mt-4 space-y-3 leading-4">
                   <div>
                     <dt className="font-bold">{copy.accountLabel}</dt>
-                    <dd>CH80 8080 8009 5469 1501 0<br />{copy.title}<br />8136 Gattikon</dd>
+                    <dd>CH00 0000 0000 0000 0000 0<br />{copy.title}<br />8001 Zurich</dd>
                   </div>
                   <div>
                     <dt className="font-bold">{copy.payableByLabel}</dt>
-                    <dd>{copy.clientName}<br />6340 Baar</dd>
+                    <dd>{copy.clientName}<br />3000 Bern</dd>
                   </div>
                   <div className="grid grid-cols-2 gap-2 pt-8">
                     <div>
@@ -243,11 +243,11 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
                   <dl className="space-y-3 leading-4">
                     <div>
                       <dt className="font-bold">{copy.accountLabel}</dt>
-                      <dd>CH80 8080 8009 5469 1501 0<br />{copy.title}<br />8136 Gattikon</dd>
+                      <dd>CH00 0000 0000 0000 0000 0<br />{copy.title}<br />8001 Zurich</dd>
                     </div>
                     <div>
                       <dt className="font-bold">{copy.payableByLabel}</dt>
-                      <dd>{copy.clientName}<br />6340 Baar</dd>
+                      <dd>{copy.clientName}<br />3000 Bern</dd>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
