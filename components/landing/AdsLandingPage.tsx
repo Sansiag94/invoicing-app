@@ -35,10 +35,24 @@ type LandingCopy = {
   preview: {
     title: string;
     subtitle: string;
+    documentLabel: string;
+    invoiceMeta: string;
+    clientLabel: string;
+    clientName: string;
     totalLabel: string;
     totalValue: string;
-    openLabel: string;
-    openValue: string;
+    dueLabel: string;
+    dueValue: string;
+    qrTitle: string;
+    qrText: string;
+    paymentReference: string;
+    lineHeaders: [string, string, string];
+    callouts: {
+      logo: string;
+      details: string;
+      qr: string;
+      reference: string;
+    };
     rows: Array<{ label: string; client: string; value: string; status: string }>;
   };
   proof: Array<{ label: string; value: string }>;
@@ -82,47 +96,159 @@ type LandingCopy = {
 const benefitIcons = [ReceiptText, Clock3, Banknote, BellRing, Users, BarChart3];
 const workflowIcons = [UserPlus, FileText, Send, CheckCircle2];
 
-function ProductPreview({ copy }: { copy: LandingCopy["preview"] }) {
+const qrPattern = new Set([
+  0, 1, 2, 3, 5, 6, 7, 8, 10, 13, 17, 18, 20, 22, 24, 26, 27, 31, 35, 36, 38,
+  39, 41, 44, 45, 47, 49, 50, 53, 54, 56, 58, 62, 63, 64, 66, 67, 70, 72, 73,
+  74, 75, 77, 78, 79, 80,
+]);
+
+function FakeQrCode() {
   return (
-    <div className="relative mx-auto w-full max-w-[35rem] overflow-hidden rounded-[2rem] border border-slate-200 bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
-      <div className="rounded-[1.35rem] border border-slate-200 bg-white p-4 text-slate-950">
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
-          <div>
-            <p className="text-sm font-semibold">{copy.title}</p>
-            <p className="mt-1 text-xs text-slate-500">{copy.subtitle}</p>
-          </div>
-          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-900">
-            QR-bill
-          </span>
-        </div>
+    <div className="grid h-28 w-28 shrink-0 grid-cols-9 gap-1 rounded-xl border border-slate-200 bg-white p-2 sm:h-32 sm:w-32">
+      {Array.from({ length: 81 }).map((_, index) => (
+        <span
+          key={index}
+          className={qrPattern.has(index) ? "rounded-[2px] bg-slate-950" : "rounded-[2px] bg-slate-100"}
+        />
+      ))}
+    </div>
+  );
+}
 
-        <div className="grid grid-cols-2 gap-3 py-4">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[0.68rem] uppercase tracking-[0.18em] text-slate-500">{copy.totalLabel}</p>
-            <p className="mt-2 text-2xl font-semibold">{copy.totalValue}</p>
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <p className="text-[0.68rem] uppercase tracking-[0.18em] text-slate-500">{copy.openLabel}</p>
-            <p className="mt-2 text-2xl font-semibold">{copy.openValue}</p>
-          </div>
-        </div>
+function Callout({
+  children,
+  className,
+  lineClassName,
+}: {
+  children: string;
+  className: string;
+  lineClassName: string;
+}) {
+  return (
+    <div className={`pointer-events-none absolute hidden lg:block ${className}`}>
+      <div className="rounded-full border border-emerald-200 bg-white px-3 py-2 text-xs font-semibold leading-5 text-emerald-950 shadow-[0_12px_34px_rgba(15,23,42,0.14)]">
+        {children}
+      </div>
+      <span className={`absolute block rounded-full bg-emerald-500 ${lineClassName}`} />
+    </div>
+  );
+}
 
-        <div className="space-y-2">
-          {copy.rows.map((row) => (
-            <div key={row.label} className="grid grid-cols-[1fr_auto] gap-4 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-slate-950">
-              <div>
-                <p className="text-sm font-semibold">{row.label}</p>
-                <p className="text-xs text-slate-500">{row.client}</p>
+function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
+  return (
+    <div className="relative mx-auto w-full max-w-[38rem]">
+      <Callout
+        className="-left-6 top-12"
+        lineClassName="left-full top-1/2 h-px w-16"
+      >
+        {copy.callouts.logo}
+      </Callout>
+      <Callout
+        className="-right-8 top-48"
+        lineClassName="right-full top-1/2 h-px w-14"
+      >
+        {copy.callouts.details}
+      </Callout>
+      <Callout
+        className="-right-8 bottom-24"
+        lineClassName="right-full top-1/2 h-px w-16"
+      >
+        {copy.callouts.qr}
+      </Callout>
+      <Callout
+        className="-left-8 bottom-12"
+        lineClassName="left-full top-1/2 h-px w-14"
+      >
+        {copy.callouts.reference}
+      </Callout>
+
+      <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-100 p-3 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
+        <div className="rounded-[1.45rem] bg-white p-5 text-slate-950 sm:p-6">
+          <div className="flex items-start justify-between gap-5 border-b border-slate-200 pb-5">
+            <div className="flex gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-sm font-bold text-white">
+                SI
               </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold">{row.value}</p>
-                <p className="text-xs font-medium text-emerald-700">{row.status}</p>
+              <div>
+                <p className="text-sm font-semibold">{copy.title}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">{copy.subtitle}</p>
               </div>
             </div>
-          ))}
+            <div className="text-right text-xs leading-5 text-slate-500">
+              <p className="font-semibold uppercase tracking-[0.16em] text-slate-400">{copy.documentLabel}</p>
+              <p className="font-semibold text-slate-950">{copy.invoiceMeta}</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 py-5 sm:grid-cols-[1fr_auto]">
+            <div>
+              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                {copy.clientLabel}
+              </p>
+              <p className="mt-2 text-sm font-semibold">{copy.clientName}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500">Musterstrasse 12<br />8001 Zurich</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:min-w-44">
+              <p className="text-xs text-slate-500">{copy.dueLabel}</p>
+              <p className="mt-1 text-sm font-semibold">{copy.dueValue}</p>
+              <p className="mt-4 text-xs text-slate-500">{copy.totalLabel}</p>
+              <p className="mt-1 text-2xl font-semibold">{copy.totalValue}</p>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-slate-200">
+            <div className="grid grid-cols-[1fr_3.5rem_5rem] bg-slate-50 px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <span>{copy.lineHeaders[0]}</span>
+              <span className="text-right">{copy.lineHeaders[1]}</span>
+              <span className="text-right">{copy.lineHeaders[2]}</span>
+            </div>
+            {copy.rows.map((row) => (
+              <div key={row.label} className="grid grid-cols-[1fr_3.5rem_5rem] border-t border-slate-200 px-3 py-3 text-sm">
+                <div>
+                  <p className="font-semibold">{row.label}</p>
+                  <p className="text-xs text-slate-500">{row.client}</p>
+                </div>
+                <span className="text-right text-slate-600">{row.status}</span>
+                <span className="text-right font-semibold">{row.value}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 border-t border-dashed border-slate-300 pt-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="flex gap-4">
+                <FakeQrCode />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{copy.qrTitle}</p>
+                  <p className="mt-2 max-w-56 text-xs leading-5 text-slate-500">{copy.qrText}</p>
+                  <p className="mt-3 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-900">
+                    {copy.paymentReference}
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 text-right sm:min-w-40">
+                <p className="text-xs text-slate-500">{copy.totalLabel}</p>
+                <p className="mt-1 text-2xl font-semibold">{copy.totalValue}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-2 lg:hidden">
+            {Object.values(copy.callouts).map((callout) => (
+              <div key={callout} className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-950">
+                {callout}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ProductPreview({ copy }: { copy: LandingCopy["preview"] }) {
+  return (
+    <InvoicePreview copy={copy} />
   );
 }
 
