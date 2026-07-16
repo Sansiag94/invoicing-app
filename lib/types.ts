@@ -294,6 +294,7 @@ export interface ExpensesPageData {
 
 export interface AnalyticsSeriesPoint {
   label: string;
+  billed: number;
   revenue: number;
   expenses: number;
   profit: number;

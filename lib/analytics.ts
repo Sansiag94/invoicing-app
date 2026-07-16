@@ -223,7 +223,7 @@ export async function buildAnalyticsOverview(
         issuedAt: { gte: range.startDate, lt: range.endDateExclusive },
         status: { not: "cancelled" },
       },
-      select: { totalAmount: true },
+      select: { issuedAt: true, issueDate: true, totalAmount: true },
     }),
     db.expense.findMany({
       where: {
@@ -312,11 +312,20 @@ export async function buildAnalyticsOverview(
     }),
     { issuedAmount: 0, issuedCount: 0 }
   );
+  const monthlyBilled = new Map<string, number>(months.map((month) => [month.key, 0]));
+  for (const invoice of issuedInRangeRaw) {
+    const billedMonthKey = getMonthKey(invoice.issuedAt ?? invoice.issueDate);
+    if (monthlyBilled.has(billedMonthKey)) {
+      monthlyBilled.set(billedMonthKey, (monthlyBilled.get(billedMonthKey) ?? 0) + invoice.totalAmount);
+    }
+  }
   const monthlySeries = months.map((month) => {
+    const billed = monthlyBilled.get(month.key) ?? 0;
     const revenue = monthlyRevenue.get(month.key) ?? 0;
     const expenses = monthlyExpenses.get(month.key) ?? 0;
     return {
       label: month.label,
+      billed,
       revenue,
       expenses,
       profit: revenue - expenses,

@@ -251,25 +251,38 @@ export default function AnalyticsPage() {
 
   const visibleSeries = useMemo(() => {
     const series = analytics?.monthlySeries ?? [];
-    return series;
+    return series.map((entry) => ({
+      ...entry,
+      billed: entry.billed ?? 0,
+    }));
   }, [analytics?.monthlySeries]);
 
   const chartData = useMemo(() => {
+    const billedValues = visibleSeries.map((entry) => entry.billed);
     const revenueValues = visibleSeries.map((entry) => entry.revenue);
     const expenseValues = visibleSeries.map((entry) => entry.expenses);
     const profitValues = visibleSeries.map((entry) => entry.profit);
     const plottedValues = [...revenueValues, ...expenseValues, ...profitValues];
+    const monthCount = Math.max(1, visibleSeries.length);
 
     return {
+      billedValues,
       revenueValues,
       expenseValues,
       profitValues,
       minValue: Math.min(0, ...plottedValues),
       maxValue: Math.max(1, ...plottedValues),
       totals: {
+        billed: billedValues.reduce((sum, value) => sum + value, 0),
         revenue: revenueValues.reduce((sum, value) => sum + value, 0),
         expenses: expenseValues.reduce((sum, value) => sum + value, 0),
         profit: visibleSeries.reduce((sum, value) => sum + value.profit, 0),
+      },
+      averages: {
+        billed: billedValues.reduce((sum, value) => sum + value, 0) / monthCount,
+        revenue: revenueValues.reduce((sum, value) => sum + value, 0) / monthCount,
+        expenses: expenseValues.reduce((sum, value) => sum + value, 0) / monthCount,
+        profit: visibleSeries.reduce((sum, value) => sum + value.profit, 0) / monthCount,
       },
     };
   }, [visibleSeries]);
@@ -284,6 +297,11 @@ export default function AnalyticsPage() {
     };
   }, [chartData.totals.profit, visibleSeries]);
 
+  const maxMonthlyBilled = useMemo(
+    () => Math.max(1, ...visibleSeries.map((entry) => entry.billed)),
+    [visibleSeries]
+  );
+
   function exportAnalyticsCsv() {
     if (!analytics) return;
 
@@ -291,17 +309,22 @@ export default function AnalyticsPage() {
       ["Range", startDate, endDate],
       ["Currency", analytics.currency],
       [],
-      ["Month", "Revenue", "Expenses", "Profit"],
+      ["Month", "Billed", "Revenue collected", "Expenses", "Profit"],
       ...visibleSeries.map((entry) => [
         entry.label,
+        entry.billed.toFixed(2),
         entry.revenue.toFixed(2),
         entry.expenses.toFixed(2),
         entry.profit.toFixed(2),
       ]),
       [],
+      ["Total billed", chartData.totals.billed.toFixed(2)],
       ["Total revenue", chartData.totals.revenue.toFixed(2)],
       ["Total expenses", chartData.totals.expenses.toFixed(2)],
       ["Profit", chartData.totals.profit.toFixed(2)],
+      ["Average billed per month", chartData.averages.billed.toFixed(2)],
+      ["Average revenue per month", chartData.averages.revenue.toFixed(2)],
+      ["Average expenses per month", chartData.averages.expenses.toFixed(2)],
       ["Income tax planning estimate", heroData.incomeTaxEstimate.toFixed(2)],
       ["Social security planning estimate", heroData.socialSecurityEstimate.toFixed(2)],
     ];
@@ -630,6 +653,77 @@ export default function AnalyticsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Average Month</CardTitle>
+            <p className="text-sm text-slate-500">
+              Monthly averages across the selected range, useful for planning regular income and costs.
+            </p>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average billed</p>
+              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
+                {analytics.currency} {formatMoney(chartData.averages.billed)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Invoice totals issued per month</p>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/70 dark:bg-emerald-950/30">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Average earnings</p>
+              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
+                {analytics.currency} {formatMoney(chartData.averages.revenue)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Cash collected per month</p>
+            </div>
+            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/70 dark:bg-amber-950/30">
+              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Average expenses</p>
+              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
+                {analytics.currency} {formatMoney(chartData.averages.expenses)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Costs booked per month</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average net result</p>
+              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
+                {analytics.currency} {formatMoney(chartData.averages.profit)}
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Collected minus expenses</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Total Billed by Month</CardTitle>
+            <p className="text-sm text-slate-500">
+              See the invoice total issued each month, separate from payments collected later.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {visibleSeries.map((entry) => (
+              <div key={entry.label} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="font-medium text-slate-900 dark:text-slate-100">{entry.label}</p>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {analytics.currency} {formatMoney(entry.billed)}
+                  </p>
+                </div>
+                <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                  <div
+                    className="h-2 rounded-full bg-slate-950 dark:bg-slate-100"
+                    style={{ width: `${entry.billed > 0 ? Math.max(6, (entry.billed / maxMonthlyBilled) * 100) : 0}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Collected: {analytics.currency} {formatMoney(entry.revenue)} - Expenses: {analytics.currency} {formatMoney(entry.expenses)}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
 
       <Card id="monthly-report">
         <CardHeader>

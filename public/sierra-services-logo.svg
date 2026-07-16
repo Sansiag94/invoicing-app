@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Sierra Services logo">
+  <rect width="180" height="180" fill="#030303"/>
+  <path
+    d="M143 33H70C49 33 36 45 36 63V70C22 76 15 88 15 103C15 123 29 136 54 146L119 172C138 180 150 172 154 155C157 141 149 131 132 124L62 96C48 90 42 84 42 75C42 63 52 57 70 57H143V33Z"
+    fill="none"
+    stroke="#f8fafc"
+    stroke-linejoin="round"
+    stroke-width="11"
+  />
+  <path
+    d="M37 147H111C130 147 142 137 144 121"
+    fill="none"
+    stroke="#f8fafc"
+    stroke-linecap="square"
+    stroke-linejoin="round"
+    stroke-width="11"
+  />
+</svg>
