@@ -51,6 +51,10 @@ const copy: LandingCopy = {
     "3 ausgestellte Rechnungen pro Monat kostenlos",
   ],
   preview: {
+    sectionEyebrow: "Rechnungsausgabe",
+    sectionTitle: "Versenden Sie Rechnungen, die professionell aussehen und direkt zahlbar sind.",
+    sectionLead:
+      "Sierra Invoices erstellt eine klare Rechnungsseite und fuegt bei aktivierten QR-Angaben einen separaten Schweizer QR-Zahlteil hinzu.",
     title: "Beispiel Studio GmbH",
     subtitle: "Ihr Logo und Ihre Firmendaten stehen oben auf der Rechnung.",
     documentLabel: "Rechnung",

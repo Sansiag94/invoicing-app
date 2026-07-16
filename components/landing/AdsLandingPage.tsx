@@ -33,6 +33,9 @@ type LandingCopy = {
   switchHref: string;
   badges: string[];
   preview: {
+    sectionEyebrow: string;
+    sectionTitle: string;
+    sectionLead: string;
     title: string;
     subtitle: string;
     documentLabel: string;
@@ -322,9 +325,9 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
         `}
       </Script>
       <div className="relative left-1/2 w-screen -translate-x-1/2 bg-slate-50 text-slate-950">
-      <section className="min-h-[calc(100svh-2rem)] overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-950">
-        <div className="mx-auto grid min-h-[calc(100svh-2rem)] max-w-7xl gap-10 px-5 py-8 md:px-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-center lg:py-10">
-          <div className="max-w-2xl space-y-7">
+      <section className="overflow-hidden border-b border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] text-slate-950">
+        <div className="mx-auto flex min-h-[calc(100svh-10rem)] max-w-7xl items-center px-5 py-16 md:px-8 lg:py-20">
+          <div className="max-w-3xl space-y-7">
             <div className="flex flex-wrap items-center gap-3">
               <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-slate-600 shadow-sm">
                 {APP_NAME}
@@ -368,8 +371,6 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               ))}
             </div>
           </div>
-
-          <ProductPreview copy={copy.preview} />
         </div>
       </section>
 
@@ -381,6 +382,19 @@ export default function AdsLandingPage({ copy }: { copy: LandingCopy }) {
               <span className="text-lg font-semibold text-slate-950">{item.value}</span>
             </div>
           ))}
+        </div>
+      </section>
+
+      <section className="border-b border-slate-200 bg-slate-50">
+        <div className="mx-auto max-w-7xl px-5 py-16 md:px-8 lg:py-20">
+          <div className="mx-auto max-w-3xl text-center">
+            <SectionEyebrow>{copy.preview.sectionEyebrow}</SectionEyebrow>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight md:text-5xl">{copy.preview.sectionTitle}</h2>
+            <p className="mt-4 text-base leading-8 text-slate-600">{copy.preview.sectionLead}</p>
+          </div>
+          <div className="mt-10">
+            <ProductPreview copy={copy.preview} />
+          </div>
         </div>
       </section>
 

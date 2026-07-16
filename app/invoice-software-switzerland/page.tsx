@@ -51,6 +51,10 @@ const copy: LandingCopy = {
     "3 issued invoices per month free",
   ],
   preview: {
+    sectionEyebrow: "Invoice output",
+    sectionTitle: "Send invoices that look professional and are ready to pay.",
+    sectionLead:
+      "Sierra Invoices creates a clean invoice page and includes a separate Swiss QR payment slip when QR-bill details are enabled.",
     title: "Example Studio GmbH",
     subtitle: "Your logo and business details appear at the top.",
     documentLabel: "Invoice",
