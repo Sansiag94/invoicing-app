@@ -110,8 +110,8 @@ const workflowIcons = [UserPlus, FileText, Send, CheckCircle2];
 function SvgPin({ number, x, y }: { number: number; x: number; y: number }) {
   return (
     <g>
-      <circle cx={x} cy={y} r="12" fill="#059669" stroke="#ffffff" strokeWidth="3" />
-      <text x={x} y={y + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#ffffff">
+      <circle cx={x} cy={y} r="11" fill="#059669" stroke="#ffffff" strokeWidth="3" />
+      <text x={x} y={y + 4} textAnchor="middle" fontSize="10" fontWeight="700" fill="#ffffff">
         {number}
       </text>
     </g>
@@ -130,27 +130,18 @@ function InvoiceCanvas({ copy }: { copy: LandingCopy["preview"] }) {
     >
       <rect width="595" height="930" rx="14" fill="#ffffff" />
 
-      <SvgPin number={1} x={38} y={32} />
-      <SvgPin number={2} x={560} y={442} />
-      <SvgPin number={3} x={286} y={626} />
-      <SvgPin number={4} x={38} y={690} />
+      <SvgPin number={1} x={38} y={38} />
+      <SvgPin number={2} x={560} y={430} />
+      <SvgPin number={3} x={292} y={628} />
+      <SvgPin number={4} x={560} y={690} />
 
-      <rect x="55" y="45" width="64" height="64" rx="12" fill="#0f172a" />
-      <path
-        d="M104 65H78c-6 0-10 4-10 9 0 5 3 8 8 10l22 8c4 1 6 4 6 7s-3 6-7 6H70"
-        fill="none"
-        stroke="#f8fafc"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="5"
-      />
-      <path
-        d="M70 100h29c6 0 10-4 10-10 0-4-3-8-8-9l-22-8c-4-1-6-4-6-7s3-5 7-5h25"
-        fill="none"
-        stroke="#f8fafc"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth="5"
+      <image
+        href="/apple-touch-icon.svg"
+        x="55"
+        y="45"
+        width="64"
+        height="64"
+        preserveAspectRatio="xMidYMid meet"
       />
 
       <text x="55" y="142" fontSize="20" fontWeight="700" fill="#020617">{copy.title}</text>
