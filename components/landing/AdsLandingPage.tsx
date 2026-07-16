@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import Script from "next/script";
 import {
   ArrowRight,
@@ -111,24 +110,148 @@ const qrPattern = new Set([
   74, 75, 77, 78, 79, 80,
 ]);
 
-function FakeQrCode() {
+function SvgPin({ number, x, y }: { number: number; x: number; y: number }) {
   return (
-    <div className="grid h-24 w-24 shrink-0 grid-cols-9 gap-1 bg-white p-1.5">
-      {Array.from({ length: 81 }).map((_, index) => (
-        <span
-          key={index}
-          className={qrPattern.has(index) ? "rounded-[2px] bg-slate-950" : "rounded-[2px] bg-slate-100"}
-        />
-      ))}
-    </div>
+    <g>
+      <circle cx={x} cy={y} r="12" fill="#059669" stroke="#ffffff" strokeWidth="3" />
+      <text x={x} y={y + 4} textAnchor="middle" fontSize="11" fontWeight="700" fill="#ffffff">
+        {number}
+      </text>
+    </g>
   );
 }
 
-function Pin({ number, className }: { number: number; className: string }) {
+function SvgQrCode({ x, y, size }: { x: number; y: number; size: number }) {
+  const gap = 3;
+  const cell = (size - gap * 8) / 9;
+
   return (
-    <span className={`absolute z-10 flex h-6 w-6 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-[0.72rem] font-bold text-white shadow-md ${className}`}>
-      {number}
-    </span>
+    <g transform={`translate(${x} ${y})`}>
+      <rect width={size} height={size} fill="#ffffff" />
+      {Array.from({ length: 81 }).map((_, index) => {
+        const row = Math.floor(index / 9);
+        const col = index % 9;
+        return (
+          <rect
+            key={index}
+            x={col * (cell + gap)}
+            y={row * (cell + gap)}
+            width={cell}
+            height={cell}
+            rx="1"
+            fill={qrPattern.has(index) ? "#020617" : "#e2e8f0"}
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+function InvoiceCanvas({ copy }: { copy: LandingCopy["preview"] }) {
+  const rowY = [382, 427, 472];
+
+  return (
+    <svg
+      viewBox="0 0 595 930"
+      role="img"
+      aria-label={`${copy.documentLabel} ${copy.invoiceMeta} sample with QR payment slip`}
+      className="block h-auto w-full rounded-xl bg-white text-slate-950"
+    >
+      <rect width="595" height="930" rx="14" fill="#ffffff" />
+
+      <SvgPin number={1} x={38} y={32} />
+      <SvgPin number={2} x={560} y={382} />
+      <SvgPin number={3} x={286} y={620} />
+      <SvgPin number={4} x={38} y={690} />
+
+      <rect x="55" y="45" width="64" height="64" rx="12" fill="#0f172a" />
+      <path
+        d="M104 65H78c-6 0-10 4-10 9 0 5 3 8 8 10l22 8c4 1 6 4 6 7s-3 6-7 6H70"
+        fill="none"
+        stroke="#f8fafc"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="5"
+      />
+      <path
+        d="M70 100h29c6 0 10-4 10-10 0-4-3-8-8-9l-22-8c-4-1-6-4-6-7s3-5 7-5h25"
+        fill="none"
+        stroke="#f8fafc"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="5"
+      />
+
+      <text x="55" y="142" fontSize="20" fontWeight="700" fill="#020617">{copy.title}</text>
+      <text x="55" y="166" fontSize="14" fill="#334155">{copy.subtitle}</text>
+      <text x="55" y="188" fontSize="14" fill="#334155">Musterstrasse 10</text>
+      <text x="55" y="209" fontSize="14" fill="#334155">8001 Zurich, Switzerland</text>
+      <text x="55" y="230" fontSize="14" fill="#334155">hello@example.ch</text>
+      <text x="55" y="251" fontSize="14" fill="#334155">+41 44 000 00 00</text>
+
+      <text x="345" y="142" fontSize="20" fontWeight="700" fill="#020617">{copy.clientName}</text>
+      <text x="345" y="166" fontSize="14" fill="#334155">Beispielweg 8</text>
+      <text x="345" y="187" fontSize="14" fill="#334155">3000 Bern, Switzerland</text>
+
+      <text x="55" y="310" fontSize="28" fontWeight="800" fill="#020617">
+        {copy.documentLabel}: {copy.invoiceMeta}
+      </text>
+      <text x="55" y="335" fontSize="14" fill="#334155">30.06.2026</text>
+      <text x="55" y="356" fontSize="14" fill="#334155">{copy.dueLabel}: {copy.dueValue}</text>
+      <text x="55" y="377" fontSize="14" fill="#334155">{copy.subjectLabel}: {copy.subjectValue}</text>
+
+      <line x1="55" y1="415" x2="540" y2="415" stroke="#020617" strokeWidth="2" />
+      <text x="55" y="402" fontSize="12" fontWeight="700" fill="#334155">{copy.lineHeaders[0].toUpperCase()}</text>
+      <text x="103" y="402" fontSize="12" fontWeight="700" fill="#334155">{copy.lineHeaders[1].toUpperCase()}</text>
+      <text x="365" y="402" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[2].toUpperCase()}</text>
+      <text x="455" y="402" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[3].toUpperCase()}</text>
+      <text x="540" y="402" fontSize="12" fontWeight="700" textAnchor="end" fill="#334155">{copy.lineHeaders[4].toUpperCase()}</text>
+
+      {copy.rows.map((row, index) => (
+        <g key={row.position}>
+          <text x="76" y={rowY[index]} fontSize="14" textAnchor="middle" fill="#020617">{row.position}</text>
+          <text x="103" y={rowY[index]} fontSize="14" fill="#020617">{row.label}</text>
+          <text x="365" y={rowY[index]} fontSize="14" textAnchor="end" fill="#020617">{row.quantity}</text>
+          <text x="455" y={rowY[index]} fontSize="14" textAnchor="end" fill="#020617">{row.unitPrice}</text>
+          <text x="540" y={rowY[index]} fontSize="14" textAnchor="end" fill="#020617">{row.value}</text>
+          <line x1="55" y1={rowY[index] + 18} x2="540" y2={rowY[index] + 18} stroke="#e2e8f0" />
+        </g>
+      ))}
+
+      <line x1="320" y1="545" x2="540" y2="545" stroke="#cbd5e1" />
+      <text x="320" y="575" fontSize="15" fill="#334155">Subtotal</text>
+      <text x="540" y="575" fontSize="15" textAnchor="end" fill="#334155">{copy.totalValue}</text>
+      <text x="320" y="610" fontSize="28" fontWeight="800" fill="#020617">Total</text>
+      <text x="540" y="610" fontSize="24" fontWeight="800" textAnchor="end" fill="#020617">{copy.totalValue}</text>
+
+      <line x1="0" y1="665" x2="595" y2="665" stroke="#020617" strokeDasharray="3 3" />
+      <line x1="200" y1="680" x2="200" y2="880" stroke="#020617" strokeDasharray="3 3" />
+
+      <text x="35" y="695" fontSize="15" fontWeight="800" fill="#020617">{copy.receiptTitle}</text>
+      <text x="35" y="730" fontSize="10" fontWeight="800" fill="#020617">{copy.accountLabel}</text>
+      <text x="35" y="746" fontSize="10" fill="#020617">CH00 0000 0000 0000 0000 0</text>
+      <text x="35" y="762" fontSize="10" fill="#020617">{copy.title}</text>
+      <text x="35" y="778" fontSize="10" fill="#020617">8001 Zurich</text>
+      <text x="35" y="812" fontSize="10" fontWeight="800" fill="#020617">{copy.payableByLabel}</text>
+      <text x="35" y="828" fontSize="10" fill="#020617">{copy.clientName}</text>
+      <text x="35" y="844" fontSize="10" fill="#020617">3000 Bern</text>
+      <text x="35" y="875" fontSize="10" fontWeight="800" fill="#020617">CHF</text>
+      <text x="145" y="875" fontSize="10" fontWeight="800" textAnchor="end" fill="#020617">{copy.totalValue.replace("CHF ", "")}</text>
+
+      <text x="225" y="695" fontSize="15" fontWeight="800" fill="#020617">{copy.paymentPartTitle}</text>
+      <SvgQrCode x={225} y={720} size={112} />
+      <text x="360" y="730" fontSize="10" fontWeight="800" fill="#020617">{copy.accountLabel}</text>
+      <text x="360" y="746" fontSize="10" fill="#020617">CH00 0000 0000 0000 0000 0</text>
+      <text x="360" y="762" fontSize="10" fill="#020617">{copy.title}</text>
+      <text x="360" y="778" fontSize="10" fill="#020617">8001 Zurich</text>
+      <text x="360" y="812" fontSize="10" fontWeight="800" fill="#020617">{copy.payableByLabel}</text>
+      <text x="360" y="828" fontSize="10" fill="#020617">{copy.clientName}</text>
+      <text x="360" y="844" fontSize="10" fill="#020617">3000 Bern</text>
+      <text x="360" y="875" fontSize="10" fontWeight="800" fill="#020617">CHF</text>
+      <text x="438" y="875" fontSize="10" fontWeight="800" fill="#020617">{copy.totalValue.replace("CHF ", "")}</text>
+      <text x="360" y="898" fontSize="10" fontWeight="800" fill="#020617">{copy.payableToLabel}</text>
+      <text x="360" y="914" fontSize="10" fill="#020617">{copy.paymentReference}</text>
+    </svg>
   );
 }
 
@@ -142,134 +265,8 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
 
   return (
     <div className="mx-auto grid w-full max-w-[52rem] gap-4 xl:grid-cols-[minmax(0,37rem)_14rem] xl:items-center">
-      <div className="overflow-x-auto rounded-[1.5rem] border border-slate-200 bg-slate-100 p-3 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
-        <div className="relative w-[34rem] overflow-hidden rounded-xl bg-white text-slate-950">
-          <div className="relative min-h-[39rem] p-8">
-            <Pin number={1} className="left-5 top-5" />
-            <Pin number={2} className="right-5 top-[23rem]" />
-
-            <div className="grid grid-cols-2 gap-10">
-              <div>
-                <Image
-                  src="/apple-touch-icon.svg"
-                  alt=""
-                  width={64}
-                  height={64}
-                  className="h-16 w-16 rounded-none"
-                />
-                <p className="mt-3 text-lg font-bold leading-tight">{copy.title}</p>
-                <p className="mt-1 text-sm leading-5 text-slate-600">{copy.subtitle}</p>
-                <p className="text-sm leading-5 text-slate-700">Musterstrasse 10<br />8001 Zurich, Switzerland</p>
-                <p className="mt-1 text-sm leading-5 text-slate-700">hello@example.ch<br />+41 44 000 00 00</p>
-              </div>
-              <div className="pt-20">
-                <p className="text-lg font-bold leading-tight">{copy.clientName}</p>
-                <p className="mt-1 text-sm leading-5 text-slate-700">Beispielweg 8<br />3000 Bern, Switzerland</p>
-              </div>
-            </div>
-
-            <div className="mt-10">
-              <h3 className="text-2xl font-bold tracking-tight">
-                {copy.documentLabel}: {copy.invoiceMeta}
-              </h3>
-              <p className="mt-1 text-sm leading-5 text-slate-600">30.06.2026</p>
-              <p className="text-sm leading-5 text-slate-600">{copy.dueLabel}: {copy.dueValue}</p>
-              <p className="text-sm leading-5 text-slate-600">{copy.subjectLabel}: {copy.subjectValue}</p>
-            </div>
-
-            <div className="mt-4 overflow-hidden text-sm">
-              <div className="grid grid-cols-[3rem_minmax(0,1fr)_4rem_5.5rem_5.5rem] border-b-2 border-slate-950 py-2 text-xs font-bold uppercase text-slate-600">
-                {copy.lineHeaders.map((header, index) => (
-                  <span key={header} className={index === 0 || index === 1 ? "" : "text-right"}>
-                    {header}
-                  </span>
-                ))}
-              </div>
-              {copy.rows.map((row) => (
-                <div key={row.position} className="grid grid-cols-[3rem_minmax(0,1fr)_4rem_5.5rem_5.5rem] border-b border-slate-200 py-3">
-                  <span className="text-center text-slate-700">{row.position}</span>
-                  <span>{row.label}</span>
-                  <span className="text-right">{row.quantity}</span>
-                  <span className="text-right">{row.unitPrice}</span>
-                  <span className="text-right">{row.value}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="relative ml-auto mt-8 w-full max-w-[18rem] border-t border-slate-300 pt-3">
-              <Pin number={3} className="-left-3 top-9" />
-              <div className="flex justify-between text-sm text-slate-600">
-                <span>Subtotal</span>
-                <span>{copy.totalValue}</span>
-              </div>
-              <div className="mt-1 flex justify-between text-xl font-bold">
-                <span>Total</span>
-                <span>{copy.totalValue}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="relative border-t border-dashed border-slate-950 bg-white p-4 text-[0.68rem]">
-            <Pin number={4} className="left-5 top-4" />
-            <div className="grid grid-cols-[0.74fr_1px_1.26fr] gap-4">
-              <div>
-                <p className="text-sm font-bold">{copy.receiptTitle}</p>
-                <dl className="mt-4 space-y-3 leading-4">
-                  <div>
-                    <dt className="font-bold">{copy.accountLabel}</dt>
-                    <dd>CH00 0000 0000 0000 0000 0<br />{copy.title}<br />8001 Zurich</dd>
-                  </div>
-                  <div>
-                    <dt className="font-bold">{copy.payableByLabel}</dt>
-                    <dd>{copy.clientName}<br />3000 Bern</dd>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 pt-8">
-                    <div>
-                      <dt className="font-bold">CHF</dt>
-                    </div>
-                    <div>
-                      <dt className="font-bold">{copy.totalValue.replace("CHF ", "")}</dt>
-                    </div>
-                  </div>
-                </dl>
-              </div>
-
-              <div className="border-l border-dashed border-slate-950" />
-
-              <div>
-                <p className="text-sm font-bold">{copy.paymentPartTitle}</p>
-                <div className="mt-4 grid grid-cols-[6rem_minmax(0,1fr)] gap-4">
-                  <FakeQrCode />
-                  <dl className="space-y-3 leading-4">
-                    <div>
-                      <dt className="font-bold">{copy.accountLabel}</dt>
-                      <dd>CH00 0000 0000 0000 0000 0<br />{copy.title}<br />8001 Zurich</dd>
-                    </div>
-                    <div>
-                      <dt className="font-bold">{copy.payableByLabel}</dt>
-                      <dd>{copy.clientName}<br />3000 Bern</dd>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <dt className="font-bold">CHF</dt>
-                      </div>
-                      <div>
-                        <dt className="font-bold">{copy.totalValue.replace("CHF ", "")}</dt>
-                      </div>
-                    </div>
-                  </dl>
-                </div>
-                <div className="mt-3 grid grid-cols-[6rem_minmax(0,1fr)] gap-4">
-                  <span />
-                  <div>
-                    <p className="font-bold">{copy.payableToLabel}</p>
-                    <p className="mt-1 leading-4">{copy.paymentReference}</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="rounded-[1.5rem] border border-slate-200 bg-slate-100 p-3 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
+        <InvoiceCanvas copy={copy} />
       </div>
 
       <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
