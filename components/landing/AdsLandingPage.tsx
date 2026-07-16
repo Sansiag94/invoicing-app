@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import Script from "next/script";
 import {
   ArrowRight,
@@ -52,14 +53,16 @@ type LandingCopy = {
     payableToLabel: string;
     payableByLabel: string;
     currencyLabel: string;
-    lineHeaders: [string, string, string];
+    subjectLabel: string;
+    subjectValue: string;
+    lineHeaders: [string, string, string, string, string];
     callouts: {
       logo: string;
       details: string;
       qr: string;
       reference: string;
     };
-    rows: Array<{ label: string; client: string; value: string; status: string }>;
+    rows: Array<{ position: string; label: string; quantity: string; unitPrice: string; value: string }>;
   };
   proof: Array<{ label: string; value: string }>;
   sections: {
@@ -110,7 +113,7 @@ const qrPattern = new Set([
 
 function FakeQrCode() {
   return (
-    <div className="grid h-24 w-24 shrink-0 grid-cols-9 gap-1 border border-slate-300 bg-white p-2">
+    <div className="grid h-24 w-24 shrink-0 grid-cols-9 gap-1 bg-white p-1.5">
       {Array.from({ length: 81 }).map((_, index) => (
         <span
           key={index}
@@ -138,110 +141,131 @@ function InvoicePreview({ copy }: { copy: LandingCopy["preview"] }) {
   ];
 
   return (
-    <div className="mx-auto grid w-full max-w-[48rem] gap-4 xl:grid-cols-[minmax(0,34rem)_14rem] xl:items-center">
+    <div className="mx-auto grid w-full max-w-[52rem] gap-4 xl:grid-cols-[minmax(0,37rem)_14rem] xl:items-center">
       <div className="rounded-[1.5rem] border border-slate-200 bg-slate-100 p-3 shadow-[0_24px_80px_rgba(15,23,42,0.14)]">
-        <div className="relative overflow-hidden rounded-xl bg-white p-5 text-slate-950 sm:p-6">
-          <Pin number={1} className="left-4 top-4" />
-          <Pin number={2} className="right-4 top-[17.5rem]" />
-          <Pin number={3} className="left-4 bottom-24" />
-          <Pin number={4} className="right-4 bottom-8" />
+        <div className="relative overflow-hidden rounded-xl bg-white text-slate-950">
+          <div className="relative min-h-[39rem] p-6 sm:p-8">
+            <Pin number={1} className="left-5 top-5" />
+            <Pin number={2} className="right-5 top-[23rem]" />
 
-          <div className="flex items-start justify-between gap-5 border-b border-slate-200 pb-5">
-            <div className="flex gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-xs font-bold text-white">
-                SI
-              </div>
+            <div className="grid gap-10 sm:grid-cols-2">
               <div>
-                <p className="text-sm font-semibold">{copy.title}</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500">{copy.subtitle}</p>
+                <Image
+                  src="/apple-touch-icon.svg"
+                  alt=""
+                  width={64}
+                  height={64}
+                  className="h-16 w-16 rounded-none"
+                />
+                <p className="mt-3 text-lg font-bold leading-tight">{copy.title}</p>
+                <p className="mt-1 text-sm leading-5 text-slate-600">{copy.subtitle}</p>
+                <p className="text-sm leading-5 text-slate-700">Hofwiesenstrasse 29<br />8136 Gattikon, Switzerland</p>
+                <p className="mt-1 text-sm leading-5 text-slate-700">hello@example.ch<br />+41 76 231 02 35</p>
+              </div>
+              <div className="pt-12 sm:pt-20">
+                <p className="text-lg font-bold leading-tight">{copy.clientName}</p>
+                <p className="mt-1 text-sm leading-5 text-slate-700">Blickensdorferstrasse 21A<br />6340 Baar, Switzerland</p>
               </div>
             </div>
-            <div className="text-right text-xs leading-5 text-slate-500">
-              <p className="font-semibold uppercase tracking-[0.16em] text-slate-400">{copy.documentLabel}</p>
-              <p className="font-semibold text-slate-950">{copy.invoiceMeta}</p>
-            </div>
-          </div>
 
-          <div className="grid gap-4 py-5 sm:grid-cols-[1fr_auto]">
-            <div>
-              <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-400">
-                {copy.clientLabel}
-              </p>
-              <p className="mt-2 text-sm font-semibold">{copy.clientName}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500">Musterstrasse 12<br />8001 Zurich</p>
+            <div className="mt-10">
+              <h3 className="text-2xl font-bold tracking-tight">
+                {copy.documentLabel}: {copy.invoiceMeta}
+              </h3>
+              <p className="mt-1 text-sm leading-5 text-slate-600">30.06.2026</p>
+              <p className="text-sm leading-5 text-slate-600">{copy.dueLabel}: {copy.dueValue}</p>
+              <p className="text-sm leading-5 text-slate-600">{copy.subjectLabel}: {copy.subjectValue}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:min-w-44">
-              <p className="text-xs text-slate-500">{copy.dueLabel}</p>
-              <p className="mt-1 text-sm font-semibold">{copy.dueValue}</p>
-              <p className="mt-4 text-xs text-slate-500">{copy.totalLabel}</p>
-              <p className="mt-1 text-2xl font-semibold">{copy.totalValue}</p>
-            </div>
-          </div>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200">
-            <div className="grid grid-cols-[1fr_3.5rem_5rem] bg-slate-50 px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-slate-500">
-              <span>{copy.lineHeaders[0]}</span>
-              <span className="text-right">{copy.lineHeaders[1]}</span>
-              <span className="text-right">{copy.lineHeaders[2]}</span>
-            </div>
-            {copy.rows.map((row) => (
-              <div key={row.label} className="grid grid-cols-[1fr_3.5rem_5rem] border-t border-slate-200 px-3 py-3 text-sm">
-                <div>
-                  <p className="font-semibold">{row.label}</p>
-                  <p className="text-xs text-slate-500">{row.client}</p>
+            <div className="mt-4 overflow-hidden text-xs sm:text-sm">
+              <div className="grid grid-cols-[2rem_minmax(0,1fr)_3rem_4rem_4rem] border-b-2 border-slate-950 py-2 text-[0.62rem] font-bold uppercase text-slate-600 sm:grid-cols-[3rem_minmax(0,1fr)_4rem_5.5rem_5.5rem] sm:text-xs">
+                {copy.lineHeaders.map((header, index) => (
+                  <span key={header} className={index === 0 || index === 1 ? "" : "text-right"}>
+                    {header}
+                  </span>
+                ))}
+              </div>
+              {copy.rows.map((row) => (
+                <div key={row.position} className="grid grid-cols-[2rem_minmax(0,1fr)_3rem_4rem_4rem] border-b border-slate-200 py-3 sm:grid-cols-[3rem_minmax(0,1fr)_4rem_5.5rem_5.5rem]">
+                  <span className="text-center text-slate-700">{row.position}</span>
+                  <span>{row.label}</span>
+                  <span className="text-right">{row.quantity}</span>
+                  <span className="text-right">{row.unitPrice}</span>
+                  <span className="text-right">{row.value}</span>
                 </div>
-                <span className="text-right text-slate-600">{row.status}</span>
-                <span className="text-right font-semibold">{row.value}</span>
+              ))}
+            </div>
+
+            <div className="relative ml-auto mt-8 w-full max-w-[18rem] border-t border-slate-300 pt-3">
+              <Pin number={3} className="-left-3 top-9" />
+              <div className="flex justify-between text-sm text-slate-600">
+                <span>Subtotal</span>
+                <span>{copy.totalValue}</span>
               </div>
-            ))}
+              <div className="mt-1 flex justify-between text-xl font-bold">
+                <span>Total</span>
+                <span>{copy.totalValue}</span>
+              </div>
+            </div>
           </div>
 
-          <div className="mt-5 border-t border-dashed border-slate-300 pt-4">
-            <div className="grid overflow-hidden border border-slate-300 text-xs sm:grid-cols-[0.66fr_1.34fr]">
-              <div className="border-b border-slate-300 p-3 sm:border-b-0 sm:border-r">
-                <p className="font-semibold">{copy.receiptTitle}</p>
-                <dl className="mt-3 space-y-2 leading-5 text-slate-600">
+          <div className="relative border-t border-dashed border-slate-950 bg-white p-4 text-[0.68rem]">
+            <Pin number={4} className="left-5 top-4" />
+            <div className="grid gap-4 sm:grid-cols-[0.74fr_1px_1.26fr]">
+              <div>
+                <p className="text-sm font-bold">{copy.receiptTitle}</p>
+                <dl className="mt-4 space-y-3 leading-4">
                   <div>
-                    <dt className="font-semibold text-slate-950">{copy.accountLabel}</dt>
-                    <dd>CH93 0076 2011 6238 5295 7</dd>
+                    <dt className="font-bold">{copy.accountLabel}</dt>
+                    <dd>CH80 8080 8009 5469 1501 0<br />{copy.title}<br />8136 Gattikon</dd>
                   </div>
                   <div>
-                    <dt className="font-semibold text-slate-950">{copy.payableToLabel}</dt>
-                    <dd>{copy.title}</dd>
+                    <dt className="font-bold">{copy.payableByLabel}</dt>
+                    <dd>{copy.clientName}<br />6340 Baar</dd>
                   </div>
-                  <div>
-                    <dt className="font-semibold text-slate-950">{copy.currencyLabel}</dt>
-                    <dd>{copy.totalValue}</dd>
+                  <div className="grid grid-cols-2 gap-2 pt-8">
+                    <div>
+                      <dt className="font-bold">CHF</dt>
+                    </div>
+                    <div>
+                      <dt className="font-bold">{copy.totalValue.replace("CHF ", "")}</dt>
+                    </div>
                   </div>
                 </dl>
               </div>
 
-              <div className="p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="font-semibold">{copy.paymentPartTitle}</p>
-                  <p className="text-right font-semibold text-slate-500">{copy.qrTitle}</p>
-                </div>
-                <div className="mt-3 flex gap-4">
+              <div className="hidden border-l border-dashed border-slate-950 sm:block" />
+
+              <div>
+                <p className="text-sm font-bold">{copy.paymentPartTitle}</p>
+                <div className="mt-4 grid gap-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
                   <FakeQrCode />
-                  <div className="min-w-0 space-y-2 leading-5 text-slate-600">
+                  <dl className="space-y-3 leading-4">
                     <div>
-                      <p className="font-semibold text-slate-950">{copy.accountLabel}</p>
-                      <p>CH93 0076 2011 6238 5295 7</p>
+                      <dt className="font-bold">{copy.accountLabel}</dt>
+                      <dd>CH80 8080 8009 5469 1501 0<br />{copy.title}<br />8136 Gattikon</dd>
                     </div>
                     <div>
-                      <p className="font-semibold text-slate-950">{copy.payableByLabel}</p>
-                      <p>{copy.clientName}</p>
+                      <dt className="font-bold">{copy.payableByLabel}</dt>
+                      <dd>{copy.clientName}<br />6340 Baar</dd>
                     </div>
-                    <div>
-                      <p className="font-semibold text-slate-950">{copy.currencyLabel}</p>
-                      <p>{copy.totalValue}</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <dt className="font-bold">CHF</dt>
+                      </div>
+                      <div>
+                        <dt className="font-bold">{copy.totalValue.replace("CHF ", "")}</dt>
+                      </div>
                     </div>
+                  </dl>
+                </div>
+                <div className="mt-3 grid gap-4 sm:grid-cols-[6rem_minmax(0,1fr)]">
+                  <span />
+                  <div>
+                    <p className="font-bold">{copy.payableToLabel}</p>
+                    <p className="mt-1 leading-4">{copy.paymentReference}</p>
                   </div>
                 </div>
-                <p className="mt-3 truncate rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-900">
-                  {copy.paymentReference}
-                </p>
-                <p className="mt-2 text-[0.68rem] leading-4 text-slate-500">{copy.qrText}</p>
               </div>
             </div>
           </div>
