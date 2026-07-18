@@ -137,7 +137,7 @@ function InvoiceCanvas({ copy }: { copy: LandingCopy["preview"] }) {
       <SvgPin number={4} x={560} y={690} />
 
       <image
-        href="/sierra-services-logo.svg"
+        href="/sierra-services-logo.jpg"
         x="55"
         y="45"
         width="64"
