@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { getAuthenticatedUser, isAuthenticationError } from "@/lib/auth";
 import { ensureBusiness } from "@/lib/ensureBusiness";
 import { markOverdueInvoicesForBusiness } from "@/lib/invoiceStatus";
+import { getOutstandingInvoiceAmount } from "@/lib/payments";
 
 function getMonthRange(today: Date): { startOfMonth: Date; startOfNextMonth: Date } {
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
@@ -29,8 +30,7 @@ export async function GET(request: Request) {
       expensesThisMonthAggregate,
       totalRevenueAggregate,
       totalExpensesAggregate,
-      prospectRevenueAggregate,
-      overdueAmountAggregate,
+      openInvoiceRows,
       openInvoices,
       unpaidInvoices,
       paidInvoices,
@@ -82,21 +82,23 @@ export async function GET(request: Request) {
         },
         _sum: { amount: true },
       }),
-      prisma.invoice.aggregate({
+      prisma.invoice.findMany({
         where: {
           businessId: business.id,
           status: {
             in: ["draft", "sent", "overdue"],
           },
         },
-        _sum: { totalAmount: true },
-      }),
-      prisma.invoice.aggregate({
-        where: {
-          businessId: business.id,
-          status: "overdue",
+        select: {
+          status: true,
+          totalAmount: true,
+          payments: {
+            select: {
+              amount: true,
+              status: true,
+            },
+          },
         },
-        _sum: { totalAmount: true },
       }),
       prisma.invoice.count({
         where: {
@@ -188,6 +190,13 @@ export async function GET(request: Request) {
         invoice.client.contactName?.trim() ||
         invoice.client.email,
     }));
+    const prospectRevenue = openInvoiceRows.reduce(
+      (sum, invoice) => sum + getOutstandingInvoiceAmount(invoice),
+      0
+    );
+    const overdueAmount = openInvoiceRows
+      .filter((invoice) => invoice.status === "overdue")
+      .reduce((sum, invoice) => sum + getOutstandingInvoiceAmount(invoice), 0);
 
     return NextResponse.json({
       currency: business.currency,
@@ -199,8 +208,8 @@ export async function GET(request: Request) {
       totalExpenses: totalExpensesAggregate._sum.amount ?? 0,
       totalProfit:
         (totalRevenueAggregate._sum.amount ?? 0) - (totalExpensesAggregate._sum.amount ?? 0),
-      prospectRevenue: prospectRevenueAggregate._sum.totalAmount ?? 0,
-      overdueAmount: overdueAmountAggregate._sum.totalAmount ?? 0,
+      prospectRevenue,
+      overdueAmount,
       openInvoices,
       unpaidInvoices,
       paidInvoices,

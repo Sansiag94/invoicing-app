@@ -177,6 +177,8 @@ model Payment {
   currency  String
   status    String
   reference String?
+  note      String?
+  paidAt    DateTime?
   createdAt DateTime        @default(now())
   invoice   Invoice         @relation("InvoicePayments", fields: [invoiceId], references: [id], onDelete: Cascade)
 
@@ -311,11 +313,17 @@ enum InvoiceStatus {
 enum PaymentProvider {
   stripe
   bank_transfer
+  twint
+  cash
+  revolut
+  other
 }
 
 enum InvoiceReminderType {
   before_due_3_days
   after_due_7_days
+  after_due_14_days
+  after_due_30_days
 }
 
 enum UnbilledWorkStatus {

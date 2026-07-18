@@ -11,6 +11,7 @@ import {
   isDraftInvoiceNumber,
 } from "@/lib/invoice";
 import { getInvoiceVatConfigurationError } from "@/lib/vat";
+import { getSettledPaymentAmount } from "@/lib/payments";
 
 type UpdateInvoiceStatusBody = {
   status?: unknown;
@@ -62,6 +63,7 @@ export async function PATCH(
             provider: true,
             status: true,
             reference: true,
+            amount: true,
           },
         },
         lineItems: {
@@ -130,16 +132,18 @@ export async function PATCH(
           (payment) =>
             payment.provider === "bank_transfer" && payment.reference === "manual-status"
         );
+        const remainingAmount = Math.max(0, invoice.totalAmount - getSettledPaymentAmount(invoice.payments));
 
-        if (!hasManualPayment) {
+        if (!hasManualPayment && remainingAmount > 0.005) {
           await tx.payment.create({
             data: {
               invoiceId: invoice.id,
               provider: "bank_transfer",
-              amount: invoice.totalAmount,
+              amount: remainingAmount,
               currency: invoice.currency,
               status: "manual_paid",
               reference: "manual-status",
+              paidAt: new Date(),
             },
           });
         }

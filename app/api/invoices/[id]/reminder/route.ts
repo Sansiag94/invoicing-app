@@ -13,6 +13,7 @@ import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business
 import { calculateInvoiceTotals } from "@/lib/invoice";
 import { isCollectibleInvoiceStatus } from "@/lib/invoiceStatus";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
+import { getOutstandingInvoiceAmount } from "@/lib/payments";
 import {
   assertRateLimit,
   buildRateLimitIdentifier,
@@ -69,6 +70,12 @@ export async function POST(
         },
         business: true,
         client: true,
+        payments: {
+          select: {
+            amount: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -111,6 +118,14 @@ export async function POST(
     const recipientName =
       invoice.client.contactName || invoice.client.companyName || invoice.client.email;
     const computedTotals = calculateInvoiceTotals(invoice.lineItems, invoice);
+    const amountDue = getOutstandingInvoiceAmount({
+      status: invoice.status,
+      totalAmount: computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount,
+      payments: invoice.payments,
+    });
+    if (amountDue <= 0.005) {
+      return apiError("This invoice has no remaining amount due", 400);
+    }
     const emailBusinessName = getInvoiceSenderName({
       ...invoice.business,
       ...senderPreferences,
@@ -122,7 +137,7 @@ export async function POST(
       businessName: emailBusinessName,
       recipientName,
       invoiceNumber: invoice.invoiceNumber,
-      totalAmount: computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount,
+      totalAmount: amountDue,
       currency: invoice.currency,
       invoiceLink,
       dueDate: invoice.dueDate,

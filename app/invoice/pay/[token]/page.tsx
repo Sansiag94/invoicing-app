@@ -155,9 +155,10 @@ export default function PublicInvoicePage() {
   const subtotal = totals.subtotal;
   const taxAmount = totals.taxAmount;
   const totalAmountDue = totals.totalAmount;
-  const invoiceAmountDue = invoice ? getInvoiceAmountDue(invoice.status, totalAmountDue) : 0;
-  const paidAmount = invoice?.status === "paid" ? totalAmountDue : 0;
-  const canCollectPayment = invoice?.status !== "paid" && invoice?.status !== "cancelled";
+  const invoiceAmountDue = invoice ? invoice.amountDue ?? getInvoiceAmountDue(invoice.status, totalAmountDue) : 0;
+  const paidAmount = invoice?.paidAmount ?? (invoice?.status === "paid" ? totalAmountDue : 0);
+  const canCollectPayment =
+    invoice?.status !== "paid" && invoice?.status !== "cancelled" && invoiceAmountDue > 0.005;
   const shouldRenderQRSection = canCollectPayment && Boolean(invoice?.qrBill);
   const cardPaymentAvailable = Boolean(invoice?.cardPaymentAvailable);
   const shouldShareQrOnFirstPage = shouldRenderQRSection && lineItems.length <= MAX_ROWS_WITH_QR_ON_FIRST_PAGE;
@@ -260,13 +261,24 @@ export default function PublicInvoicePage() {
     { label: strings.accountHolder, value: senderName },
     invoice.business.bankName ? { label: strings.bank, value: invoice.business.bankName } : null,
     invoice.business.iban ? { label: strings.iban, value: formatIban(invoice.business.iban) } : null,
-    { label: strings.amount, value: `${invoice.currency} ${formatInvoiceMoney(totalAmountDue, invoiceLanguage)}` },
+    { label: strings.amount, value: `${invoice.currency} ${formatInvoiceMoney(invoiceAmountDue, invoiceLanguage)}` },
     paymentReference ? { label: strings.referenceMessage, value: paymentReference } : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row?.value));
   const paymentNoteLines = [
     invoice.status === "paid" ? strings.invoiceAlreadyPaid : invoice.paymentNote?.trim() || null,
   ].filter(Boolean);
   const effectivePaymentNote = paymentNoteLines.length > 0 ? paymentNoteLines.join("\n") : null;
+  const approximateConversions = invoice.approximateConversions ?? [];
+  const conversionCopy =
+    invoiceLanguage === "de"
+      ? {
+          title: "Ungefahre Umrechnung",
+          body: "Die Rechnung bleibt in CHF zahlbar. Bank oder Zahlungsdienst konnen andere Kurse und Gebuhren verwenden.",
+        }
+      : {
+          title: "Approximate currency guide",
+          body: "The invoice remains payable in CHF. Your bank or payment app may use a different rate and fees.",
+        };
 
   const qrBillSection = (
     <section className="qr-bill pt-3">
@@ -313,7 +325,7 @@ export default function PublicInvoicePage() {
               </div>
               <div>
                 <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.amount}</p>
-                <p className="text-[10px] leading-[1.16]">{formatInvoiceMoney(totalAmountDue, invoiceLanguage)}</p>
+                <p className="text-[10px] leading-[1.16]">{formatInvoiceMoney(invoiceAmountDue, invoiceLanguage)}</p>
               </div>
             </div>
             <div className="flex h-[7mm] items-end justify-end">
@@ -368,7 +380,7 @@ export default function PublicInvoicePage() {
                   </div>
                   <div>
                     <p className="mb-[0.8mm] text-[8px] font-semibold">{strings.amount}</p>
-                    <p className="text-[10px] leading-[1.16]">{formatInvoiceMoney(totalAmountDue, invoiceLanguage)}</p>
+                    <p className="text-[10px] leading-[1.16]">{formatInvoiceMoney(invoiceAmountDue, invoiceLanguage)}</p>
                   </div>
                 </div>
               </div>
@@ -604,6 +616,22 @@ export default function PublicInvoicePage() {
       {!cardPaymentAvailable && canCollectPayment ? (
         <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 print:hidden">
           {strings.onlineCardPaymentUnavailable}
+        </div>
+      ) : null}
+      {approximateConversions.length > 0 && invoiceAmountDue > 0 ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 print:hidden">
+          <p className="font-semibold">{conversionCopy.title}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {approximateConversions.map((conversion) => (
+              <span
+                key={conversion.currency}
+                className="rounded-full border border-emerald-200 bg-white px-3 py-1 font-semibold"
+              >
+                {conversion.currency} {formatInvoiceMoney(conversion.amount, invoiceLanguage)}
+              </span>
+            ))}
+          </div>
+          <p className="mt-2 text-xs leading-5 text-emerald-800">{conversionCopy.body}</p>
         </div>
       ) : null}
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, BellRing, CheckCircle2, CircleOff, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Banknote, BellRing, CheckCircle2, CircleOff, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
 import { arrayMove } from "@/lib/arrayMove";
@@ -16,8 +16,8 @@ import {
   SWISS_VAT_RATES,
 } from "@/lib/vat";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
-import { getDefaultDueDate, toDateInputValue } from "@/lib/invoiceDates";
-import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
+import { getDefaultDueDate, getTodayDateInputValue, toDateInputValue } from "@/lib/invoiceDates";
+import { getSettledPaymentAmount } from "@/lib/payments";
 import ServiceDescriptionInput from "@/components/invoices/ServiceDescriptionInput";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,8 @@ function formatEventLabel(type: string): string {
       return "Cancelled";
     case "payment_review":
       return "Payment review";
+    case "payment_recorded":
+      return "Payment recorded";
     case "reopened":
       return "Reopened";
     case "duplicated":
@@ -89,6 +91,16 @@ function formatEventLabel(type: string): string {
     default:
       return type;
   }
+}
+
+function formatPaymentProvider(provider: string, reference: string | null): string {
+  if (provider === "stripe") return "Paid via Stripe";
+  if (reference === "manual-status") return "Marked paid manually";
+  if (provider === "twint") return "TWINT payment";
+  if (provider === "cash") return "Cash payment";
+  if (provider === "revolut") return "Revolut payment";
+  if (provider === "other") return "Other payment";
+  return "Bank transfer payment";
 }
 
 export default function InvoiceDetailPage() {
@@ -112,9 +124,11 @@ export default function InvoiceDetailPage() {
   const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
+  const [showRecordPaymentDialog, setShowRecordPaymentDialog] = useState(false);
   const [billingLimitDetails, setBillingLimitDetails] = useState<BillingLimitDetails | null>(null);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
   const { toast } = useToast();
 
   const [issueDate, setIssueDate] = useState("");
@@ -125,6 +139,10 @@ export default function InvoiceDetailPage() {
   const [notes, setNotes] = useState("");
   const [saveNotesAsClientDefault, setSaveNotesAsClientDefault] = useState(false);
   const [paymentNote, setPaymentNote] = useState("");
+  const [recordPaymentAmount, setRecordPaymentAmount] = useState("");
+  const [recordPaymentProvider, setRecordPaymentProvider] = useState("bank_transfer");
+  const [recordPaymentPaidAt, setRecordPaymentPaidAt] = useState(getTodayDateInputValue());
+  const [recordPaymentNote, setRecordPaymentNote] = useState("");
   const [lineItems, setLineItems] = useState<LineItemData[]>([]);
   const [portfolioItems, setPortfolioItems] = useState<PortfolioItemRecord[]>([]);
   const [draggedLineItemIndex, setDraggedLineItemIndex] = useState<number | null>(null);
@@ -554,6 +572,68 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const openRecordPaymentDialog = () => {
+    if (!invoice) {
+      return;
+    }
+
+    const remainingAmount =
+      invoice.status === "paid" || invoice.status === "cancelled"
+        ? 0
+        : Math.max(0, invoice.totalAmount - getSettledPaymentAmount(invoice.payments));
+    setRecordPaymentAmount(remainingAmount > 0 ? remainingAmount.toFixed(2) : "");
+    setRecordPaymentProvider("bank_transfer");
+    setRecordPaymentPaidAt(getTodayDateInputValue());
+    setRecordPaymentNote("");
+    setShowRecordPaymentDialog(true);
+  };
+
+  const handleRecordPayment = async () => {
+    if (!invoice || isRecordingPayment) {
+      return;
+    }
+
+    try {
+      setIsRecordingPayment(true);
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/payments`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: recordPaymentAmount,
+          provider: recordPaymentProvider,
+          paidAt: recordPaymentPaidAt,
+          note: recordPaymentNote,
+        }),
+      });
+      const result = (await response.json()) as InvoiceDetails & { error?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Failed to record payment",
+          description: result?.error ?? "Failed to record payment",
+          variant: "error",
+        });
+        return;
+      }
+
+      setInvoice(result);
+      loadInvoiceIntoForm(result);
+      setShowRecordPaymentDialog(false);
+      setSuccessMessage(result.status === "paid" ? "Payment recorded. Invoice is fully paid." : "Partial payment recorded.");
+    } catch (error) {
+      console.error("Error recording payment:", error);
+      toast({
+        title: "Failed to record payment",
+        description: "Failed to record payment",
+        variant: "error",
+      });
+    } finally {
+      setIsRecordingPayment(false);
+    }
+  };
+
   const handleAddLineItem = () => {
     setLineItems((current) => [
       ...current,
@@ -835,6 +915,18 @@ export default function InvoiceDetailPage() {
     );
   }
 
+  const balanceTotalAmount = isEditing ? editedTotals.totalAmount : invoice.totalAmount;
+  const settledPaymentAmount = getSettledPaymentAmount(invoice.payments);
+  const paidAmount =
+    invoice.status === "paid"
+      ? Math.max(settledPaymentAmount, balanceTotalAmount)
+      : settledPaymentAmount;
+  const invoiceAmountDue =
+    invoice.status === "paid" || invoice.status === "cancelled"
+      ? 0
+      : Math.max(0, balanceTotalAmount - settledPaymentAmount);
+  const hasPartialPayment = invoiceAmountDue > 0.005 && settledPaymentAmount > 0.005;
+
   const timelineSteps = [
     {
       label: "Created",
@@ -852,12 +944,14 @@ export default function InvoiceDetailPage() {
       active: invoice.status === "overdue" || invoice.status === "paid",
     },
     {
-      label: invoice.status === "cancelled" ? "Cancelled" : "Paid",
+      label: invoice.status === "cancelled" ? "Cancelled" : hasPartialPayment ? "Partially paid" : "Paid",
       description:
         invoice.status === "cancelled"
           ? "No payment due"
           : invoice.status === "paid"
           ? "Payment completed"
+          : hasPartialPayment
+            ? `${invoice.currency} ${formatMoney(invoiceAmountDue)} still due`
           : invoice.status === "overdue"
             ? "Still awaiting payment"
             : "Awaiting payment",
@@ -866,10 +960,6 @@ export default function InvoiceDetailPage() {
     },
   ];
   const latestViewedEvent = invoice.events.find((event) => event.type === "viewed") ?? null;
-  const invoiceAmountDue = getInvoiceAmountDue(
-    invoice.status,
-    isEditing ? editedTotals.totalAmount : invoice.totalAmount
-  );
 
   return (
     <div className="space-y-6">
@@ -934,15 +1024,28 @@ export default function InvoiceDetailPage() {
                 {isUpdatingStatus ? "Updating..." : "Reopen Invoice"}
               </Button>
             ) : (
-              <Button
-                variant="outline"
-                onClick={() => void handleManualStatusChange("paid")}
-                disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
-                className="w-full sm:w-auto"
-              >
-                <CheckCircle2 className="h-4 w-4" />
-                {isUpdatingStatus ? "Updating..." : "Mark Paid"}
-              </Button>
+              <>
+                {invoice.status === "sent" || invoice.status === "overdue" ? (
+                  <Button
+                    variant="outline"
+                    onClick={openRecordPaymentDialog}
+                    disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting || isRecordingPayment}
+                    className="w-full sm:w-auto"
+                  >
+                    <Banknote className="h-4 w-4" />
+                    Record Payment
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  onClick={() => void handleManualStatusChange("paid")}
+                  disabled={isUpdatingStatus || isSending || isDuplicating || isDeleting}
+                  className="w-full sm:w-auto"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {isUpdatingStatus ? "Updating..." : "Mark Paid"}
+                </Button>
+              </>
             )
           ) : null}
           {!isEditing && (invoice.status === "sent" || invoice.status === "overdue") ? (
@@ -1078,13 +1181,9 @@ export default function InvoiceDetailPage() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-medium text-slate-900">
-                          {payment.provider === "stripe"
-                            ? "Paid via Stripe"
-                            : payment.reference === "manual-status"
-                              ? "Marked paid manually"
-                              : "Bank transfer payment"}
+                          {formatPaymentProvider(payment.provider, payment.reference)}
                         </p>
-                        <p className="text-slate-600">{formatDateTime(payment.createdAt)}</p>
+                        <p className="text-slate-600">{formatDateTime(payment.paidAt ?? payment.createdAt)}</p>
                       </div>
                       <p className="font-semibold text-slate-900">
                         {payment.currency} {formatMoney(payment.amount)}
@@ -1092,6 +1191,9 @@ export default function InvoiceDetailPage() {
                     </div>
                     {payment.reference ? (
                       <p className="mt-2 text-xs text-slate-500">Reference: {payment.reference}</p>
+                    ) : null}
+                    {payment.note ? (
+                      <p className="mt-2 text-xs text-slate-600">Note: {payment.note}</p>
                     ) : null}
                   </div>
                 ))
@@ -1128,7 +1230,9 @@ export default function InvoiceDetailPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Invoice Summary</CardTitle>
-          <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+          <Badge variant={hasPartialPayment ? "warning" : statusVariant(invoice.status)}>
+            {hasPartialPayment ? "partially paid" : invoice.status}
+          </Badge>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
           <div>
@@ -1144,6 +1248,12 @@ export default function InvoiceDetailPage() {
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Currency</p>
             <p className="font-medium text-slate-900">{invoice.currency}</p>
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500">Paid So Far</p>
+            <p className="font-medium text-slate-900">
+              {invoice.currency} {formatMoney(paidAmount)}
+            </p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-slate-500">Amount Due</p>
@@ -1781,6 +1891,78 @@ export default function InvoiceDetailPage() {
           void handleManualStatusChange("cancelled");
         }}
       />
+
+      <Dialog open={showRecordPaymentDialog} onOpenChange={setShowRecordPaymentDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Add a partial or full payment received for invoice{" "}
+              <strong>{invoice.invoiceNumber}</strong>. Reminders continue until the amount due reaches zero.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="recordPaymentAmount">Amount received</Label>
+              <Input
+                id="recordPaymentAmount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={recordPaymentAmount}
+                onChange={(event) => setRecordPaymentAmount(event.target.value)}
+                onFocus={handleNumberInputFocus}
+              />
+              <p className="text-xs text-slate-500">
+                Remaining before this payment: {invoice.currency} {formatMoney(invoiceAmountDue)}
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="recordPaymentProvider">Method</Label>
+                <Select
+                  id="recordPaymentProvider"
+                  value={recordPaymentProvider}
+                  onChange={(event) => setRecordPaymentProvider(event.target.value)}
+                >
+                  <option value="bank_transfer">Bank transfer</option>
+                  <option value="twint">TWINT</option>
+                  <option value="cash">Cash</option>
+                  <option value="revolut">Revolut</option>
+                  <option value="other">Other</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="recordPaymentPaidAt">Paid date</Label>
+                <Input
+                  id="recordPaymentPaidAt"
+                  type="date"
+                  value={recordPaymentPaidAt}
+                  onChange={(event) => setRecordPaymentPaidAt(event.target.value)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="recordPaymentNote">Internal note</Label>
+              <Textarea
+                id="recordPaymentNote"
+                value={recordPaymentNote}
+                onChange={(event) => setRecordPaymentNote(event.target.value)}
+                placeholder="Example: Client paid 50% by TWINT. Remaining balance still open."
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRecordPaymentDialog(false)} disabled={isRecordingPayment}>
+              Cancel
+            </Button>
+            <Button onClick={handleRecordPayment} disabled={isRecordingPayment}>
+              {isRecordingPayment ? "Recording..." : "Record Payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showReopenEditDialog} onOpenChange={setShowReopenEditDialog}>
         <DialogContent>

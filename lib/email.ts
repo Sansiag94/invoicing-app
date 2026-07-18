@@ -32,7 +32,11 @@ type SendInvoiceEmailInput = {
   bankTransferDetails?: BankTransferDetails | null;
 };
 
-export type InvoiceReminderKind = "before_due_3_days" | "after_due_7_days";
+export type InvoiceReminderKind =
+  | "before_due_3_days"
+  | "after_due_7_days"
+  | "after_due_14_days"
+  | "after_due_30_days";
 
 type SendInvoiceReminderEmailInput = {
   to: string;
@@ -343,9 +347,11 @@ export async function sendInvoiceReminderEmail({
   const normalizedRecipientName = recipientName?.trim();
   const greetingLine = normalizedRecipientName ? `Hello ${normalizedRecipientName},` : "Hello,";
   const isBeforeDue = reminderKind === "before_due_3_days";
+  const overdueDays =
+    reminderKind === "after_due_30_days" ? 30 : reminderKind === "after_due_14_days" ? 14 : 7;
   const timingLine = isBeforeDue
     ? `This invoice is due on ${dueDateLabel} (in 3 days).`
-    : `This invoice was due on ${dueDateLabel} (7 days ago).`;
+    : `This invoice was due on ${dueDateLabel} (${overdueDays} days ago).`;
   const subject = isBeforeDue
     ? `${businessName} - Reminder: Invoice ${invoiceNumber} due soon`
     : `${businessName} - Reminder: Invoice ${invoiceNumber} is overdue`;
@@ -367,7 +373,7 @@ export async function sendInvoiceReminderEmail({
     text: `${greetingLine}
 
 Reminder for invoice ${invoiceNumber}.
-Amount: ${formattedTotal}
+Amount due: ${formattedTotal}
 ${timingLine}
 
 View invoice:
@@ -385,7 +391,7 @@ ${privacyUrl}`,
           </p>
           <div style="margin: 0 0 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 18px;">
             <div style="margin: 0 0 10px; color: #475569;">Invoice number: <strong style="color:#0f172a;">${safeInvoiceNumber}</strong></div>
-            <div style="margin: 0 0 10px; color: #475569;">Amount: <strong style="color:#0f172a;">${safeFormattedTotal}</strong></div>
+            <div style="margin: 0 0 10px; color: #475569;">Amount due: <strong style="color:#0f172a;">${safeFormattedTotal}</strong></div>
             <div style="margin: 0; color: #475569;">${safeTimingLine}</div>
           </div>
           <div style="margin: 0 0 18px;">
@@ -467,7 +473,7 @@ export async function sendManualInvoiceReminderEmail({
     text: `${greetingLine}
 
 This is a reminder for invoice ${invoiceNumber}.
-Amount: ${formattedTotal}
+Amount due: ${formattedTotal}
 Due date: ${dueDateLabel}
 
 View or pay online:
@@ -485,7 +491,7 @@ ${privacyUrl}`,
           </p>
           <div style="margin: 0 0 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 18px;">
             <div style="margin: 0 0 10px; color: #475569;">Invoice number: <strong style="color:#0f172a;">${safeInvoiceNumber}</strong></div>
-            <div style="margin: 0 0 10px; color: #475569;">Total amount: <strong style="color:#0f172a;">${safeFormattedTotal}</strong></div>
+            <div style="margin: 0 0 10px; color: #475569;">Amount due: <strong style="color:#0f172a;">${safeFormattedTotal}</strong></div>
             <div style="margin: 0; color: #475569;">Due date: <strong style="color:#0f172a;">${safeDueDateLabel}</strong></div>
           </div>
           <div style="margin: 0 0 18px;">

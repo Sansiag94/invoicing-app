@@ -30,6 +30,8 @@ type ReminderCronStage =
   | "prepare_windows"
   | "before_due_3_days"
   | "after_due_7_days"
+  | "after_due_14_days"
+  | "after_due_30_days"
   | "complete";
 
 type ReminderCandidate = {
@@ -37,6 +39,7 @@ type ReminderCandidate = {
   invoiceNumber: string;
   publicToken: string | null;
   totalAmount: number;
+  paidAmount: number;
   currency: string;
   dueDate: Date;
   businessName: string;
@@ -73,6 +76,7 @@ async function findReminderCandidates(
       i."invoiceNumber",
       i."publicToken",
       i."totalAmount",
+      COALESCE(SUM(CASE WHEN p."status" IN ('manual_paid', 'paid', 'succeeded') THEN p."amount" ELSE 0 END), 0) AS "paidAmount",
       i."currency",
       i."dueDate",
       b."name" AS "businessName",
@@ -85,7 +89,8 @@ async function findReminderCandidates(
     FROM "Invoice" i
     INNER JOIN "Business" b ON b."uuid" = i."businessId"
     INNER JOIN "Client" c ON c."uuid" = i."clientId"
-      WHERE i."status" IN (${InvoiceStatus.sent}::"InvoiceStatus", ${InvoiceStatus.overdue}::"InvoiceStatus")
+    LEFT JOIN "Payment" p ON p."invoiceId" = i."uuid"
+    WHERE i."status" IN (${InvoiceStatus.sent}::"InvoiceStatus", ${InvoiceStatus.overdue}::"InvoiceStatus")
       AND i."dueDate" >= ${from}
       AND i."dueDate" < ${to}
       AND NOT EXISTS (
@@ -94,6 +99,21 @@ async function findReminderCandidates(
         WHERE r."invoiceId" = i."uuid"
           AND r."type" = ${reminderType}::"InvoiceReminderType"
       )
+    GROUP BY
+      i."uuid",
+      i."invoiceNumber",
+      i."publicToken",
+      i."totalAmount",
+      i."currency",
+      i."dueDate",
+      b."name",
+      b."ownerName",
+      b."invoiceSenderType",
+      b."replyToEmail",
+      c."companyName",
+      c."contactName",
+      c."email"
+    HAVING i."totalAmount" - COALESCE(SUM(CASE WHEN p."status" IN ('manual_paid', 'paid', 'succeeded') THEN p."amount" ELSE 0 END), 0) > 0.005
   `;
 }
 
@@ -115,6 +135,12 @@ async function claimReminder(
       AND i."status" IN (${InvoiceStatus.sent}::"InvoiceStatus", ${InvoiceStatus.overdue}::"InvoiceStatus")
       AND i."dueDate" >= ${from}
       AND i."dueDate" < ${to}
+      AND i."totalAmount" - COALESCE((
+        SELECT SUM(p."amount")
+        FROM "Payment" p
+        WHERE p."invoiceId" = i."uuid"
+          AND p."status" IN ('manual_paid', 'paid', 'succeeded')
+      ), 0) > 0.005
     ON CONFLICT ("invoiceId", "type") DO NOTHING
   `;
 
@@ -193,12 +219,13 @@ async function processReminderBatch(
         ownerName: candidate.businessOwnerName,
         invoiceSenderType: candidate.businessInvoiceSenderType,
       });
+      const amountDue = Math.max(0, candidate.totalAmount - candidate.paidAmount);
       await sendInvoiceReminderEmail({
         to: clientEmail,
         businessName: businessDisplayName,
         recipientName,
         invoiceNumber,
-        totalAmount: candidate.totalAmount,
+        totalAmount: amountDue,
         currency: candidate.currency,
         invoiceLink,
         dueDate,
@@ -262,6 +289,10 @@ async function runReminderJob(request: Request) {
     const dueSoonEnd = addDays(dueSoonStart, 1);
     const overdueStart = addDays(todayStart, -7);
     const overdueEnd = addDays(overdueStart, 1);
+    const overdue14Start = addDays(todayStart, -14);
+    const overdue14End = addDays(overdue14Start, 1);
+    const overdue30Start = addDays(todayStart, -30);
+    const overdue30End = addDays(overdue30Start, 1);
 
     stage = "before_due_3_days";
     const dueSoon = await processReminderBatch(
@@ -279,12 +310,30 @@ async function runReminderJob(request: Request) {
       overdueEnd
     );
 
+    stage = "after_due_14_days";
+    const overdue14 = await processReminderBatch(
+      request,
+      "after_due_14_days",
+      overdue14Start,
+      overdue14End
+    );
+
+    stage = "after_due_30_days";
+    const overdue30 = await processReminderBatch(
+      request,
+      "after_due_30_days",
+      overdue30Start,
+      overdue30End
+    );
+
     stage = "complete";
     return NextResponse.json({
       success: true,
       dueSoon,
       overdue,
-      sent: dueSoon.sent + overdue.sent,
+      overdue14,
+      overdue30,
+      sent: dueSoon.sent + overdue.sent + overdue14.sent + overdue30.sent,
     });
   } catch (error) {
     if (isCronAuthorizationError(error)) {

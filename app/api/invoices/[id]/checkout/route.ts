@@ -5,6 +5,7 @@ import { apiError } from "@/lib/api-response";
 import prisma from "@/lib/prisma";
 import { getStripeClient } from "@/lib/stripe";
 import { calculateInvoiceTotals } from "@/lib/invoice";
+import { getOutstandingInvoiceAmount } from "@/lib/payments";
 import { recordStripePaymentFromSession } from "@/lib/stripePayments";
 import {
   getStripeRequestOptions,
@@ -117,6 +118,12 @@ export async function POST(
             discountValue: true,
           },
         },
+        payments: {
+          select: {
+            amount: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -142,11 +149,15 @@ export async function POST(
     }
 
     const computedTotals = calculateInvoiceTotals(invoice.lineItems, invoice);
-    const totalAmountDue =
-      computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount;
+    const totalAmount = computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount;
+    const totalAmountDue = getOutstandingInvoiceAmount({
+      status: invoice.status,
+      totalAmount,
+      payments: invoice.payments,
+    });
     const amountInMinorUnit = Math.round(totalAmountDue * 100);
     if (amountInMinorUnit <= 0) {
-      return apiError("Invoice total must be greater than 0", 400);
+      return apiError("Invoice has no remaining amount due", 400);
     }
 
     const successUrl = new URL(

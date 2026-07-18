@@ -5,7 +5,9 @@ import { calculateInvoiceTotals, normalizeInvoiceCurrency } from "@/lib/invoice"
 import { generateSwissQRCodeRects, generateSwissQRPayload, getSwissQRBillMetadata } from "@/lib/qrbill";
 import { getBusinessSenderPreferences, getInvoiceSenderName } from "@/lib/business";
 import { isSwissCountry } from "@/lib/countries";
+import { getApproximateCurrencyConversions } from "@/lib/exchangeRates";
 import { hasRecentInvoiceEvent, logInvoiceEvent } from "@/lib/invoiceActivity";
+import { getOutstandingInvoiceAmount, getSettledPaymentAmount } from "@/lib/payments";
 import {
   isStripeCardPaymentAvailable,
   loadResolvedBusinessStripeStatus,
@@ -57,6 +59,12 @@ export async function GET(
         lineItems: {
           orderBy: { position: "asc" },
         },
+        payments: {
+          select: {
+            amount: true,
+            status: true,
+          },
+        },
         business: {
           select: {
             id: true,
@@ -106,7 +114,14 @@ export async function GET(
       });
     }
 
+    const { payments: invoicePayments, ...invoiceCore } = invoice;
     const computedTotals = calculateInvoiceTotals(invoice.lineItems, invoice);
+    const paidAmount = getSettledPaymentAmount(invoicePayments);
+    const amountDue = getOutstandingInvoiceAmount({
+      status: invoice.status,
+      totalAmount: computedTotals.totalAmount,
+      payments: invoicePayments,
+    });
 
     const senderPreferences = getBusinessSenderPreferences(invoice.business);
 
@@ -120,8 +135,8 @@ export async function GET(
     const senderName = getInvoiceSenderName(businessWithSender);
     const stripeStatus = await loadResolvedBusinessStripeStatus(invoice.business.id);
     const invoiceForQR = {
-      ...invoice,
-      totalAmount: computedTotals.totalAmount,
+      ...invoiceCore,
+      totalAmount: amountDue,
     };
     const businessForQR = {
       ...businessWithSender,
@@ -153,15 +168,25 @@ export async function GET(
       }
     }
 
+    const approximateConversions = isSwissCountry(invoice.client.country)
+      ? []
+      : await getApproximateCurrencyConversions(amountDue, normalizeInvoiceCurrency(invoice.currency, "CHF"));
+
     return NextResponse.json({
-      ...invoice,
+      ...invoiceCore,
       business: businessWithSender,
       subtotal: computedTotals.subtotal,
       taxAmount: computedTotals.taxAmount,
       totalAmount: computedTotals.totalAmount,
       currency: normalizeInvoiceCurrency(invoice.currency, "CHF"),
+      paidAmount,
+      amountDue,
+      approximateConversions,
       cardPaymentAvailable:
-        invoice.status !== "paid" && invoice.status !== "cancelled" && isStripeCardPaymentAvailable(stripeStatus),
+        amountDue > 0.005 &&
+        invoice.status !== "paid" &&
+        invoice.status !== "cancelled" &&
+        isStripeCardPaymentAvailable(stripeStatus),
       qrBill,
     });
   } catch (error) {

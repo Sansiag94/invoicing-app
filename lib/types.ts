@@ -146,6 +146,8 @@ export interface InvoicePaymentRecord {
   currency: string;
   status: string;
   reference: string | null;
+  note: string | null;
+  paidAt: string | null;
   createdAt: string;
 }
 
@@ -524,5 +526,12 @@ export interface PublicInvoiceDetails {
   client: PublicInvoiceClientData;
   business: PublicInvoiceBusinessData;
   cardPaymentAvailable: boolean;
+  paidAmount: number;
+  amountDue: number;
+  approximateConversions?: Array<{
+    currency: "EUR" | "USD";
+    amount: number;
+    rate: number;
+  }>;
   qrBill: SwissQRBillPayloadData | null;
 }
