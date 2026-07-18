@@ -295,6 +295,7 @@ export interface ExpensesPageData {
 export interface AnalyticsSeriesPoint {
   label: string;
   billed: number;
+  invoiceCount: number;
   revenue: number;
   expenses: number;
   profit: number;
@@ -321,6 +322,14 @@ export interface AnalyticsMonthProgress {
   overdueAmount: number;
 }
 
+export interface AnalyticsLargestInvoice {
+  invoiceId: string;
+  invoiceNumber: string;
+  clientName: string;
+  issueDate: string;
+  amount: number;
+}
+
 export interface AnalyticsOverview {
   currency: InvoiceCurrency;
   dateRange: {
@@ -343,6 +352,7 @@ export interface AnalyticsOverview {
   monthlySeries: AnalyticsSeriesPoint[];
   topClients: AnalyticsClientBreakdown[];
   expenseBreakdown: AnalyticsExpenseBreakdown[];
+  largestInvoice: AnalyticsLargestInvoice | null;
   monthlyReports: MonthlyReportRecord[];
 }
 

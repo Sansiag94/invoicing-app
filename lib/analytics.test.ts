@@ -48,6 +48,7 @@ describe("analytics helpers", () => {
       monthlySeries: [],
       topClients: [],
       expenseBreakdown: [],
+      largestInvoice: null,
     });
 
     expect(metrics).toMatchObject({

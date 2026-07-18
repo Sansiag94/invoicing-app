@@ -225,6 +225,7 @@ export async function buildAnalyticsOverview(
       },
       select: {
         id: true,
+        invoiceNumber: true,
         issuedAt: true,
         issueDate: true,
         totalAmount: true,
@@ -314,14 +315,34 @@ export async function buildAnalyticsOverview(
     { issuedAmount: 0, issuedCount: 0 }
   );
   const monthlyBilled = new Map<string, number>(months.map((month) => [month.key, 0]));
+  const monthlyInvoiceCount = new Map<string, number>(months.map((month) => [month.key, 0]));
+  let largestInvoice: {
+    invoiceId: string;
+    invoiceNumber: string;
+    clientName: string;
+    issueDate: string;
+    amount: number;
+  } | null = null;
+
   for (const invoice of issuedInRangeRaw) {
     const billedMonthKey = getMonthKey(invoice.issuedAt ?? invoice.issueDate);
     if (monthlyBilled.has(billedMonthKey)) {
       monthlyBilled.set(billedMonthKey, (monthlyBilled.get(billedMonthKey) ?? 0) + invoice.totalAmount);
+      monthlyInvoiceCount.set(billedMonthKey, (monthlyInvoiceCount.get(billedMonthKey) ?? 0) + 1);
     }
 
     const clientId = invoice.client.id;
     const clientName = invoice.client.companyName || invoice.client.contactName || invoice.client.email;
+    if (largestInvoice === null || invoice.totalAmount > largestInvoice.amount) {
+      largestInvoice = {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        clientName,
+        issueDate: invoice.issueDate.toISOString(),
+        amount: invoice.totalAmount,
+      };
+    }
+
     const existingClient = billedClientMap.get(clientId);
     const invoiceIds = existingClient?.invoiceIds ?? new Set<string>();
     invoiceIds.add(invoice.id);
@@ -339,6 +360,7 @@ export async function buildAnalyticsOverview(
     return {
       label: month.label,
       billed,
+      invoiceCount: monthlyInvoiceCount.get(month.key) ?? 0,
       revenue,
       expenses,
       profit: revenue - expenses,
@@ -387,6 +409,7 @@ export async function buildAnalyticsOverview(
     monthlySeries,
     topClients,
     expenseBreakdown,
+    largestInvoice,
   };
 }
 

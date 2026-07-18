@@ -278,6 +278,7 @@ export default function AnalyticsPage() {
     return series.map((entry) => ({
       ...entry,
       billed: entry.billed ?? 0,
+      invoiceCount: entry.invoiceCount ?? 0,
     }));
   }, [analytics?.monthlySeries]);
 
@@ -325,28 +326,86 @@ export default function AnalyticsPage() {
   function exportAnalyticsCsv() {
     if (!analytics) return;
 
+    const isSingleMonthExport = visibleSeries.length <= 1;
+    const averageIssuedInvoiceValue =
+      analytics.monthProgress.issuedCount > 0 ? chartData.totals.billed / analytics.monthProgress.issuedCount : 0;
+    const reserveTotal = heroData.incomeTaxEstimate + heroData.socialSecurityEstimate;
+    const largestInvoice = analytics.largestInvoice;
     const rows = [
-      ["Range", startDate, endDate],
+      ["Sierra Invoices Analytics Report"],
+      ["Period", startDate, endDate],
       ["Currency", analytics.currency],
       [],
-      ["Month", "Billed", "Revenue collected", "Expenses", "Profit"],
+      ["Summary"],
+      ["Total billed", chartData.totals.billed.toFixed(2)],
+      ["Invoices issued", analytics.monthProgress.issuedCount],
+      ["Average issued invoice value", averageIssuedInvoiceValue.toFixed(2)],
+      ["Collected", chartData.totals.revenue.toFixed(2)],
+      ["Expenses", chartData.totals.expenses.toFixed(2)],
+      ["Net billed after expenses", chartData.totals.billedNet.toFixed(2)],
+      ["Open amount", analytics.monthProgress.openAmount.toFixed(2)],
+      ["Overdue amount", analytics.monthProgress.overdueAmount.toFixed(2)],
+      ...(largestInvoice
+        ? [
+            ["Largest invoice", largestInvoice.invoiceNumber],
+            ["Largest invoice client", largestInvoice.clientName],
+            ["Largest invoice amount", largestInvoice.amount.toFixed(2)],
+            ["Largest invoice issue date", largestInvoice.issueDate.slice(0, 10)],
+          ]
+        : [["Largest invoice", "No invoices issued"]]),
+      [],
+      ["Planning"],
+      ["Income tax estimate", heroData.incomeTaxEstimate.toFixed(2)],
+      ["Social security estimate", heroData.socialSecurityEstimate.toFixed(2)],
+      ["Suggested reserve total", reserveTotal.toFixed(2)],
+      ["Note", "Planning estimate only. Confirm final tax and social security amounts with your accountant."],
+      [],
+      ["Monthly Breakdown"],
+      ["Month", "Invoices issued", "Billed", "Collected", "Expenses", "Net billed after expenses"],
       ...visibleSeries.map((entry) => [
         entry.label,
+        entry.invoiceCount,
         entry.billed.toFixed(2),
         entry.revenue.toFixed(2),
         entry.expenses.toFixed(2),
-        entry.profit.toFixed(2),
+        (entry.billed - entry.expenses).toFixed(2),
       ]),
       [],
-      ["Total billed", chartData.totals.billed.toFixed(2)],
-      ["Total revenue", chartData.totals.revenue.toFixed(2)],
-      ["Total expenses", chartData.totals.expenses.toFixed(2)],
-      ["Net after expenses", chartData.totals.billedNet.toFixed(2)],
-      ["Average billed per month", chartData.averages.billed.toFixed(2)],
-      ["Average revenue per month", chartData.averages.revenue.toFixed(2)],
-      ["Average expenses per month", chartData.averages.expenses.toFixed(2)],
-      ["Income tax planning estimate", heroData.incomeTaxEstimate.toFixed(2)],
-      ["Social security planning estimate", heroData.socialSecurityEstimate.toFixed(2)],
+      ...(!isSingleMonthExport
+        ? [
+            ["Averages"],
+            ["Average billed per month", chartData.averages.billed.toFixed(2)],
+            ["Average collected per month", chartData.averages.revenue.toFixed(2)],
+            ["Average expenses per month", chartData.averages.expenses.toFixed(2)],
+            ["Average net billed per month", chartData.averages.billedNet.toFixed(2)],
+            [],
+          ]
+        : []),
+      ["Client Breakdown"],
+      ["Client", "Invoices issued", "Billed", "Share of billed total"],
+      ...(analytics.topClients.length === 0
+        ? [["No billed client work"]]
+        : analytics.topClients.map((client) => {
+            const share = chartData.totals.billed > 0 ? (client.revenue / chartData.totals.billed) * 100 : 0;
+            return [client.clientName, client.invoiceCount, client.revenue.toFixed(2), `${share.toFixed(1)}%`];
+          })),
+      [],
+      ["Payment Status"],
+      ["Paid invoices", analytics.paidInvoices],
+      ["Unpaid invoices", analytics.unpaidInvoices],
+      ["Collected", chartData.totals.revenue.toFixed(2)],
+      ["Open amount", analytics.monthProgress.openAmount.toFixed(2)],
+      ["Overdue amount", analytics.monthProgress.overdueAmount.toFixed(2)],
+      ["Average days to pay", analytics.averageDaysToPay === null ? "Not enough paid invoices yet" : analytics.averageDaysToPay.toFixed(1)],
+      [],
+      ["Expense Breakdown"],
+      ["Category", "Amount"],
+      ...(analytics.expenseBreakdown.length === 0
+        ? [["No expenses booked"]]
+        : analytics.expenseBreakdown.map((entry) => [
+            getExpenseDisplayCategoryLabel(entry.category, entry.otherCategoryName),
+            entry.amount.toFixed(2),
+          ])),
     ];
     const csv = rows.map((row) => row.map((cell) => `"${String(cell ?? "").replaceAll('"', '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
@@ -727,10 +786,11 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[620px] text-left text-sm">
+              <table className="w-full min-w-[700px] text-left text-sm">
                 <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800">
                   <tr>
                     <th className="py-2 pr-3">Month</th>
+                    <th className="py-2 pr-3 text-right">Invoices</th>
                     <th className="py-2 pr-3 text-right">Billed</th>
                     <th className="py-2 pr-3 text-right">Expenses</th>
                     <th className="py-2 pr-3 text-right">Net</th>
@@ -743,6 +803,7 @@ export default function AnalyticsPage() {
                     return (
                       <tr key={entry.label}>
                         <td className="py-3 pr-3 font-medium text-slate-900 dark:text-slate-100">{entry.label}</td>
+                        <td className="py-3 pr-3 text-right text-slate-600 dark:text-slate-300">{entry.invoiceCount}</td>
                         <td className="py-3 pr-3 text-right text-slate-900 dark:text-slate-100">
                           {analytics.currency} {formatMoney(entry.billed)}
                         </td>
