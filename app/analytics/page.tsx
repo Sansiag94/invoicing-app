@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CalendarDays, Download, LineChart, ReceiptText, WalletCards } from "lucide-react";
+import { ArrowLeft, CalendarDays, Download, LineChart } from "lucide-react";
 import { AnalyticsOverview } from "@/lib/types";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { readPrivatePageCache, writePrivatePageCache } from "@/utils/privatePageCache";
@@ -29,14 +29,6 @@ function formatHeroMoney(value: number): string {
 
 function formatPercent(value: number): string {
   return `${value.toFixed(1)}%`;
-}
-
-function formatDeltaPercent(current: number, previous: number): string {
-  if (previous === 0) {
-    return current === 0 ? "0.0%" : "New";
-  }
-
-  return `${(((current - previous) / previous) * 100).toFixed(1)}%`;
 }
 
 function AnalyticsPageSkeleton() {
@@ -103,6 +95,21 @@ function getYearDateRange(year: number) {
   return {
     startDate: getDateInputValue(new Date(year, 0, 1)),
     endDate: getDateInputValue(new Date(year, 11, 31)),
+  };
+}
+
+function getMonthDateRange(year: number, month: number) {
+  return {
+    startDate: getDateInputValue(new Date(year, month, 1)),
+    endDate: getDateInputValue(new Date(year, month + 1, 0)),
+  };
+}
+
+function getLastMonthsDateRange(monthCount: number) {
+  const now = new Date();
+  return {
+    startDate: getDateInputValue(new Date(now.getFullYear(), now.getMonth() - monthCount + 1, 1)),
+    endDate: getDateInputValue(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
   };
 }
 
@@ -215,6 +222,23 @@ export default function AnalyticsPage() {
     setSelectedYear(getRangeYear(startDate, value));
   }
 
+  function applyDateRange(range: { startDate: string; endDate: string }) {
+    setStartDate(range.startDate);
+    setEndDate(range.endDate);
+    setSelectedYear(getRangeYear(range.startDate, range.endDate));
+  }
+
+  const quickRanges = useMemo(() => {
+    const now = new Date();
+    return [
+      { label: "This month", range: getMonthDateRange(now.getFullYear(), now.getMonth()) },
+      { label: "Last month", range: getMonthDateRange(now.getFullYear(), now.getMonth() - 1) },
+      { label: "Last 3 months", range: getLastMonthsDateRange(3) },
+      { label: "This year", range: getYearDateRange(now.getFullYear()) },
+      { label: "Last year", range: getYearDateRange(now.getFullYear() - 1) },
+    ];
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
@@ -261,46 +285,42 @@ export default function AnalyticsPage() {
     const billedValues = visibleSeries.map((entry) => entry.billed);
     const revenueValues = visibleSeries.map((entry) => entry.revenue);
     const expenseValues = visibleSeries.map((entry) => entry.expenses);
-    const profitValues = visibleSeries.map((entry) => entry.profit);
-    const plottedValues = [...revenueValues, ...expenseValues, ...profitValues];
+    const billedNetValues = visibleSeries.map((entry) => entry.billed - entry.expenses);
+    const plottedValues = [...billedValues, ...expenseValues, ...billedNetValues];
     const monthCount = Math.max(1, visibleSeries.length);
 
     return {
       billedValues,
       revenueValues,
       expenseValues,
-      profitValues,
+      billedNetValues,
       minValue: Math.min(0, ...plottedValues),
       maxValue: Math.max(1, ...plottedValues),
       totals: {
         billed: billedValues.reduce((sum, value) => sum + value, 0),
         revenue: revenueValues.reduce((sum, value) => sum + value, 0),
         expenses: expenseValues.reduce((sum, value) => sum + value, 0),
-        profit: visibleSeries.reduce((sum, value) => sum + value.profit, 0),
+        billedNet: billedNetValues.reduce((sum, value) => sum + value, 0),
       },
       averages: {
         billed: billedValues.reduce((sum, value) => sum + value, 0) / monthCount,
         revenue: revenueValues.reduce((sum, value) => sum + value, 0) / monthCount,
         expenses: expenseValues.reduce((sum, value) => sum + value, 0) / monthCount,
-        profit: visibleSeries.reduce((sum, value) => sum + value.profit, 0) / monthCount,
+        billedNet: billedNetValues.reduce((sum, value) => sum + value, 0) / monthCount,
       },
     };
   }, [visibleSeries]);
 
   const heroData = useMemo(() => {
-    const profit = chartData.totals.profit;
+    const profit = chartData.totals.billedNet;
     const positiveProfit = Math.max(0, profit);
     return {
       incomeTaxEstimate: positiveProfit * 0.2,
       socialSecurityEstimate: positiveProfit * 0.1,
-      maxMonthlyRevenue: Math.max(1, ...visibleSeries.map((entry) => entry.revenue)),
     };
-  }, [chartData.totals.profit, visibleSeries]);
+  }, [chartData.totals.billedNet]);
 
-  const maxMonthlyBilled = useMemo(
-    () => Math.max(1, ...visibleSeries.map((entry) => entry.billed)),
-    [visibleSeries]
-  );
+  const maxMonthlyBilled = useMemo(() => Math.max(1, ...visibleSeries.map((entry) => entry.billed)), [visibleSeries]);
 
   function exportAnalyticsCsv() {
     if (!analytics) return;
@@ -321,7 +341,7 @@ export default function AnalyticsPage() {
       ["Total billed", chartData.totals.billed.toFixed(2)],
       ["Total revenue", chartData.totals.revenue.toFixed(2)],
       ["Total expenses", chartData.totals.expenses.toFixed(2)],
-      ["Profit", chartData.totals.profit.toFixed(2)],
+      ["Net after expenses", chartData.totals.billedNet.toFixed(2)],
       ["Average billed per month", chartData.averages.billed.toFixed(2)],
       ["Average revenue per month", chartData.averages.revenue.toFixed(2)],
       ["Average expenses per month", chartData.averages.expenses.toFixed(2)],
@@ -341,32 +361,15 @@ export default function AnalyticsPage() {
   }
 
   const comparisonData = useMemo(() => {
-    const series = analytics?.monthlySeries ?? [];
-    const previousSeries = series.slice(-visibleSeries.length * 2, -visibleSeries.length);
-
-    const total = (values: Array<{ revenue: number; expenses: number; profit: number }>) =>
-      values.reduce(
-        (accumulator, entry) => ({
-          revenue: accumulator.revenue + entry.revenue,
-          expenses: accumulator.expenses + entry.expenses,
-          profit: accumulator.profit + entry.profit,
-        }),
-        { revenue: 0, expenses: 0, profit: 0 }
-      );
-
-    const currentTotals = total(visibleSeries);
-    const previousTotals = total(previousSeries);
     const bestMonth = visibleSeries.reduce<(typeof visibleSeries)[number] | null>(
-      (best, entry) => (best === null || entry.profit > best.profit ? entry : best),
+      (best, entry) => (best === null || entry.billed > best.billed ? entry : best),
       null
     );
 
     return {
-      previousTotals,
-      currentTotals,
       bestMonth,
     };
-  }, [analytics?.monthlySeries, visibleSeries]);
+  }, [visibleSeries]);
 
   const maxBreakdownValue = useMemo(() => {
     const breakdown = analytics?.expenseBreakdown ?? [];
@@ -386,26 +389,15 @@ export default function AnalyticsPage() {
     return {
       topClientName: topClient?.clientName ?? null,
       topClientShare:
-        topClient && analytics.totalRevenue > 0 ? (topClient.revenue / analytics.totalRevenue) * 100 : null,
+        topClient && chartData.totals.billed > 0 ? (topClient.revenue / chartData.totals.billed) * 100 : null,
       overdueShare:
         analytics.prospectRevenue > 0 ? (analytics.overdueAmount / analytics.prospectRevenue) * 100 : null,
     };
-  }, [analytics]);
+  }, [analytics, chartData.totals.billed]);
 
   const chartWidth = 760;
   const chartHeight = 280;
   const chartPadding = { left: 24, right: 20, top: 20, bottom: 34 };
-  const revenuePath = buildLinePath(
-    chartData.revenueValues,
-    chartWidth,
-    chartHeight,
-    chartPadding.left,
-    chartPadding.right,
-    chartPadding.top,
-    chartPadding.bottom,
-    chartData.minValue,
-    chartData.maxValue
-  );
   const expensePath = buildLinePath(
     chartData.expenseValues,
     chartWidth,
@@ -417,19 +409,8 @@ export default function AnalyticsPage() {
     chartData.minValue,
     chartData.maxValue
   );
-  const profitPath = buildLinePath(
-    chartData.profitValues,
-    chartWidth,
-    chartHeight,
-    chartPadding.left,
-    chartPadding.right,
-    chartPadding.top,
-    chartPadding.bottom,
-    chartData.minValue,
-    chartData.maxValue
-  );
-  const revenuePoints = buildPoints(
-    chartData.revenueValues,
+  const billedNetPath = buildLinePath(
+    chartData.billedNetValues,
     chartWidth,
     chartHeight,
     chartPadding.left,
@@ -450,8 +431,8 @@ export default function AnalyticsPage() {
     chartData.minValue,
     chartData.maxValue
   );
-  const profitPoints = buildPoints(
-    chartData.profitValues,
+  const billedNetPoints = buildPoints(
+    chartData.billedNetValues,
     chartWidth,
     chartHeight,
     chartPadding.left,
@@ -471,13 +452,21 @@ export default function AnalyticsPage() {
     ? {
         grid: "#334155",
         label: "#94a3b8",
-        profit: "#e2e8f0",
+        billed: "#38bdf8",
+        net: "#e2e8f0",
       }
     : {
         grid: "#e2e8f0",
         label: "#64748b",
-        profit: "#475569",
+        billed: "#0f172a",
+        net: "#475569",
       };
+  const usableChartWidth = chartWidth - chartPadding.left - chartPadding.right;
+  const usableChartHeight = chartHeight - chartPadding.top - chartPadding.bottom;
+  const chartStepX = visibleSeries.length === 1 ? 0 : usableChartWidth / (visibleSeries.length - 1);
+  const chartBarWidth = Math.max(12, Math.min(34, visibleSeries.length === 0 ? 24 : usableChartWidth / visibleSeries.length / 2.4));
+  const getChartY = (value: number) =>
+    chartPadding.top + usableChartHeight - ((value - chartData.minValue) / chartValueRange) * usableChartHeight;
 
   if (isLoading) {
     return <AnalyticsPageSkeleton />;
@@ -493,8 +482,8 @@ export default function AnalyticsPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:hover:bg-slate-900 dark:hover:text-slate-50">
               <Link href="/dashboard" aria-label="Back to dashboard">
@@ -506,291 +495,47 @@ export default function AnalyticsPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-slate-950 dark:text-slate-50">Analytics</h1>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Financial overview for {startDate} to {endDate}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Billed work and business costs for {startDate} to {endDate}</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-              <CalendarDays className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-              <select
-                value={selectedYear}
-                onChange={(event) => handleYearChange(event.target.value)}
-                className="bg-transparent text-sm font-semibold outline-none"
-                aria-label="Analytics year"
-              >
-                <option value="custom">Custom</option>
-                {yearOptions.map((year) => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-            </label>
-            <Button
-              type="button"
-              onClick={exportAnalyticsCsv}
-              className="h-10 rounded-md bg-slate-950 px-4 text-white shadow-sm hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Export CSV
-            </Button>
-          </div>
-        </div>
-
-        <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:items-end">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
-                <WalletCards className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                Revenue collected
-              </div>
-              <p className="mt-3 text-4xl font-semibold leading-none text-slate-950 dark:text-slate-50">
-                {formatHeroMoney(chartData.totals.revenue)} <span className="text-base font-medium text-slate-500">{analytics.currency}</span>
-              </p>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-wrap gap-2">
+              {quickRanges.map((item) => {
+                const isActive = startDate === item.range.startDate && endDate === item.range.endDate;
+                return (
+                  <button
+                    key={item.label}
+                    type="button"
+                    onClick={() => applyDateRange(item.range)}
+                    className={`h-9 rounded-md border px-3 text-sm font-semibold transition ${
+                      isActive
+                        ? "border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950"
+                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <div className="flex items-center gap-2 text-sm font-semibold text-slate-500 dark:text-slate-400">
-                <ReceiptText className="h-4 w-4 text-slate-500 dark:text-slate-400" />
-                Expenses booked
-              </div>
-              <p className="mt-3 text-3xl font-medium leading-none text-slate-600 dark:text-slate-300">
-                {formatHeroMoney(chartData.totals.expenses)} <span className="text-sm font-medium">{analytics.currency}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="flex min-h-40 items-end gap-2 overflow-x-auto pb-1">
-            {visibleSeries.map((entry) => {
-              const barHeight = Math.max(6, (entry.revenue / heroData.maxMonthlyRevenue) * 96);
-              const hasRevenue = entry.revenue > 0;
-              return (
-                <div key={entry.label} className="flex min-w-10 flex-1 flex-col items-center gap-3">
-                  <div
-                    className={hasRevenue ? "w-full max-w-9 rounded-t-md bg-slate-950 dark:bg-slate-100" : "w-full max-w-9 rounded-t-md bg-slate-200 dark:bg-slate-800"}
-                    style={{ height: `${barHeight}px` }}
-                    title={`${entry.label}: ${analytics.currency} ${formatMoney(entry.revenue)} revenue`}
-                  />
-                  <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{getShortMonthLabel(entry.label)}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-7 rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-900/60">
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-[1.2fr_2fr] md:items-center">
-            <div>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Net result</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
-                {formatHeroMoney(chartData.totals.profit)} {analytics.currency}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                Tax planning estimate {selectedYear === "custom" ? "for selected range" : selectedYear}
-              </p>
-              <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <p className="text-lg font-medium text-slate-900 dark:text-slate-50">
-                    {formatHeroMoney(heroData.incomeTaxEstimate)} {analytics.currency}
-                  </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Income tax</p>
-                </div>
-                <div>
-                  <p className="text-lg font-medium text-slate-900 dark:text-slate-50">
-                    {formatHeroMoney(heroData.socialSecurityEstimate)} {analytics.currency}
-                  </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">Social security</p>
-                </div>
-              </div>
-              <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-                Planning estimate only. Confirm final tax and social security amounts with your accountant.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Selected Date Range</CardTitle>
-          <p className="text-sm text-slate-500">
-            Track what has been issued, collected, and left open for the exact dates selected.
-          </p>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Issued in range</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
-                {analytics.currency} {formatMoney(analytics.monthProgress.issuedAmount)}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                {analytics.monthProgress.issuedCount} official invoice
-                {analytics.monthProgress.issuedCount === 1 ? "" : "s"} issued in range
-              </p>
-            </div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/70 dark:bg-emerald-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Collected in range</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
-                {analytics.currency} {formatMoney(analytics.monthProgress.collectedAmount)}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Cash received in the selected dates</p>
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/70 dark:bg-amber-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Open now</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
-                {analytics.currency} {formatMoney(analytics.monthProgress.openAmount)}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Unpaid amount across draft, sent, and overdue invoices</p>
-            </div>
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/70 dark:bg-red-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Overdue now</p>
-              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
-                {analytics.currency} {formatMoney(analytics.monthProgress.overdueAmount)}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Currently overdue unpaid amount</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Average Month</CardTitle>
-            <p className="text-sm text-slate-500">
-              Monthly averages across the selected range, useful for planning regular income and costs.
-            </p>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average billed</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
-                {analytics.currency} {formatMoney(chartData.averages.billed)}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Invoice totals issued per month</p>
-            </div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900/70 dark:bg-emerald-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Average earnings</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
-                {analytics.currency} {formatMoney(chartData.averages.revenue)}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Cash collected per month</p>
-            </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/70 dark:bg-amber-950/30">
-              <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Average expenses</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
-                {analytics.currency} {formatMoney(chartData.averages.expenses)}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Costs booked per month</p>
-            </div>
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average net result</p>
-              <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
-                {analytics.currency} {formatMoney(chartData.averages.profit)}
-              </p>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Collected minus expenses</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Billed by Month</CardTitle>
-            <p className="text-sm text-slate-500">
-              See the invoice total issued each month, separate from payments collected later.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {visibleSeries.map((entry) => (
-              <div key={entry.label} className="space-y-2 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-                <div className="flex items-center justify-between gap-3">
-                  <p className="font-medium text-slate-900 dark:text-slate-100">{entry.label}</p>
-                  <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
-                    {analytics.currency} {formatMoney(entry.billed)}
-                  </p>
-                </div>
-                <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-                  <div
-                    className="h-2 rounded-full bg-slate-950 dark:bg-slate-100"
-                    style={{ width: `${entry.billed > 0 ? Math.max(6, (entry.billed / maxMonthlyBilled) * 100) : 0}%` }}
-                  />
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Collected: {analytics.currency} {formatMoney(entry.revenue)} - Expenses: {analytics.currency} {formatMoney(entry.expenses)}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card id="monthly-report">
-        <CardHeader>
-          <CardTitle>Monthly Report</CardTitle>
-          <p className="text-sm text-slate-500">
-            Saved monthly report history is generated automatically and emailed on the 1st of each month at 08:00 Europe/Zurich.
-          </p>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest saved report</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
-              {analytics.monthlyReports[0]?.month ?? "Not available yet"}
-            </p>
-            {analytics.monthlyReports[0] ? (
-              <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                <p>
-                  Revenue: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.revenue)}
-                </p>
-                <p>
-                  Costs: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.expenses)}
-                </p>
-                <p>
-                  Net result: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.profit)}
-                </p>
-                <p>Email status: {analytics.monthlyReports[0].emailStatus}</p>
-              </div>
-            ) : (
-              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">The first saved report appears after the next monthly automation run.</p>
-            )}
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Report history</p>
-            {analytics.monthlyReports.length === 0 ? (
-              <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">No saved reports yet.</p>
-            ) : (
-              <div className="mt-3 max-h-56 space-y-2 overflow-y-auto text-sm text-slate-600 dark:text-slate-300">
-                {analytics.monthlyReports.map((report) => (
-                  <div key={report.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 dark:bg-slate-900">
-                    <div>
-                      <p className="font-medium text-slate-900 dark:text-slate-100">{report.month}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        Generated {new Date(report.generatedAt).toLocaleDateString()} - {report.emailStatus}
-                      </p>
-                    </div>
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">
-                      {report.currency} {formatMoney(report.metrics.profit)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <CardTitle>Revenue, costs, and net result</CardTitle>
-              <p className="mt-1 text-sm text-slate-500">Interactive view for {startDate} to {endDate}.</p>
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex h-10 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+                <CalendarDays className="h-4 w-4 text-slate-500 dark:text-slate-400" />
+                <select
+                  value={selectedYear}
+                  onChange={(event) => handleYearChange(event.target.value)}
+                  className="bg-transparent text-sm font-semibold outline-none"
+                  aria-label="Analytics year"
+                >
+                  <option value="custom">Custom</option>
+                  {yearOptions.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+              </label>
               <label className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                <span>Start date</span>
+                <span className="sr-only">Start date</span>
                 <input
                   type="date"
                   value={startDate}
@@ -799,7 +544,7 @@ export default function AnalyticsPage() {
                 />
               </label>
               <label className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                <span>End date</span>
+                <span className="sr-only">End date</span>
                 <input
                   type="date"
                   value={endDate}
@@ -807,28 +552,109 @@ export default function AnalyticsPage() {
                   className="h-10 rounded-md border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
                 />
               </label>
+              <Button
+                type="button"
+                onClick={exportAnalyticsCsv}
+                className="h-10 rounded-md bg-slate-950 px-4 text-white shadow-sm hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
             </div>
+          </div>
+        </div>
+
+        <div className="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total billed</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-slate-50">
+              {formatHeroMoney(chartData.totals.billed)} <span className="text-base font-medium text-slate-500">{analytics.currency}</span>
+            </p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              {analytics.monthProgress.issuedCount} invoice{analytics.monthProgress.issuedCount === 1 ? "" : "s"} issued in range
+            </p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 dark:border-slate-800 dark:bg-slate-900/60">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Average billed / month</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-slate-50">
+              {formatHeroMoney(chartData.averages.billed)} <span className="text-base font-medium text-slate-500">{analytics.currency}</span>
+            </p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Your normal monthly invoice volume</p>
+          </div>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-4 dark:border-amber-900/70 dark:bg-amber-950/30">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Expenses</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-slate-50">
+              {formatHeroMoney(chartData.totals.expenses)} <span className="text-base font-medium text-slate-500">{analytics.currency}</span>
+            </p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Costs booked in the selected range</p>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-900/70 dark:bg-emerald-950/30">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Net after expenses</p>
+            <p className="mt-2 text-3xl font-semibold text-slate-950 dark:text-slate-50">
+              {formatHeroMoney(chartData.totals.billedNet)} <span className="text-base font-medium text-slate-500">{analytics.currency}</span>
+            </p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Billed amount minus booked expenses</p>
+          </div>
+        </div>
+
+        <div className="mt-5 rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950/60">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-[1.2fr_2fr] md:items-center">
+            <div>
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Tax planning estimate</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-900 dark:text-slate-50">
+                {formatHeroMoney(heroData.incomeTaxEstimate + heroData.socialSecurityEstimate)} {analytics.currency}
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">Based on positive net after expenses.</p>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-900">
+                <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                  {formatHeroMoney(heroData.incomeTaxEstimate)} {analytics.currency}
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Income tax estimate</p>
+              </div>
+              <div className="rounded-lg bg-slate-50 px-4 py-3 dark:bg-slate-900">
+                <p className="text-lg font-semibold text-slate-900 dark:text-slate-50">
+                  {formatHeroMoney(heroData.socialSecurityEstimate)} {analytics.currency}
+                </p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Social security estimate</p>
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+            Planning estimate only. Confirm final tax and social security amounts with your accountant.
+          </p>
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,0.75fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Billing</CardTitle>
+            <p className="text-sm text-slate-500">
+              Billed amount is the main bar. Expenses and net after expenses show whether each month was strong or costly.
+            </p>
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                Revenue
+                <span className="h-2.5 w-2.5 rounded-full bg-slate-950 dark:bg-slate-100" />
+                Billed
               </div>
               <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
                 <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
-                Costs
+                Expenses
               </div>
               <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
-                <span className="h-2.5 w-2.5 rounded-full bg-slate-700 dark:bg-slate-200" />
-                Profit
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                Net
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/60">
               <svg viewBox={`0 0 ${chartWidth} ${chartHeight}`} className="min-w-[680px]">
                 {[0.25, 0.5, 0.75, 1].map((fraction) => {
-                  const y = chartPadding.top + (chartHeight - chartPadding.top - chartPadding.bottom) * (1 - fraction);
+                  const y = chartPadding.top + usableChartHeight * (1 - fraction);
                   return (
                     <line
                       key={fraction}
@@ -850,30 +676,40 @@ export default function AnalyticsPage() {
                   strokeWidth="1.5"
                 />
 
-                <path d={revenuePath} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
-                <path d={expensePath} fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
-                <path d={profitPath} fill="none" stroke={chartColors.profit} strokeWidth="3" strokeLinecap="round" />
+                {visibleSeries.map((entry, index) => {
+                  const x = chartPadding.left + index * chartStepX;
+                  const billedY = getChartY(entry.billed);
+                  return (
+                    <rect
+                      key={`billed-${entry.label}`}
+                      x={x - chartBarWidth / 2}
+                      y={Math.min(billedY, zeroLineY)}
+                      width={chartBarWidth}
+                      height={Math.max(2, Math.abs(zeroLineY - billedY))}
+                      rx="5"
+                      fill={entry.billed > 0 ? chartColors.billed : chartColors.grid}
+                    >
+                      <title>{`${entry.label}: Billed ${analytics.currency} ${formatMoney(entry.billed)}`}</title>
+                    </rect>
+                  );
+                })}
 
-                {revenuePoints.map((point, index) => (
-                  <circle key={`revenue-${index}`} cx={point.x} cy={point.y} r="4" fill="#10b981">
-                    <title>{`${visibleSeries[index]?.label}: Revenue ${analytics.currency} ${formatMoney(point.value)}`}</title>
-                  </circle>
-                ))}
+                <path d={expensePath} fill="none" stroke="#f59e0b" strokeWidth="3" strokeLinecap="round" />
+                <path d={billedNetPath} fill="none" stroke="#10b981" strokeWidth="3" strokeLinecap="round" />
+
                 {expensePoints.map((point, index) => (
                   <circle key={`expense-${index}`} cx={point.x} cy={point.y} r="4" fill="#f59e0b">
-                    <title>{`${visibleSeries[index]?.label}: Costs ${analytics.currency} ${formatMoney(point.value)}`}</title>
+                    <title>{`${visibleSeries[index]?.label}: Expenses ${analytics.currency} ${formatMoney(point.value)}`}</title>
                   </circle>
                 ))}
-                {profitPoints.map((point, index) => (
-                  <circle key={`profit-${index}`} cx={point.x} cy={point.y} r="4" fill={chartColors.profit}>
-                    <title>{`${visibleSeries[index]?.label}: Profit ${analytics.currency} ${formatMoney(visibleSeries[index]?.profit ?? 0)}`}</title>
+                {billedNetPoints.map((point, index) => (
+                  <circle key={`net-${index}`} cx={point.x} cy={point.y} r="4" fill="#10b981">
+                    <title>{`${visibleSeries[index]?.label}: Net ${analytics.currency} ${formatMoney(point.value)}`}</title>
                   </circle>
                 ))}
 
                 {visibleSeries.map((entry, index) => {
-                  const usableWidth = chartWidth - chartPadding.left - chartPadding.right;
-                  const stepX = visibleSeries.length === 1 ? 0 : usableWidth / (visibleSeries.length - 1);
-                  const x = chartPadding.left + index * stepX;
+                  const x = chartPadding.left + index * chartStepX;
                   return (
                     <text
                       key={entry.label}
@@ -883,108 +719,90 @@ export default function AnalyticsPage() {
                       fontSize="11"
                       fill={chartColors.label}
                     >
-                      {entry.label}
+                      {getShortMonthLabel(entry.label)}
                     </text>
                   );
                 })}
               </svg>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected revenue</p>
-                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
-                  {analytics.currency} {formatMoney(chartData.totals.revenue)}
-                </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  vs previous: {formatDeltaPercent(chartData.totals.revenue, comparisonData.previousTotals.revenue)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected costs</p>
-                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
-                  {analytics.currency} {formatMoney(chartData.totals.expenses)}
-                </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  vs previous: {formatDeltaPercent(chartData.totals.expenses, comparisonData.previousTotals.expenses)}
-                </p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Selected profit</p>
-                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
-                  {analytics.currency} {formatMoney(chartData.totals.profit)}
-                </p>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                  vs previous: {formatDeltaPercent(chartData.totals.profit, comparisonData.previousTotals.profit)}
-                </p>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[620px] text-left text-sm">
+                <thead className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500 dark:border-slate-800">
+                  <tr>
+                    <th className="py-2 pr-3">Month</th>
+                    <th className="py-2 pr-3 text-right">Billed</th>
+                    <th className="py-2 pr-3 text-right">Expenses</th>
+                    <th className="py-2 pr-3 text-right">Net</th>
+                    <th className="py-2 text-right">Collected</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {visibleSeries.map((entry) => {
+                    const net = entry.billed - entry.expenses;
+                    return (
+                      <tr key={entry.label}>
+                        <td className="py-3 pr-3 font-medium text-slate-900 dark:text-slate-100">{entry.label}</td>
+                        <td className="py-3 pr-3 text-right text-slate-900 dark:text-slate-100">
+                          {analytics.currency} {formatMoney(entry.billed)}
+                        </td>
+                        <td className="py-3 pr-3 text-right text-slate-600 dark:text-slate-300">
+                          {analytics.currency} {formatMoney(entry.expenses)}
+                        </td>
+                        <td className="py-3 pr-3 text-right font-semibold text-slate-900 dark:text-slate-100">
+                          {analytics.currency} {formatMoney(net)}
+                        </td>
+                        <td className="py-3 text-right text-slate-500 dark:text-slate-400">
+                          {analytics.currency} {formatMoney(entry.revenue)}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Collections and payment behavior</CardTitle>
+            <CardTitle>Month Notes</CardTitle>
+            <p className="text-sm text-slate-500">Quick signals from the selected range.</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Overdue exposure</p>
-              <div className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                <p>{analytics.currency} {formatMoney(analytics.overdueAmount)} currently overdue</p>
-                <p>
-                  {derived.overdueShare === null
-                    ? "No open revenue pipeline right now."
-                    : `${formatPercent(derived.overdueShare)} of the current open pipeline is overdue.`}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Average days to pay</p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                {analytics.averageDaysToPay === null
-                  ? "Not enough paid invoices yet."
-                  : `${analytics.averageDaysToPay.toFixed(1)} days based on invoices with recorded payments.`}
-              </p>
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Best month in this range</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Best billing month</p>
               <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                 {comparisonData.bestMonth
-                  ? `${comparisonData.bestMonth.label} delivered ${analytics.currency} ${formatMoney(comparisonData.bestMonth.profit)} profit.`
+                  ? `${comparisonData.bestMonth.label} had ${analytics.currency} ${formatMoney(comparisonData.bestMonth.billed)} billed.`
                   : "Not enough data yet."}
               </p>
             </div>
-
             <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Open pipeline</p>
-              <div className="mt-2 space-y-1 text-sm text-slate-600 dark:text-slate-300">
-                <p>Open pipeline: {analytics.currency} {formatMoney(analytics.prospectRevenue)}</p>
-                <p>Paid invoices: {analytics.paidInvoices}</p>
-                <p>Unpaid invoices: {analytics.unpaidInvoices}</p>
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Cash collected</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                {analytics.currency} {formatMoney(chartData.totals.revenue)} collected in this range.
+              </p>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Useful for cash flow, but not the main billing target.</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Largest month</p>
+              <div className="mt-3 space-y-2">
+                {visibleSeries.map((entry) => (
+                  <div key={entry.label} className="space-y-1">
+                    <div className="flex items-center justify-between gap-3 text-xs">
+                      <span className="font-medium text-slate-600 dark:text-slate-300">{entry.label}</span>
+                      <span className="text-slate-500 dark:text-slate-400">{analytics.currency} {formatMoney(entry.billed)}</span>
+                    </div>
+                    <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div
+                        className="h-2 rounded-full bg-slate-950 dark:bg-slate-100"
+                        style={{ width: `${entry.billed > 0 ? Math.max(6, (entry.billed / maxMonthlyBilled) * 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
-
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
-              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Average paid invoice</p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                {analytics.currency} {formatMoney(analytics.averagePaidInvoiceValue)} average value per paid invoice.
-              </p>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-                {derived.topClientName && derived.topClientShare !== null
-                  ? `${derived.topClientName} represents ${formatPercent(derived.topClientShare)} of paid revenue.`
-                  : "No paid client revenue yet."}
-              </p>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Button asChild className="w-full">
-                <Link href="/invoices?status=overdue">Review overdue invoices</Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link href="/expenses">Review expenses</Link>
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -993,22 +811,22 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Top Clients</CardTitle>
-            <p className="text-sm text-slate-500">See how concentrated your revenue is and which clients matter most.</p>
+            <CardTitle>Best Clients</CardTitle>
+            <p className="text-sm text-slate-500">Clients ranked by billed invoice totals in the selected period.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {analytics.topClients.length === 0 ? (
-              <p className="text-sm text-slate-500">No paid client revenue yet.</p>
+              <p className="text-sm text-slate-500">No billed client work yet.</p>
             ) : (
               analytics.topClients.map((client) => {
-                const share = analytics.totalRevenue > 0 ? (client.revenue / analytics.totalRevenue) * 100 : 0;
+                const share = chartData.totals.billed > 0 ? (client.revenue / chartData.totals.billed) * 100 : 0;
                 return (
                   <div key={client.clientId} className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
                     <div className="flex items-center justify-between gap-3">
                       <div>
                         <p className="font-medium text-slate-900 dark:text-slate-100">{client.clientName}</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          {client.invoiceCount} paid invoices - {formatPercent(share)} of revenue
+                          {client.invoiceCount} invoice{client.invoiceCount === 1 ? "" : "s"} - {formatPercent(share)} of billed work
                         </p>
                       </div>
                       <p className="font-semibold text-slate-900 dark:text-slate-100">
@@ -1024,8 +842,8 @@ export default function AnalyticsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Expense Breakdown</CardTitle>
-            <p className="text-sm text-slate-500">Identify where money is going so you can cut or control the biggest categories.</p>
+            <CardTitle>Where Money Went</CardTitle>
+            <p className="text-sm text-slate-500">Expenses grouped by category for the selected period.</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {analytics.expenseBreakdown.length === 0 ? (
@@ -1043,13 +861,115 @@ export default function AnalyticsPage() {
                   </div>
                   <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
                     <div
-                      className="h-2 rounded-full bg-slate-600 dark:bg-slate-300"
+                      className="h-2 rounded-full bg-amber-400"
                       style={{ width: `${Math.max(6, (entry.amount / maxBreakdownValue) * 100)}%` }}
                     />
                   </div>
                 </div>
               ))
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Health</CardTitle>
+            <p className="text-sm text-slate-500">Secondary view for follow-up and cash flow.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-900/70 dark:bg-amber-950/30">
+                <p className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">Open now</p>
+                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
+                  {analytics.currency} {formatMoney(analytics.monthProgress.openAmount)}
+                </p>
+              </div>
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 dark:border-red-900/70 dark:bg-red-950/30">
+                <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Overdue now</p>
+                <p className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-50">
+                  {analytics.currency} {formatMoney(analytics.monthProgress.overdueAmount)}
+                </p>
+              </div>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-sm font-medium text-slate-900 dark:text-slate-100">Average days to pay</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                {analytics.averageDaysToPay === null
+                  ? "Not enough paid invoices yet."
+                  : `${analytics.averageDaysToPay.toFixed(1)} days based on invoices with recorded payments.`}
+              </p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+                {derived.overdueShare === null
+                  ? "No open invoice pipeline right now."
+                  : `${formatPercent(derived.overdueShare)} of the current open invoice pipeline is overdue.`}
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Button asChild className="w-full">
+                <Link href="/invoices?status=overdue">Review overdue invoices</Link>
+              </Button>
+              <Button asChild variant="outline" className="w-full">
+                <Link href="/invoices">Open invoices</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card id="monthly-report">
+          <CardHeader>
+            <CardTitle>Monthly Report</CardTitle>
+            <p className="text-sm text-slate-500">
+              Saved report history generated automatically on the 1st of each month.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Latest saved report</p>
+              <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-slate-50">
+                {analytics.monthlyReports[0]?.month ?? "Not available yet"}
+              </p>
+              {analytics.monthlyReports[0] ? (
+                <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                  <p>
+                    Revenue: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.revenue)}
+                  </p>
+                  <p>
+                    Costs: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.expenses)}
+                  </p>
+                  <p>
+                    Net result: {analytics.monthlyReports[0].currency} {formatMoney(analytics.monthlyReports[0].metrics.profit)}
+                  </p>
+                  <p>Email status: {analytics.monthlyReports[0].emailStatus}</p>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">The first saved report appears after the next monthly automation run.</p>
+              )}
+            </div>
+
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Report history</p>
+              {analytics.monthlyReports.length === 0 ? (
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">No saved reports yet.</p>
+              ) : (
+                <div className="mt-3 max-h-56 space-y-2 overflow-y-auto text-sm text-slate-600 dark:text-slate-300">
+                  {analytics.monthlyReports.map((report) => (
+                    <div key={report.id} className="flex items-center justify-between gap-3 rounded-lg bg-white px-3 py-2 dark:bg-slate-900">
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-slate-100">{report.month}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Generated {new Date(report.generatedAt).toLocaleDateString()} - {report.emailStatus}
+                        </p>
+                      </div>
+                      <p className="font-semibold text-slate-900 dark:text-slate-100">
+                        {report.currency} {formatMoney(report.metrics.profit)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>

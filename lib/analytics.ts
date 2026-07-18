@@ -223,7 +223,20 @@ export async function buildAnalyticsOverview(
         issuedAt: { gte: range.startDate, lt: range.endDateExclusive },
         status: { not: "cancelled" },
       },
-      select: { issuedAt: true, issueDate: true, totalAmount: true },
+      select: {
+        id: true,
+        issuedAt: true,
+        issueDate: true,
+        totalAmount: true,
+        client: {
+          select: {
+            id: true,
+            companyName: true,
+            contactName: true,
+            email: true,
+          },
+        },
+      },
     }),
     db.expense.findMany({
       where: {
@@ -253,7 +266,7 @@ export async function buildAnalyticsOverview(
 
   let totalRevenue = 0;
   const monthlyRevenue = new Map<string, number>(months.map((month) => [month.key, 0]));
-  const topClientMap = new Map<string, { clientId: string; clientName: string; revenue: number; invoiceIds: Set<string> }>();
+  const billedClientMap = new Map<string, { clientId: string; clientName: string; revenue: number; invoiceIds: Set<string> }>();
   const paymentDelays: number[] = [];
 
   for (const payment of settledPaymentsRaw) {
@@ -263,18 +276,6 @@ export async function buildAnalyticsOverview(
     if (monthlyRevenue.has(revenueMonthKey)) {
       monthlyRevenue.set(revenueMonthKey, (monthlyRevenue.get(revenueMonthKey) ?? 0) + payment.amount);
     }
-
-    const clientId = payment.invoice.client.id;
-    const clientName = payment.invoice.client.companyName || payment.invoice.client.contactName || payment.invoice.client.email;
-    const existingClient = topClientMap.get(clientId);
-    const invoiceIds = existingClient?.invoiceIds ?? new Set<string>();
-    invoiceIds.add(payment.invoice.id);
-    topClientMap.set(clientId, {
-      clientId,
-      clientName,
-      revenue: (existingClient?.revenue ?? 0) + payment.amount,
-      invoiceIds,
-    });
 
     const diffMs = payment.createdAt.getTime() - payment.invoice.issueDate.getTime();
     paymentDelays.push(Math.max(0, diffMs / (1000 * 60 * 60 * 24)));
@@ -318,6 +319,18 @@ export async function buildAnalyticsOverview(
     if (monthlyBilled.has(billedMonthKey)) {
       monthlyBilled.set(billedMonthKey, (monthlyBilled.get(billedMonthKey) ?? 0) + invoice.totalAmount);
     }
+
+    const clientId = invoice.client.id;
+    const clientName = invoice.client.companyName || invoice.client.contactName || invoice.client.email;
+    const existingClient = billedClientMap.get(clientId);
+    const invoiceIds = existingClient?.invoiceIds ?? new Set<string>();
+    invoiceIds.add(invoice.id);
+    billedClientMap.set(clientId, {
+      clientId,
+      clientName,
+      revenue: (existingClient?.revenue ?? 0) + invoice.totalAmount,
+      invoiceIds,
+    });
   }
   const monthlySeries = months.map((month) => {
     const billed = monthlyBilled.get(month.key) ?? 0;
@@ -332,7 +345,7 @@ export async function buildAnalyticsOverview(
     };
   });
 
-  const topClients = Array.from(topClientMap.values())
+  const topClients = Array.from(billedClientMap.values())
     .map((client) => ({
       clientId: client.clientId,
       clientName: client.clientName,
