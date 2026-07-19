@@ -20,6 +20,7 @@ import {
   normalizeInvoiceCurrency,
 } from "@/lib/invoice";
 import { getInvoiceVatConfigurationError } from "@/lib/vat";
+import { getOutstandingInvoiceAmount, getSettledPaymentAmount } from "@/lib/payments";
 
 type LineItemInput = {
   description: unknown;
@@ -123,10 +124,26 @@ export async function GET(request: Request) {
             email: true,
           },
         },
+        payments: {
+          select: {
+            amount: true,
+            status: true,
+          },
+        },
       },
     });
 
-    return NextResponse.json(invoices);
+    return NextResponse.json(
+      invoices.map(({ payments, ...invoice }) => ({
+        ...invoice,
+        paidAmount: getSettledPaymentAmount(payments),
+        amountDue: getOutstandingInvoiceAmount({
+          status: invoice.status,
+          totalAmount: invoice.totalAmount,
+          payments,
+        }),
+      }))
+    );
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);

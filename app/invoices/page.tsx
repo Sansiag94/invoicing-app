@@ -90,6 +90,68 @@ function getInvoiceClientName(invoice: InvoiceRow): string {
   return invoice.client?.companyName || invoice.client?.contactName || invoice.client?.email || "-";
 }
 
+function getInvoicePaidAmount(invoice: InvoiceRow): number {
+  return typeof invoice.paidAmount === "number" && Number.isFinite(invoice.paidAmount)
+    ? invoice.paidAmount
+    : 0;
+}
+
+function getInvoiceAmountDue(invoice: InvoiceRow): number {
+  if (typeof invoice.amountDue === "number" && Number.isFinite(invoice.amountDue)) {
+    return invoice.amountDue;
+  }
+
+  return invoice.status === "paid" || invoice.status === "cancelled" ? 0 : invoice.totalAmount;
+}
+
+function isPartiallyPaidInvoice(invoice: InvoiceRow): boolean {
+  return getInvoicePaidAmount(invoice) > 0.005 && getInvoiceAmountDue(invoice) > 0.005;
+}
+
+function renderInvoiceAmount(invoice: InvoiceRow) {
+  const paidAmount = getInvoicePaidAmount(invoice);
+  const amountDue = getInvoiceAmountDue(invoice);
+
+  if (isPartiallyPaidInvoice(invoice)) {
+    return (
+      <div className="space-y-0.5">
+        <p className="font-semibold text-slate-900 dark:text-slate-100">
+          Due {invoice.currency} {amountDue.toFixed(2)}
+        </p>
+        <p className="text-xs text-slate-500 dark:text-slate-400">
+          Total {invoice.currency} {invoice.totalAmount.toFixed(2)} · Paid {invoice.currency}{" "}
+          {paidAmount.toFixed(2)}
+        </p>
+      </div>
+    );
+  }
+
+  if (invoice.status === "paid") {
+    return (
+      <div className="space-y-0.5">
+        <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+          Paid {invoice.currency} {invoice.totalAmount.toFixed(2)}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <p>
+      {invoice.currency} {invoice.totalAmount.toFixed(2)}
+    </p>
+  );
+}
+
+function renderInvoiceStatusBadges(invoice: InvoiceRow) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+      {isPartiallyPaidInvoice(invoice) ? <Badge variant="warning">partial</Badge> : null}
+    </div>
+  );
+}
+
 function getInvoiceActionMenuHeight(invoice: InvoiceRow): number {
   let actionCount = 4;
 
@@ -2033,12 +2095,8 @@ function InvoicePageContent() {
                     <TableCell>{formatShortDate(invoice.issueDate)}</TableCell>
                     <TableCell>{invoice.invoiceNumber}</TableCell>
                     <TableCell>{getInvoiceClientName(invoice)}</TableCell>
-                    <TableCell>
-                      {invoice.currency} {invoice.totalAmount.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
-                    </TableCell>
+                    <TableCell>{renderInvoiceAmount(invoice)}</TableCell>
+                    <TableCell>{renderInvoiceStatusBadges(invoice)}</TableCell>
                     <TableCell>
                       <div className="grid grid-cols-[8.5rem_7rem] gap-2">
                         {invoice.status === "draft" || invoice.status === "paid" ? (
@@ -2114,11 +2172,11 @@ function InvoicePageContent() {
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{formatShortDate(invoice.issueDate)}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-300">{getInvoiceClientName(invoice)}</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">
-                        {invoice.currency} {invoice.totalAmount.toFixed(2)}
-                      </p>
+                      <div className="text-sm text-slate-600 dark:text-slate-300">
+                        {renderInvoiceAmount(invoice)}
+                      </div>
                     </div>
-                    <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                    {renderInvoiceStatusBadges(invoice)}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">

@@ -132,6 +132,8 @@ export interface InvoiceSummary {
   subtotal: number;
   taxAmount: number;
   totalAmount: number;
+  paidAmount?: number;
+  amountDue?: number;
   notes: string | null;
   paymentNote: string | null;
   discountType: DiscountType;
