@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FocusEvent, ReactNode, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
-import { BellRing, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, CircleOff, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { BellRing, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, CircleOff, Copy, FileCheck2, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import BillingPlanChip from "@/components/billing/BillingPlanChip";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
@@ -90,6 +90,10 @@ function getInvoiceClientName(invoice: InvoiceRow): string {
   return invoice.client?.companyName || invoice.client?.contactName || invoice.client?.email || "-";
 }
 
+function hasInvoiceClientEmail(invoice: InvoiceRow): boolean {
+  return Boolean(invoice.client?.email?.trim());
+}
+
 function getInvoicePaidAmount(invoice: InvoiceRow): number {
   return typeof invoice.paidAmount === "number" && Number.isFinite(invoice.paidAmount)
     ? invoice.paidAmount
@@ -165,7 +169,7 @@ function getInvoiceActionMenuHeight(invoice: InvoiceRow): number {
   }
 
   if (invoice.status === "draft") {
-    actionCount += invoice.scheduledSendAt ? 2 : 1;
+    actionCount += invoice.scheduledSendAt ? 3 : 2;
   }
 
   return ACTION_MENU_VERTICAL_PADDING + actionCount * ACTION_MENU_ROW_HEIGHT;
@@ -330,6 +334,7 @@ function InvoicePageContent() {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
+  const [isIssuingId, setIsIssuingId] = useState<string | null>(null);
   const [isSchedulingId, setIsSchedulingId] = useState<string | null>(null);
   const [isSendingReminderId, setIsSendingReminderId] = useState<string | null>(null);
   const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
@@ -937,6 +942,66 @@ function InvoicePageContent() {
     }
   };
 
+  const issueInvoiceNow = async (invoiceId: string) => {
+    setIsIssuingId(invoiceId);
+
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoiceId}/issue`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        message?: string;
+        code?: string;
+        details?: unknown;
+      };
+
+      if (!response.ok) {
+        if (handleBillingLimitResponse(result)) {
+          return;
+        }
+
+        toast({
+          title: "Failed to issue invoice",
+          description: result.error ?? "Failed to issue invoice",
+          variant: "error",
+        });
+        return;
+      }
+
+      setSuccessMessage(result.message ?? "Invoice issued. You can download or print it now.");
+      await refreshInvoiceWorkspaceData();
+    } catch (error) {
+      console.error("Error issuing invoice:", error);
+      toast({
+        title: "Failed to issue invoice",
+        description: "Failed to issue invoice",
+        variant: "error",
+      });
+    } finally {
+      setIsIssuingId(null);
+    }
+  };
+
+  const handleIssueInvoice = (invoiceId: string) => {
+    const invoice = invoices.find((entry) => entry.id === invoiceId);
+
+    setConfirmDialog({
+      title: "Issue Invoice",
+      description: (
+        <>
+          Issue draft invoice <strong>{invoice?.invoiceNumber ?? "this invoice"}</strong> without sending an email?
+          A real invoice number will be assigned, and you can then download or print it for the client.
+        </>
+      ),
+      confirmLabel: "Issue Invoice",
+      onConfirm: () => {
+        setConfirmDialog(null);
+        void issueInvoiceNow(invoiceId);
+      },
+    });
+  };
+
   const handleSendInvoice = (invoiceId: string) => {
     const invoice = invoices.find((entry) => entry.id === invoiceId);
 
@@ -1536,6 +1601,21 @@ function InvoicePageContent() {
             >
               <CalendarClock className="h-4 w-4" />
               {isSchedulingId === invoice.id ? "Updating..." : "Clear Schedule"}
+            </button>
+          ) : null}
+          {invoice.status === "draft" ? (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+              disabled={isIssuingId === invoice.id}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
+                handleIssueInvoice(invoice.id);
+              }}
+            >
+              <FileCheck2 className="h-4 w-4" />
+              {isIssuingId === invoice.id ? "Issuing..." : "Issue for Download"}
             </button>
           ) : null}
           <button
@@ -2233,7 +2313,21 @@ function InvoicePageContent() {
                     </TableCell>
                     <TableCell>
                       <div className="grid grid-cols-[8.5rem_7rem] gap-2">
-                        {invoice.status === "draft" || invoice.status === "paid" ? (
+                        {invoice.status === "draft" && !hasInvoiceClientEmail(invoice) ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-[8.5rem] justify-start"
+                            disabled={isIssuingId === invoice.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleIssueInvoice(invoice.id);
+                            }}
+                          >
+                            <FileCheck2 className="h-4 w-4" />
+                            {isIssuingId === invoice.id ? "Issuing..." : "Issue"}
+                          </Button>
+                        ) : invoice.status === "draft" || invoice.status === "paid" ? (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -2321,7 +2415,21 @@ function InvoicePageContent() {
                   ) : null}
 
                   <div className="grid grid-cols-2 gap-2">
-                    {invoice.status === "draft" || invoice.status === "paid" ? (
+                    {invoice.status === "draft" && !hasInvoiceClientEmail(invoice) ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={isIssuingId === invoice.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleIssueInvoice(invoice.id);
+                        }}
+                        className="col-span-2"
+                      >
+                        <FileCheck2 className="h-4 w-4" />
+                        {isIssuingId === invoice.id ? "Issuing..." : "Issue for Download"}
+                      </Button>
+                    ) : invoice.status === "draft" || invoice.status === "paid" ? (
                       <Button
                         variant="secondary"
                         size="sm"

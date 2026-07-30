@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 export type InvoiceEventType =
   | "created"
   | "edited"
+  | "issued"
   | "sent"
   | "reminder_sent"
   | "viewed"

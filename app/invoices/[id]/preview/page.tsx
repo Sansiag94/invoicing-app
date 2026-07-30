@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BellRing, CalendarClock, CheckCircle2, CircleOff, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, CalendarClock, CheckCircle2, CircleOff, Copy, Download, FileCheck2, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
 import { getBillingLimitDetails } from "@/lib/billingClient";
@@ -55,6 +55,7 @@ export default function InvoicePreviewPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isIssuing, setIsIssuing] = useState(false);
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
@@ -64,6 +65,7 @@ export default function InvoicePreviewPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
+  const [showIssueConfirmDialog, setShowIssueConfirmDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
@@ -253,6 +255,11 @@ export default function InvoicePreviewPage() {
   }, [isMobile, pdfUrl]);
 
   const handleDownloadPdf = () => {
+    if (invoice?.status === "draft") {
+      setShowIssueConfirmDialog(true);
+      return;
+    }
+
     if (!pdfUrl) {
       return;
     }
@@ -334,6 +341,60 @@ export default function InvoicePreviewPage() {
     }
 
     void sendInvoiceNow();
+  };
+
+  const issueInvoiceNow = async () => {
+    if (!id) {
+      return;
+    }
+
+    try {
+      setIsIssuing(true);
+      const response = await authenticatedFetch(`/api/invoices/${id}/issue`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as {
+        message?: string;
+        status?: InvoiceDetails["status"];
+        invoiceNumber?: string;
+        error?: string;
+        code?: string;
+        details?: unknown;
+      };
+
+      if (!response.ok) {
+        if (handleBillingLimitResponse(result)) {
+          return;
+        }
+
+        toast({
+          title: "Failed to issue invoice",
+          description: result?.error ?? "Failed to issue invoice",
+          variant: "error",
+        });
+        return;
+      }
+
+      setSuccessMessage(result?.message ?? "Invoice issued. You can download or print it now.");
+      window.location.reload();
+    } catch (error) {
+      console.error("Error issuing invoice:", error);
+      toast({
+        title: "Failed to issue invoice",
+        description: "Failed to issue invoice",
+        variant: "error",
+      });
+    } finally {
+      setIsIssuing(false);
+    }
+  };
+
+  const handleIssueInvoice = () => {
+    if (invoice?.status !== "draft") {
+      return;
+    }
+
+    setShowIssueConfirmDialog(true);
   };
 
   const openScheduleDialog = () => {
@@ -622,11 +683,21 @@ export default function InvoicePreviewPage() {
 
         <div className="grid w-full grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
           {invoice?.status !== "cancelled" ? (
-            invoice?.status === "draft" || invoice?.status === "paid" ? (
+            invoice?.status === "draft" && !invoice.client.email?.trim() ? (
+              <Button
+                variant="default"
+                onClick={handleIssueInvoice}
+                disabled={isIssuing || isSending || isLoading || isDuplicating}
+                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
+              >
+                <FileCheck2 className="h-4 w-4" />
+                {isIssuing ? "Issuing..." : "Issue for Download"}
+              </Button>
+            ) : invoice?.status === "draft" || invoice?.status === "paid" ? (
               <Button
                 variant="default"
                 onClick={handleSendInvoice}
-                disabled={isSending || isLoading || isDuplicating}
+                disabled={isSending || isIssuing || isLoading || isDuplicating}
                 className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <Send className="h-4 w-4" />
@@ -648,11 +719,22 @@ export default function InvoicePreviewPage() {
             <Button
               variant="outline"
               onClick={openScheduleDialog}
-              disabled={isSchedulingSend || isSending || isLoading || isDuplicating}
+              disabled={isSchedulingSend || isSending || isIssuing || isLoading || isDuplicating}
               className="w-full sm:w-auto"
             >
               <CalendarClock className="h-4 w-4" />
               {invoice.scheduledSendAt ? "Reschedule Send" : "Schedule Send"}
+            </Button>
+          ) : null}
+          {invoice?.status === "draft" && invoice.client.email?.trim() ? (
+            <Button
+              variant="outline"
+              onClick={handleIssueInvoice}
+              disabled={isIssuing || isSending || isLoading || isDuplicating}
+              className="w-full sm:w-auto"
+            >
+              <FileCheck2 className="h-4 w-4" />
+              {isIssuing ? "Issuing..." : "Issue without Email"}
             </Button>
           ) : null}
           {invoice?.status === "paid" ? (
@@ -697,9 +779,9 @@ export default function InvoicePreviewPage() {
               Cancel Invoice
             </Button>
           ) : null}
-          <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading} className="w-full sm:w-auto">
-            <Download className="h-4 w-4" />
-            Download PDF
+          <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading || isIssuing} className="w-full sm:w-auto">
+            {invoice?.status === "draft" ? <FileCheck2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+            {invoice?.status === "draft" ? "Issue before PDF" : "Download PDF"}
           </Button>
           <Button
             variant="outline"
@@ -758,6 +840,23 @@ export default function InvoicePreviewPage() {
           </Button>
         </div>
       ) : null}
+      {invoice?.status === "draft" && !invoice.scheduledSendAt ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-100">
+          <span>
+            This preview is still a draft. Issue it before downloading or handing it to a client so it gets an official invoice number.
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleIssueInvoice}
+            disabled={isIssuing}
+          >
+            <FileCheck2 className="h-4 w-4" />
+            {isIssuing ? "Issuing..." : "Issue now"}
+          </Button>
+        </div>
+      ) : null}
       {invoice?.status === "cancelled" ? (
         <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
           This invoice is cancelled. The PDF stays available for your records, but no payment is
@@ -789,9 +888,9 @@ export default function InvoicePreviewPage() {
                 <Button onClick={handleOpenPdfPreview}>
                   Open PDF Preview
                 </Button>
-                <Button variant="outline" onClick={handleDownloadPdf}>
-                  <Download className="h-4 w-4" />
-                  Download PDF
+                <Button variant="outline" onClick={handleDownloadPdf} disabled={isIssuing}>
+                  {invoice?.status === "draft" ? <FileCheck2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                  {invoice?.status === "draft" ? "Issue before PDF" : "Download PDF"}
                 </Button>
               </div>
             </div>
@@ -838,6 +937,24 @@ export default function InvoicePreviewPage() {
         onConfirm={() => {
           setShowSendConfirmDialog(false);
           void sendInvoiceNow();
+        }}
+      />
+
+      <ConfirmDialog
+        open={showIssueConfirmDialog}
+        onOpenChange={setShowIssueConfirmDialog}
+        title="Issue Invoice"
+        description={
+          <>
+            Issue draft invoice <strong>{invoice?.invoiceNumber}</strong> without sending an email?
+            A real invoice number will be assigned, and the preview will reload with the final PDF.
+          </>
+        }
+        confirmLabel="Issue Invoice"
+        isConfirming={isIssuing}
+        onConfirm={() => {
+          setShowIssueConfirmDialog(false);
+          void issueInvoiceNow();
         }}
       />
 
