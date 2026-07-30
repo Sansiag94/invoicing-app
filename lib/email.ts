@@ -44,6 +44,8 @@ type SendInvoiceReminderEmailInput = {
   recipientName?: string | null;
   invoiceNumber: string;
   totalAmount: number;
+  originalTotalAmount?: number;
+  paidAmount?: number;
   currency: string;
   invoiceLink: string;
   dueDate: Date;
@@ -58,6 +60,8 @@ type SendManualInvoiceReminderEmailInput = {
   recipientName?: string | null;
   invoiceNumber: string;
   totalAmount: number;
+  originalTotalAmount?: number;
+  paidAmount?: number;
   currency: string;
   invoiceLink: string;
   dueDate: Date;
@@ -334,6 +338,8 @@ export async function sendInvoiceReminderEmail({
   recipientName,
   invoiceNumber,
   totalAmount,
+  originalTotalAmount,
+  paidAmount = 0,
   currency,
   invoiceLink,
   dueDate,
@@ -343,6 +349,10 @@ export async function sendInvoiceReminderEmail({
   const from = buildSenderIdentity(businessName);
   const replyTo = replyToEmail?.trim() || process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
+  const hasPartialPayment = paidAmount > 0.005;
+  const invoiceTotalAmount = originalTotalAmount ?? (hasPartialPayment ? totalAmount + paidAmount : totalAmount);
+  const formattedInvoiceTotal = `${currency} ${invoiceTotalAmount.toFixed(2)}`;
+  const formattedPaidAmount = `${currency} ${paidAmount.toFixed(2)}`;
   const dueDateLabel = formatDueDate(dueDate);
   const normalizedRecipientName = recipientName?.trim();
   const greetingLine = normalizedRecipientName ? `Hello ${normalizedRecipientName},` : "Hello,";
@@ -352,6 +362,10 @@ export async function sendInvoiceReminderEmail({
   const timingLine = isBeforeDue
     ? `This invoice is due on ${dueDateLabel} (in 3 days).`
     : `This invoice was due on ${dueDateLabel} (${overdueDays} days ago).`;
+  const balanceLine = hasPartialPayment
+    ? `A partial payment of ${formattedPaidAmount} has been recorded. Only the remaining balance is still open.`
+    : `The amount due is ${formattedTotal}.`;
+  const overdueBalanceLine = !isBeforeDue && hasPartialPayment ? "The remaining balance is now overdue." : null;
   const subject = isBeforeDue
     ? `${businessName} - Reminder: Invoice ${invoiceNumber} due soon`
     : `${businessName} - Reminder: Invoice ${invoiceNumber} is overdue`;
@@ -360,7 +374,11 @@ export async function sendInvoiceReminderEmail({
   const safeGreetingLine = escapeHtml(greetingLine);
   const safeInvoiceNumber = escapeHtml(invoiceNumber);
   const safeFormattedTotal = escapeHtml(formattedTotal);
+  const safeFormattedInvoiceTotal = escapeHtml(formattedInvoiceTotal);
+  const safeFormattedPaidAmount = escapeHtml(formattedPaidAmount);
   const safeTimingLine = escapeHtml(timingLine);
+  const safeBalanceLine = escapeHtml(balanceLine);
+  const safeOverdueBalanceLine = overdueBalanceLine ? escapeHtml(overdueBalanceLine) : null;
   const safeInvoiceLink = escapeHtml(invoiceLink);
   const { privacyUrl } = getLegalEmailLinks();
   const safePrivacyUrl = escapeHtml(privacyUrl);
@@ -373,11 +391,15 @@ export async function sendInvoiceReminderEmail({
     text: `${greetingLine}
 
 Reminder for invoice ${invoiceNumber}.
+${balanceLine}
+${overdueBalanceLine ? `${overdueBalanceLine}\n` : ""}
 Amount due: ${formattedTotal}
 ${timingLine}
 
 View invoice:
 ${invoiceLink}
+
+You can pay online or use the payment details in the invoice.
 
 Privacy notice:
 ${privacyUrl}`,
@@ -389,8 +411,17 @@ ${privacyUrl}`,
           <p style="margin: 0 0 22px; color: #475569; line-height: 1.6;">
             Reminder for invoice <strong>${safeInvoiceNumber}</strong>.
           </p>
+          <p style="margin: -10px 0 22px; color: #475569; line-height: 1.6;">
+            ${safeBalanceLine}${safeOverdueBalanceLine ? `<br />${safeOverdueBalanceLine}` : ""}
+          </p>
           <div style="margin: 0 0 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 18px;">
             <div style="margin: 0 0 10px; color: #475569;">Invoice number: <strong style="color:#0f172a;">${safeInvoiceNumber}</strong></div>
+            ${
+              hasPartialPayment
+                ? `<div style="margin: 0 0 10px; color: #475569;">Original total: <strong style="color:#0f172a;">${safeFormattedInvoiceTotal}</strong></div>
+                   <div style="margin: 0 0 10px; color: #475569;">Payment received: <strong style="color:#047857;">${safeFormattedPaidAmount}</strong></div>`
+                : ""
+            }
             <div style="margin: 0 0 10px; color: #475569;">Amount due: <strong style="color:#0f172a;">${safeFormattedTotal}</strong></div>
             <div style="margin: 0; color: #475569;">${safeTimingLine}</div>
           </div>
@@ -402,6 +433,9 @@ ${privacyUrl}`,
           <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
             If the button does not work, copy and paste this link into your browser:<br />
             <span>${safeInvoiceLink}</span>
+          </p>
+          <p style="margin: 14px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+            You can pay online or use the payment details in the invoice.
           </p>
           <p style="margin: 14px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.6;">
             Privacy notice: <a href="${safePrivacyUrl}" style="color: #475569;">${safePrivacyUrl}</a>
@@ -445,6 +479,8 @@ export async function sendManualInvoiceReminderEmail({
   recipientName,
   invoiceNumber,
   totalAmount,
+  originalTotalAmount,
+  paidAmount = 0,
   currency,
   invoiceLink,
   dueDate,
@@ -453,14 +489,33 @@ export async function sendManualInvoiceReminderEmail({
   const from = buildSenderIdentity(businessName);
   const replyTo = replyToEmail?.trim() || process.env.RESEND_REPLY_TO_EMAIL || DEFAULT_RESEND_REPLY_TO_EMAIL;
   const formattedTotal = `${currency} ${totalAmount.toFixed(2)}`;
+  const hasPartialPayment = paidAmount > 0.005;
+  const invoiceTotalAmount = originalTotalAmount ?? (hasPartialPayment ? totalAmount + paidAmount : totalAmount);
+  const formattedInvoiceTotal = `${currency} ${invoiceTotalAmount.toFixed(2)}`;
+  const formattedPaidAmount = `${currency} ${paidAmount.toFixed(2)}`;
   const dueDateLabel = formatDueDate(dueDate);
+  const dueDateValue = new Date(dueDate);
+  const today = new Date();
+  const todayStart = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const dueStart = Number.isFinite(dueDateValue.getTime())
+    ? Date.UTC(dueDateValue.getUTCFullYear(), dueDateValue.getUTCMonth(), dueDateValue.getUTCDate())
+    : todayStart;
+  const isOverdue = dueStart < todayStart;
+  const balanceLine = hasPartialPayment
+    ? `A partial payment of ${formattedPaidAmount} has been recorded. Only the remaining balance is still open.`
+    : `The amount due is ${formattedTotal}.`;
+  const overdueBalanceLine = isOverdue && hasPartialPayment ? "The remaining balance is now overdue." : null;
   const normalizedRecipientName = recipientName?.trim();
   const greetingLine = normalizedRecipientName ? `Hello ${normalizedRecipientName},` : "Hello,";
   const safeBusinessName = escapeHtml(businessName);
   const safeGreetingLine = escapeHtml(greetingLine);
   const safeInvoiceNumber = escapeHtml(invoiceNumber);
   const safeFormattedTotal = escapeHtml(formattedTotal);
+  const safeFormattedInvoiceTotal = escapeHtml(formattedInvoiceTotal);
+  const safeFormattedPaidAmount = escapeHtml(formattedPaidAmount);
   const safeDueDateLabel = escapeHtml(dueDateLabel);
+  const safeBalanceLine = escapeHtml(balanceLine);
+  const safeOverdueBalanceLine = overdueBalanceLine ? escapeHtml(overdueBalanceLine) : null;
   const safeInvoiceLink = escapeHtml(invoiceLink);
   const { privacyUrl } = getLegalEmailLinks();
   const safePrivacyUrl = escapeHtml(privacyUrl);
@@ -473,11 +528,15 @@ export async function sendManualInvoiceReminderEmail({
     text: `${greetingLine}
 
 This is a reminder for invoice ${invoiceNumber}.
+${balanceLine}
+${overdueBalanceLine ? `${overdueBalanceLine}\n` : ""}
 Amount due: ${formattedTotal}
 Due date: ${dueDateLabel}
 
 View or pay online:
 ${invoiceLink}
+
+You can pay online or use the payment details in the invoice.
 
 Privacy notice:
 ${privacyUrl}`,
@@ -489,8 +548,17 @@ ${privacyUrl}`,
           <p style="margin: 0 0 22px; color: #475569; line-height: 1.6;">
             This is a reminder for invoice <strong>${safeInvoiceNumber}</strong>.
           </p>
+          <p style="margin: -10px 0 22px; color: #475569; line-height: 1.6;">
+            ${safeBalanceLine}${safeOverdueBalanceLine ? `<br />${safeOverdueBalanceLine}` : ""}
+          </p>
           <div style="margin: 0 0 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #f8fafc; padding: 18px;">
             <div style="margin: 0 0 10px; color: #475569;">Invoice number: <strong style="color:#0f172a;">${safeInvoiceNumber}</strong></div>
+            ${
+              hasPartialPayment
+                ? `<div style="margin: 0 0 10px; color: #475569;">Original total: <strong style="color:#0f172a;">${safeFormattedInvoiceTotal}</strong></div>
+                   <div style="margin: 0 0 10px; color: #475569;">Payment received: <strong style="color:#047857;">${safeFormattedPaidAmount}</strong></div>`
+                : ""
+            }
             <div style="margin: 0 0 10px; color: #475569;">Amount due: <strong style="color:#0f172a;">${safeFormattedTotal}</strong></div>
             <div style="margin: 0; color: #475569;">Due date: <strong style="color:#0f172a;">${safeDueDateLabel}</strong></div>
           </div>
@@ -502,6 +570,9 @@ ${privacyUrl}`,
           <p style="margin: 20px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
             If the button does not work, copy and paste this link into your browser:<br />
             <span>${safeInvoiceLink}</span>
+          </p>
+          <p style="margin: 14px 0 0; color: #64748b; font-size: 13px; line-height: 1.6;">
+            You can pay online or use the payment details in the invoice.
           </p>
           <p style="margin: 14px 0 0; color: #94a3b8; font-size: 12px; line-height: 1.6;">
             Privacy notice: <a href="${safePrivacyUrl}" style="color: #475569;">${safePrivacyUrl}</a>

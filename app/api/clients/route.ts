@@ -74,7 +74,7 @@ export async function POST(request: Request) {
       city: asString(body.city),
     });
 
-    if (!email || !structuredAddress.address || !structuredAddress.street || !structuredAddress.postalCode || !structuredAddress.city || !country) {
+    if (!structuredAddress.address || !structuredAddress.street || !structuredAddress.postalCode || !structuredAddress.city || !country) {
       return apiError("Missing required fields", 400);
     }
 
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       return apiError("Invalid country", 400);
     }
 
-    if (!isValidEmail(email)) {
+    if (email && !isValidEmail(email)) {
       return apiError("Invalid email address", 400);
     }
 

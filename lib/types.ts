@@ -60,7 +60,7 @@ export interface ClientSummary {
   id: string;
   companyName: string | null;
   contactName: string | null;
-  email: string;
+  email: string | null;
   phone?: string | null;
   address: string;
   street?: string | null;
@@ -475,7 +475,7 @@ export interface SwissQRBillPayloadData {
 export interface PublicInvoiceClientData {
   companyName: string | null;
   contactName: string | null;
-  email: string;
+  email: string | null;
   phone?: string | null;
   address: string;
   street?: string | null;

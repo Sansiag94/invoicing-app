@@ -13,7 +13,7 @@ import { getInvoiceSenderName, normalizeInvoiceSenderType } from "@/lib/business
 import { calculateInvoiceTotals } from "@/lib/invoice";
 import { isCollectibleInvoiceStatus } from "@/lib/invoiceStatus";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
-import { getOutstandingInvoiceAmount } from "@/lib/payments";
+import { getOutstandingInvoiceAmount, getSettledPaymentAmount } from "@/lib/payments";
 import {
   assertRateLimit,
   buildRateLimitIdentifier,
@@ -93,7 +93,7 @@ export async function POST(
 
     const clientEmail = invoice.client.email?.trim();
     if (!clientEmail) {
-      return apiError("Client email is missing", 400);
+      return apiError("This client has no email address. Add an email to the client before sending reminders.", 400);
     }
 
     let publicToken = invoice.publicToken;
@@ -118,9 +118,11 @@ export async function POST(
     const recipientName =
       invoice.client.contactName || invoice.client.companyName || invoice.client.email;
     const computedTotals = calculateInvoiceTotals(invoice.lineItems, invoice);
+    const invoiceTotalAmount = computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount;
+    const paidAmount = getSettledPaymentAmount(invoice.payments);
     const amountDue = getOutstandingInvoiceAmount({
       status: invoice.status,
-      totalAmount: computedTotals.totalAmount > 0 ? computedTotals.totalAmount : invoice.totalAmount,
+      totalAmount: invoiceTotalAmount,
       payments: invoice.payments,
     });
     if (amountDue <= 0.005) {
@@ -138,6 +140,8 @@ export async function POST(
       recipientName,
       invoiceNumber: invoice.invoiceNumber,
       totalAmount: amountDue,
+      originalTotalAmount: invoiceTotalAmount,
+      paidAmount,
       currency: invoice.currency,
       invoiceLink,
       dueDate: invoice.dueDate,

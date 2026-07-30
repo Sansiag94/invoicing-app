@@ -21,7 +21,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/toast";
 
 function getClientDisplayName(client: ClientSummary): string {
-  return client.companyName || client.contactName || client.email;
+  return client.companyName || client.contactName || client.email || "Client";
 }
 
 function ClientsPageSkeleton() {
@@ -161,10 +161,10 @@ function ClientsPageContent() {
       return;
     }
 
-    if (!isValidEmail(email.trim())) {
+    if (email.trim() && !isValidEmail(email.trim())) {
       toast({
         title: "Invalid email",
-        description: "Enter a valid email address for the client.",
+        description: "Enter a valid email address or leave the field empty.",
         variant: "error",
       });
       return;
@@ -418,8 +418,12 @@ function ClientsPageContent() {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  required
+                  placeholder="Optional"
                 />
+                <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
+                  If this is empty, invoices can still be created and downloaded, but email sending and payment reminders
+                  will be disabled for this client until an email is added.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
@@ -638,7 +642,7 @@ function ClientsPageContent() {
                         {getClientDisplayName(client) || "-"}
                       </Link>
                     </TableCell>
-                    <TableCell>{client.email}</TableCell>
+                    <TableCell>{client.email || <span className="text-slate-400">No email</span>}</TableCell>
                     <TableCell>{client.phone || "-"}</TableCell>
                     <TableCell>{client.country}</TableCell>
                     <TableCell>{getInvoiceLanguageLabel(client.language)}</TableCell>
@@ -673,7 +677,7 @@ function ClientsPageContent() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-1">
                       <p className="font-semibold text-slate-900 dark:text-slate-100">{getClientDisplayName(client) || "-"}</p>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">{client.email}</p>
+                      <p className="text-sm text-slate-600 dark:text-slate-300">{client.email || "No email added"}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-300">{client.phone || "-"}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-300">{client.country}</p>
                       <p className="text-sm text-slate-600 dark:text-slate-300">{getInvoiceLanguageLabel(client.language)}</p>

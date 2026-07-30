@@ -45,10 +45,15 @@ export default function InvoiceCreateSidebar({
             {client ? (
               <div className="space-y-1 text-slate-700">
                 <p className="font-medium text-slate-900">
-                  {client.companyName || client.contactName || client.email}
+                  {client.companyName || client.contactName || client.email || "Client"}
                 </p>
                 {client.contactName && client.companyName ? <p>{client.contactName}</p> : null}
-                <p>{client.email}</p>
+                {client.email ? <p>{client.email}</p> : null}
+                {!client.email ? (
+                  <p className="text-xs leading-5 text-amber-700">
+                    No email added. You can download or print this invoice, but email sending and reminders are disabled.
+                  </p>
+                ) : null}
                 {client.phone ? <p>{client.phone}</p> : null}
                 <p>{client.country}</p>
                 <p>Invoice language: {getInvoiceLanguageLabel(client.language)}</p>

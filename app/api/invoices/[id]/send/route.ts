@@ -168,7 +168,7 @@ async function sendInvoice(id: string, businessId: string, request: Request) {
   const clientEmail = existingInvoice.client.email?.trim();
   if (!clientEmail) {
     console.warn("[invoice-send] Client email missing", { invoiceId: existingInvoice.id });
-    return apiError("Client email is missing", 400);
+    return apiError("This client has no email address. Add an email to the client before sending invoices by email.", 400);
   }
 
   if (existingInvoice.status === "cancelled") {

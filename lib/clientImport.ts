@@ -28,7 +28,7 @@ type ClientImportHeader = (typeof CLIENT_IMPORT_HEADERS)[number];
 export type PreparedClientImportRow = {
   companyName: string | null;
   contactName: string | null;
-  email: string;
+  email: string | null;
   phone: string | null;
   address: string;
   street: string;
@@ -39,7 +39,7 @@ export type PreparedClientImportRow = {
   vatNumber: string | null;
 };
 
-function normalizeCell(value: string | undefined): string {
+function normalizeCell(value: string | null | undefined): string {
   return (value ?? "").trim();
 }
 
@@ -162,7 +162,7 @@ function toHeaderRecord(row: string[]): Record<ClientImportHeader, string> {
 
 export function prepareClientImportRows(input: {
   csvText: string;
-  existingEmails: Iterable<string>;
+  existingEmails: Iterable<string | null>;
 }): {
   rowsToCreate: PreparedClientImportRow[];
   result: ClientImportResult;
@@ -207,7 +207,7 @@ export function prepareClientImportRows(input: {
     const record = toHeaderRecord(row);
     const companyName = record.companyName || null;
     const contactName = record.contactName || null;
-    const email = record.email;
+    const email = record.email || null;
     const phone = record.phone || null;
     const street = record.street;
     const postalCode = record.postalCode;
@@ -215,7 +215,7 @@ export function prepareClientImportRows(input: {
     const country = resolveSupportedCountry(record.country);
     const languageInput = record.language;
     const vatNumber = record.vatNumber || null;
-    const normalizedEmail = email.toLowerCase();
+    const normalizedEmail = email?.toLowerCase() || null;
 
     if (!companyName && !contactName) {
       invalidRowCount += 1;
@@ -230,15 +230,15 @@ export function prepareClientImportRows(input: {
       continue;
     }
 
-    if (!email || !isValidEmail(email)) {
+    if (email && !isValidEmail(email)) {
       invalidRowCount += 1;
       errors.push(
-        buildRowError(rowNumber, "invalid", "Email must be present and valid.", email || null)
+        buildRowError(rowNumber, "invalid", "Email must be valid or left blank.", email)
       );
       continue;
     }
 
-    if (existingEmails.has(normalizedEmail)) {
+    if (normalizedEmail && existingEmails.has(normalizedEmail)) {
       skippedDuplicateCount += 1;
       errors.push(
         buildRowError(
@@ -277,7 +277,9 @@ export function prepareClientImportRows(input: {
       continue;
     }
 
-    existingEmails.add(normalizedEmail);
+    if (normalizedEmail) {
+      existingEmails.add(normalizedEmail);
+    }
     rowsToCreate.push({
       companyName,
       contactName,

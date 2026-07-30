@@ -48,7 +48,7 @@ type ReminderCandidate = {
   businessReplyToEmail: string | null;
   clientCompanyName: string | null;
   clientContactName: string | null;
-  clientEmail: string;
+  clientEmail: string | null;
 };
 
 function getErrorName(error: unknown): string {
@@ -176,7 +176,7 @@ async function processReminderBatch(
 
   for (const candidate of candidates) {
     const invoiceNumber = candidate.invoiceNumber.trim();
-    const clientEmail = candidate.clientEmail.trim();
+    const clientEmail = candidate.clientEmail?.trim() || "";
     const dueDate =
       candidate.dueDate instanceof Date ? candidate.dueDate : new Date(candidate.dueDate);
 
@@ -226,6 +226,8 @@ async function processReminderBatch(
         recipientName,
         invoiceNumber,
         totalAmount: amountDue,
+        originalTotalAmount: candidate.totalAmount,
+        paidAmount: candidate.paidAmount,
         currency: candidate.currency,
         invoiceLink,
         dueDate,

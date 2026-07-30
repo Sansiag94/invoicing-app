@@ -39,7 +39,7 @@ type InvoiceRow = InvoiceSummary & {
   client?: {
     companyName: string | null;
     contactName: string | null;
-    email: string;
+    email: string | null;
   };
 };
 
@@ -165,7 +165,7 @@ function getInvoiceActionMenuHeight(invoice: InvoiceRow): number {
 function getClientFirstName(client: ClientSummary | null): string {
   if (!client) return "client_first_name";
 
-  const fallbackFromEmail = client.email.split("@")[0]?.trim();
+  const fallbackFromEmail = client.email?.split("@")[0]?.trim();
   const rawName = (client.contactName || client.companyName || fallbackFromEmail || "").trim();
   if (!rawName) return "client_first_name";
 
@@ -1505,7 +1505,7 @@ function InvoicePageContent() {
                       <option value="">Select Client</option>
                       {clients.map((client) => (
                         <option key={client.id} value={client.id}>
-                          {client.companyName || client.contactName || client.email}
+                          {client.companyName || client.contactName || client.email || "Client"}
                         </option>
                       ))}
                     </Select>

@@ -40,7 +40,7 @@ type ClientSearchResult = {
   id: string;
   companyName: string | null;
   contactName: string | null;
-  email: string;
+  email: string | null;
   country: string;
 };
 
@@ -53,7 +53,7 @@ type InvoiceSearchResult = {
   client?: {
     companyName: string | null;
     contactName: string | null;
-    email: string;
+    email: string | null;
   };
 };
 
@@ -71,9 +71,9 @@ function normalizeSearchValue(value: string): string {
 function getClientDisplayName(client: {
   companyName: string | null;
   contactName: string | null;
-  email: string;
+  email: string | null;
 }): string {
-  return client.companyName || client.contactName || client.email;
+  return client.companyName || client.contactName || client.email || "Client";
 }
 
 function formatShortDate(value: string): string {
@@ -580,7 +580,9 @@ export default function Navbar({ onOpenMenu, businessBrand }: NavbarProps) {
                             className="w-full rounded-md px-2 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                           >
                             <p className="font-medium text-slate-900 dark:text-slate-100">{getClientDisplayName(client)}</p>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{client.email}</p>
+                            {client.email ? (
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{client.email}</p>
+                            ) : null}
                           </button>
                         ))}
                       </div>

@@ -157,6 +157,7 @@ export default function PublicInvoicePage() {
   const totalAmountDue = totals.totalAmount;
   const invoiceAmountDue = invoice ? invoice.amountDue ?? getInvoiceAmountDue(invoice.status, totalAmountDue) : 0;
   const paidAmount = invoice?.paidAmount ?? (invoice?.status === "paid" ? totalAmountDue : 0);
+  const hasPartialPayment = paidAmount > 0.005 && invoiceAmountDue > 0.005;
   const canCollectPayment =
     invoice?.status !== "paid" && invoice?.status !== "cancelled" && invoiceAmountDue > 0.005;
   const shouldRenderQRSection = canCollectPayment && Boolean(invoice?.qrBill);
@@ -606,6 +607,15 @@ export default function PublicInvoicePage() {
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 print:hidden">
           {strings.invoiceAlreadyPaid}. {strings.amountDue}: {invoice.currency}{" "}
           {formatInvoiceMoney(invoiceAmountDue, invoiceLanguage)}.
+        </div>
+      ) : null}
+      {hasPartialPayment ? (
+        <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-900 print:hidden">
+          <p className="font-semibold">{strings.remainingBalanceOpen}</p>
+          <p className="mt-1">
+            {strings.status.paid}: {invoice.currency} {formatInvoiceMoney(paidAmount, invoiceLanguage)} -{" "}
+            {strings.amountDue}: {invoice.currency} {formatInvoiceMoney(invoiceAmountDue, invoiceLanguage)}
+          </p>
         </div>
       ) : null}
       {checkoutError ? (

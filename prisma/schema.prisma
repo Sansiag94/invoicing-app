@@ -80,7 +80,7 @@ model Client {
   business    Business  @relation("BusinessClients", fields: [businessId], references: [id], onDelete: Cascade)
   companyName String?   // Optional: For companies
   contactName String?   // Optional: For individual contacts
-  email       String
+  email       String?
   phone       String?
   address     String
   street      String?

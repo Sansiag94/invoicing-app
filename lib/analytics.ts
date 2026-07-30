@@ -332,7 +332,7 @@ export async function buildAnalyticsOverview(
     }
 
     const clientId = invoice.client.id;
-    const clientName = invoice.client.companyName || invoice.client.contactName || invoice.client.email;
+    const clientName = invoice.client.companyName || invoice.client.contactName || invoice.client.email || "Client";
     if (largestInvoice === null || invoice.totalAmount > largestInvoice.amount) {
       largestInvoice = {
         invoiceId: invoice.id,

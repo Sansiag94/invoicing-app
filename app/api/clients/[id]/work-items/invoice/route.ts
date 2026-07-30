@@ -31,9 +31,9 @@ function asDate(value: unknown): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function getClientFirstName(client: { contactName: string | null; companyName: string | null; email: string }): string {
+function getClientFirstName(client: { contactName: string | null; companyName: string | null; email: string | null }): string {
   const rawName = client.contactName || client.companyName || client.email;
-  return rawName.split(/\s+/)[0] || "there";
+  return rawName?.split(/\s+/)[0] || "there";
 }
 
 function buildInvoiceNotesFromSettings(
@@ -41,7 +41,7 @@ function buildInvoiceNotesFromSettings(
     language: string;
     contactName: string | null;
     companyName: string | null;
-    email: string;
+    email: string | null;
     defaultInvoiceMessage?: string | null;
   },
   senderName: string,

@@ -18,6 +18,7 @@ type InvoiceStrings = {
   vat: string;
   total: string;
   amountDue: string;
+  remainingBalanceOpen: string;
   paymentOptions: string;
   payOnline: string;
   viewInvoiceOnline: string;
@@ -93,6 +94,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     vat: "VAT",
     total: "Total",
     amountDue: "Amount due",
+    remainingBalanceOpen: "A payment has been recorded. Only the remaining balance is still open.",
     paymentOptions: "Payment options",
     payOnline: "Pay online",
     viewInvoiceOnline: "View invoice online",
@@ -145,6 +147,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     vat: "MWST",
     total: "Total",
     amountDue: "Offener Betrag",
+    remainingBalanceOpen: "Eine Zahlung wurde erfasst. Nur der offene Restbetrag ist noch offen.",
     paymentOptions: "Zahlungsoptionen",
     payOnline: "Online bezahlen",
     viewInvoiceOnline: "Rechnung online ansehen",
@@ -197,6 +200,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     vat: "IVA",
     total: "Total",
     amountDue: "Importe pendiente",
+    remainingBalanceOpen: "Se ha registrado un pago. Solo queda pendiente el saldo restante.",
     paymentOptions: "Opciones de pago",
     payOnline: "Pagar en linea",
     viewInvoiceOnline: "Ver factura en linea",
@@ -249,6 +253,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     vat: "TVA",
     total: "Total",
     amountDue: "Montant du",
+    remainingBalanceOpen: "Un paiement a ete enregistre. Seul le solde restant est encore ouvert.",
     paymentOptions: "Options de paiement",
     payOnline: "Payer en ligne",
     viewInvoiceOnline: "Voir la facture en ligne",
@@ -301,6 +306,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
     vat: "IVA",
     total: "Totale",
     amountDue: "Importo dovuto",
+    remainingBalanceOpen: "Un pagamento e stato registrato. Rimane aperto solo il saldo restante.",
     paymentOptions: "Opzioni di pagamento",
     payOnline: "Paga online",
     viewInvoiceOnline: "Visualizza la fattura online",

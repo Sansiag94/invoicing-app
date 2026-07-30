@@ -34,9 +34,9 @@ function formatMonthLabel(value: Date): string {
 function getClientDisplayName(client: {
   companyName: string | null;
   contactName: string | null;
-  email: string;
+  email: string | null;
 }) {
-  return client.companyName || client.contactName || client.email;
+  return client.companyName || client.contactName || client.email || "Client";
 }
 
 function pushUniqueNotification(

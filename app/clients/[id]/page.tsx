@@ -207,10 +207,10 @@ export default function ClientDetailPage() {
       return;
     }
 
-    if (!isValidEmail(email.trim())) {
+    if (email.trim() && !isValidEmail(email.trim())) {
       toast({
         title: "Invalid email",
-        description: "Enter a valid email address for the client.",
+        description: "Enter a valid email address or leave the field empty.",
         variant: "error",
       });
       return;
@@ -618,7 +618,7 @@ export default function ClientDetailPage() {
     );
   }
 
-  const displayName = client.companyName || client.contactName || client.email;
+  const displayName = client.companyName || client.contactName || client.email || "Client";
   const openInvoices = client.invoices.filter((invoice) => invoice.status !== "paid");
   const outstandingTotal = openInvoices.reduce((sum, invoice) => sum + invoice.totalAmount, 0);
   const outstandingCurrency = openInvoices[0]?.currency ?? client.invoices[0]?.currency ?? "CHF";
@@ -699,7 +699,12 @@ export default function ClientDetailPage() {
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Email</p>
-              <p className="font-medium text-slate-900">{client.email}</p>
+              <p className="font-medium text-slate-900">{client.email || "No email added"}</p>
+              {!client.email ? (
+                <p className="mt-1 text-xs leading-5 text-amber-700">
+                  Email sending and payment reminders are disabled for this client until an email is added.
+                </p>
+              ) : null}
             </div>
             <div>
               <p className="text-xs uppercase tracking-wide text-slate-500">Phone</p>
@@ -787,8 +792,12 @@ export default function ClientDetailPage() {
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
-                  required
+                  placeholder="Optional"
                 />
+                <p className="text-xs leading-5 text-slate-500">
+                  If this is empty, invoices can still be created and downloaded, but email sending and payment reminders
+                  will be disabled for this client until an email is added.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="phone">Phone</Label>
