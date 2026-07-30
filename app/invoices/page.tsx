@@ -162,14 +162,24 @@ function renderInvoiceStatusBadges(invoice: InvoiceRow) {
 }
 
 function getInvoiceActionMenuHeight(invoice: InvoiceRow): number {
-  let actionCount = 4;
+  let actionCount = 2;
+
+  if (invoice.status === "paid" || invoice.status === "cancelled" || invoice.status === "sent" || invoice.status === "overdue") {
+    actionCount += 1;
+  }
 
   if (invoice.status === "sent" || invoice.status === "overdue") {
     actionCount += 1;
   }
 
   if (invoice.status === "draft") {
-    actionCount += invoice.scheduledSendAt ? 3 : 2;
+    actionCount += 2;
+    if (hasInvoiceClientEmail(invoice)) {
+      actionCount += 1;
+    }
+    if (invoice.scheduledSendAt) {
+      actionCount += 1;
+    }
   }
 
   return ACTION_MENU_VERTICAL_PADDING + actionCount * ACTION_MENU_ROW_HEIGHT;
@@ -853,7 +863,7 @@ function InvoicePageContent() {
       setPaymentNoteManuallyEdited(false);
       setPaymentNote(buildInvoicePaymentNoteTemplate(null, acceptsTwintPayments, twintPhoneNumber));
       setIsCreateFormOpen(false);
-      setSuccessMessage("Invoice created successfully.");
+      setSuccessMessage("Draft saved. Review the preview before creating the final invoice.");
 
       if (result?.id) {
         router.push(`/invoices/${result.id}/preview`);
@@ -987,14 +997,14 @@ function InvoicePageContent() {
     const invoice = invoices.find((entry) => entry.id === invoiceId);
 
     setConfirmDialog({
-      title: "Issue Invoice",
+      title: "Create Invoice",
       description: (
         <>
-          Issue draft invoice <strong>{invoice?.invoiceNumber ?? "this invoice"}</strong> without sending an email?
-          A real invoice number will be assigned, and you can then download or print it for the client.
+          Create the final invoice from draft <strong>{invoice?.invoiceNumber ?? "this invoice"}</strong>?
+          This assigns the official invoice number and keeps it in your invoice history.
         </>
       ),
-      confirmLabel: "Issue Invoice",
+      confirmLabel: "Create Invoice",
       onConfirm: () => {
         setConfirmDialog(null);
         void issueInvoiceNow(invoiceId);
@@ -1010,10 +1020,10 @@ function InvoicePageContent() {
         title: "Send Invoice",
         description: (
           <>
-            Send this draft invoice now? An official invoice number will be assigned when it is sent.
+            This is still a draft. Sending it will first create the official invoice number, then email the final invoice to the client.
           </>
         ),
-        confirmLabel: "Send Invoice",
+        confirmLabel: "Create & Send",
         onConfirm: () => {
           setConfirmDialog(null);
           void sendInvoiceNow(invoiceId);
@@ -1309,11 +1319,20 @@ function InvoicePageContent() {
       return;
     }
 
+    if (action === "delete" && selectedInvoices.some((invoice) => invoice.status !== "draft")) {
+      toast({
+        title: "Only drafts can be deleted",
+        description: "Final invoices stay in your records. Cancel a final invoice instead.",
+        variant: "error",
+      });
+      return;
+    }
+
     if (action === "delete" && !skipConfirmation) {
       setConfirmDialog({
-        title: "Delete Invoices",
-        description: `Delete ${selectedInvoices.length} selected invoices? This action cannot be undone.`,
-        confirmLabel: "Delete Invoices",
+        title: "Delete Drafts",
+        description: `Delete ${selectedInvoices.length} selected draft invoice${selectedInvoices.length === 1 ? "" : "s"}? This action cannot be undone.`,
+        confirmLabel: "Delete Drafts",
         confirmVariant: "destructive",
         onConfirm: () => {
           setConfirmDialog(null);
@@ -1525,7 +1544,7 @@ function InvoicePageContent() {
               <RotateCcw className="h-4 w-4" />
               {isUpdatingStatusId === invoice.id ? "Updating..." : "Reopen Invoice"}
             </button>
-          ) : (
+          ) : invoice.status === "sent" || invoice.status === "overdue" ? (
             <button
               type="button"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200")}
@@ -1539,7 +1558,7 @@ function InvoicePageContent() {
               <CheckCircle2 className="h-4 w-4" />
               {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
             </button>
-          )}
+          ) : null}
           {invoice.status === "sent" || invoice.status === "overdue" ? (
             <button
               type="button"
@@ -1573,7 +1592,7 @@ function InvoicePageContent() {
               Cancel Invoice
             </button>
           ) : null}
-          {invoice.status === "draft" ? (
+          {invoice.status === "draft" && hasInvoiceClientEmail(invoice) ? (
             <button
               type="button"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
@@ -1615,7 +1634,7 @@ function InvoicePageContent() {
               }}
             >
               <FileCheck2 className="h-4 w-4" />
-              {isIssuingId === invoice.id ? "Issuing..." : "Issue for Download"}
+              {isIssuingId === invoice.id ? "Creating..." : "Create Invoice"}
             </button>
           ) : null}
           <button
@@ -1642,18 +1661,20 @@ function InvoicePageContent() {
             <Copy className="h-4 w-4" />
             Duplicate
           </button>
-          <button
-            type="button"
-            className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-300 dark:hover:bg-red-950/40 dark:hover:text-red-200")}
-            onClick={() => {
-              setOpenActionsInvoiceId(null);
-              setActionsMenuPosition(null);
-              setDeleteTarget(invoice);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </button>
+          {invoice.status === "draft" ? (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-red-700 hover:bg-red-50 hover:text-red-800 dark:text-red-300 dark:hover:bg-red-950/40 dark:hover:text-red-200")}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
+                setDeleteTarget(invoice);
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Draft
+            </button>
+          ) : null}
         </div>,
         document.body
       ) : null}
@@ -2138,7 +2159,7 @@ function InvoicePageContent() {
 
                 <div className="flex justify-end">
                   <Button onClick={handleCreateInvoice} disabled={isCreating} className="min-w-[10rem] max-md:w-full">
-                    {isCreating ? "Creating..." : "Create Invoice"}
+                    {isCreating ? "Saving..." : "Next: Preview"}
                   </Button>
                 </div>
               </div>
@@ -2206,7 +2227,7 @@ function InvoicePageContent() {
                 Export CSV
               </Button>
               <Button size="sm" variant="outline" onClick={() => handleBulkAction("delete")} disabled={bulkActionLabel !== null} className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800">
-                {bulkActionLabel === "delete" ? "Deleting..." : "Delete"}
+                {bulkActionLabel === "delete" ? "Deleting..." : "Delete Drafts"}
               </Button>
             </div>
           ) : null}
@@ -2220,7 +2241,7 @@ function InvoicePageContent() {
                   createInvoiceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
               >
-                Create Invoice
+                Start Invoice
               </Button>
             </div>
           ) : filteredInvoices.length === 0 ? (
@@ -2246,7 +2267,7 @@ function InvoicePageContent() {
                     createInvoiceRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
                 >
-                  Create Invoice
+                  Start Invoice
                 </Button>
               </div>
             </div>
@@ -2313,7 +2334,7 @@ function InvoicePageContent() {
                     </TableCell>
                     <TableCell>
                       <div className="grid grid-cols-[8.5rem_7rem] gap-2">
-                        {invoice.status === "draft" && !hasInvoiceClientEmail(invoice) ? (
+                        {invoice.status === "draft" ? (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -2325,9 +2346,9 @@ function InvoicePageContent() {
                             }}
                           >
                             <FileCheck2 className="h-4 w-4" />
-                            {isIssuingId === invoice.id ? "Issuing..." : "Issue"}
+                            {isIssuingId === invoice.id ? "Creating..." : "Create"}
                           </Button>
-                        ) : invoice.status === "draft" || invoice.status === "paid" ? (
+                        ) : invoice.status === "paid" ? (
                           <Button
                             variant="secondary"
                             size="sm"
@@ -2415,7 +2436,7 @@ function InvoicePageContent() {
                   ) : null}
 
                   <div className="grid grid-cols-2 gap-2">
-                    {invoice.status === "draft" && !hasInvoiceClientEmail(invoice) ? (
+                    {invoice.status === "draft" ? (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -2427,9 +2448,9 @@ function InvoicePageContent() {
                         className="col-span-2"
                       >
                         <FileCheck2 className="h-4 w-4" />
-                        {isIssuingId === invoice.id ? "Issuing..." : "Issue for Download"}
+                        {isIssuingId === invoice.id ? "Creating..." : "Create Invoice"}
                       </Button>
-                    ) : invoice.status === "draft" || invoice.status === "paid" ? (
+                    ) : invoice.status === "paid" ? (
                       <Button
                         variant="secondary"
                         size="sm"
@@ -2479,9 +2500,9 @@ function InvoicePageContent() {
       <Dialog open={Boolean(deleteTarget)} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Invoice</DialogTitle>
+            <DialogTitle>Delete Draft</DialogTitle>
             <DialogDescription>
-              Delete invoice <strong>{deleteTarget?.invoiceNumber}</strong>? This action cannot be
+              Delete draft invoice <strong>{deleteTarget?.invoiceNumber}</strong>? This action cannot be
               undone.
             </DialogDescription>
           </DialogHeader>
@@ -2490,7 +2511,7 @@ function InvoicePageContent() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteInvoice} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Deleting..." : "Delete Draft"}
             </Button>
           </DialogFooter>
         </DialogContent>

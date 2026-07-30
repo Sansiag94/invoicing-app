@@ -119,11 +119,11 @@ export async function issueDraftInvoice(input: {
     invoiceId: invoice.id,
     type: "issued",
     actor: input.actor,
-    details: `Invoice ${updated.invoiceNumber} issued without email for download or hand delivery`,
+    details: `Invoice ${updated.invoiceNumber} created as a final invoice`,
   });
 
   return {
-    message: "Invoice issued. You can download or print it now.",
+    message: "Invoice created. You can download, print, or send it now.",
     status: updated.status,
     invoiceNumber: updated.invoiceNumber,
   };

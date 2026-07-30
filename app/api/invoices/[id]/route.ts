@@ -442,16 +442,30 @@ export async function DELETE(
       return apiError("Invoice not found", 404);
     }
 
-    const deleted = await prisma.invoice.deleteMany({
+    const invoice = await prisma.invoice.findFirst({
       where: {
         id,
         businessId,
       },
+      select: {
+        id: true,
+        status: true,
+      },
     });
 
-    if (deleted.count === 0) {
+    if (!invoice) {
       return apiError("Invoice not found", 404);
     }
+
+    if (invoice.status !== "draft") {
+      return apiError("Only draft invoices can be deleted. Cancel a final invoice instead.", 400);
+    }
+
+    await prisma.invoice.delete({
+      where: {
+        id: invoice.id,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

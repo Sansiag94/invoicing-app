@@ -351,11 +351,6 @@ export default function InvoiceDetailPage() {
       return;
     }
 
-    if (invoice.status === "draft") {
-      setShowIssueConfirmDialog(true);
-      return;
-    }
-
     try {
       const response = await authenticatedFetch(`/api/invoices/${invoice.id}/pdf`);
       if (!response.ok) {
@@ -1142,7 +1137,7 @@ export default function InvoiceDetailPage() {
         </div>
         <div className="grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap">
           {!isEditing && invoice.status !== "cancelled" ? (
-            invoice.status === "draft" && !invoice.client.email?.trim() ? (
+            invoice.status === "draft" ? (
               <Button
                 variant="default"
                 onClick={handleIssueInvoice}
@@ -1150,9 +1145,9 @@ export default function InvoiceDetailPage() {
                 className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <FileCheck2 className="h-4 w-4" />
-                {isIssuing ? "Issuing..." : "Issue for Download"}
+                {isIssuing ? "Creating..." : "Create Invoice"}
               </Button>
-            ) : invoice.status === "draft" || invoice.status === "paid" ? (
+            ) : invoice.status === "paid" ? (
               <Button
                 variant="default"
                 onClick={handleSendInvoice}
@@ -1174,7 +1169,7 @@ export default function InvoiceDetailPage() {
               </Button>
             )
           ) : null}
-          {!isEditing && invoice.status === "draft" ? (
+          {!isEditing && invoice.status === "draft" && invoice.client.email?.trim() ? (
             <Button
               variant="outline"
               onClick={openScheduleDialog}
@@ -1188,12 +1183,12 @@ export default function InvoiceDetailPage() {
           {!isEditing && invoice.status === "draft" && invoice.client.email?.trim() ? (
             <Button
               variant="outline"
-              onClick={handleIssueInvoice}
-              disabled={isIssuing || isSending || isDuplicating}
+              onClick={handleSendInvoice}
+              disabled={isSending || isIssuing || isDuplicating}
               className="w-full sm:w-auto"
             >
-              <FileCheck2 className="h-4 w-4" />
-              {isIssuing ? "Issuing..." : "Issue without Email"}
+              <Send className="h-4 w-4" />
+              {isSending ? "Sending..." : "Send Invoice"}
             </Button>
           ) : null}
           {!isEditing ? (
@@ -1217,7 +1212,7 @@ export default function InvoiceDetailPage() {
                 <RotateCcw className="h-4 w-4" />
                 {isUpdatingStatus ? "Updating..." : "Reopen Invoice"}
               </Button>
-            ) : (
+            ) : invoice.status === "sent" || invoice.status === "overdue" ? (
               <>
                 {invoice.status === "sent" || invoice.status === "overdue" ? (
                   <Button
@@ -1240,7 +1235,7 @@ export default function InvoiceDetailPage() {
                   {isUpdatingStatus ? "Updating..." : "Mark Paid"}
                 </Button>
               </>
-            )
+            ) : null
           ) : null}
           {!isEditing && (invoice.status === "sent" || invoice.status === "overdue") ? (
             <Button
@@ -1279,7 +1274,7 @@ export default function InvoiceDetailPage() {
 
           <Button variant="outline" onClick={handleDownloadPdf} disabled={isSaving || isDeleting || isIssuing} className="w-full sm:w-auto">
             {invoice.status === "draft" ? <FileCheck2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-            {invoice.status === "draft" ? "Issue before PDF" : "Download PDF"}
+            {invoice.status === "draft" ? "Download Draft PDF" : "Download PDF"}
           </Button>
           {!isEditing ? (
             <>
@@ -1292,15 +1287,17 @@ export default function InvoiceDetailPage() {
                 <Copy className="h-4 w-4" />
                 {isDuplicating ? "Duplicating..." : "Duplicate"}
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => setShowDeleteDialog(true)}
-                disabled={isDeleting || isDuplicating}
-                className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40 dark:hover:text-red-100 sm:min-w-[10rem] sm:w-auto"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete
-              </Button>
+              {invoice.status === "draft" ? (
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDeleteDialog(true)}
+                  disabled={isDeleting || isDuplicating}
+                  className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40 dark:hover:text-red-100 sm:min-w-[10rem] sm:w-auto"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Draft
+                </Button>
+              ) : null}
             </>
           ) : null}
         </div>
@@ -1331,7 +1328,7 @@ export default function InvoiceDetailPage() {
       {invoice.status === "draft" && !invoice.scheduledSendAt ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-100">
           <span>
-            This is still a draft. Issue it before downloading or handing it to a client so it gets an official invoice number.
+            This is still a draft. Create the invoice when it is ready so it gets an official invoice number.
           </span>
           <Button
             type="button"
@@ -1341,7 +1338,7 @@ export default function InvoiceDetailPage() {
             disabled={isIssuing}
           >
             <FileCheck2 className="h-4 w-4" />
-            {isIssuing ? "Issuing..." : "Issue now"}
+            {isIssuing ? "Creating..." : "Create Invoice"}
           </Button>
         </div>
       ) : null}
@@ -2047,9 +2044,9 @@ export default function InvoiceDetailPage() {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete Invoice</DialogTitle>
+            <DialogTitle>Delete Draft</DialogTitle>
             <DialogDescription>
-              Delete invoice <strong>{invoice.invoiceNumber}</strong>? This action cannot be undone.
+              Delete draft invoice <strong>{invoice.invoiceNumber}</strong>? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -2057,7 +2054,7 @@ export default function InvoiceDetailPage() {
               Cancel
             </Button>
             <Button variant="destructive" onClick={handleDeleteInvoice} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete"}
+              {isDeleting ? "Deleting..." : "Delete Draft"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2069,10 +2066,10 @@ export default function InvoiceDetailPage() {
         title="Send Invoice"
         description={
           <>
-            Send this draft invoice now? An official invoice number will be assigned when it is sent.
+            This is still a draft. Sending it will first create the official invoice number, then email the final invoice to the client.
           </>
         }
-        confirmLabel="Send Invoice"
+        confirmLabel="Create & Send"
         isConfirming={isSending}
         onConfirm={() => {
           setShowSendConfirmDialog(false);
@@ -2083,14 +2080,14 @@ export default function InvoiceDetailPage() {
       <ConfirmDialog
         open={showIssueConfirmDialog}
         onOpenChange={setShowIssueConfirmDialog}
-        title="Issue Invoice"
+        title="Create Invoice"
         description={
           <>
-            Issue draft invoice <strong>{invoice.invoiceNumber}</strong> without sending an email?
-            A real invoice number will be assigned, and you can then download or print it for the client.
+            Create the final invoice from draft <strong>{invoice.invoiceNumber}</strong>?
+            This assigns the official invoice number and keeps it in your invoice history.
           </>
         }
-        confirmLabel="Issue Invoice"
+        confirmLabel="Create Invoice"
         isConfirming={isIssuing}
         onConfirm={() => {
           setShowIssueConfirmDialog(false);
