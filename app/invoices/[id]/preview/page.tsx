@@ -839,23 +839,6 @@ export default function InvoicePreviewPage() {
           </Button>
         </div>
       ) : null}
-      {invoice?.status === "draft" && !invoice.scheduledSendAt ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-100">
-          <span>
-            This preview is still a draft. Create the invoice when it is ready so it gets an official invoice number.
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleIssueInvoice}
-            disabled={isIssuing}
-          >
-            <FileCheck2 className="h-4 w-4" />
-            {isIssuing ? "Creating..." : "Create Invoice"}
-          </Button>
-        </div>
-      ) : null}
       {invoice?.status === "cancelled" ? (
         <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
           This invoice is cancelled. The PDF stays available for your records, but no payment is
