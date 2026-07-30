@@ -98,6 +98,8 @@ export async function GET(request: Request) {
       notes: "Thank you for your business.",
       paymentNote: null,
       publicToken: null,
+      scheduledSendAt: null,
+      scheduledSendFailure: null,
       stripeCheckoutSessionId: null,
       stripeCheckoutSessionExpiresAt: null,
       createdAt: new Date(),

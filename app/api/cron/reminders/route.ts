@@ -15,6 +15,7 @@ import {
   isCronAuthorizationError,
 } from "@/lib/cronAuth";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
+import { deliverInvoiceEmail } from "@/lib/invoiceDelivery";
 
 export const runtime = "nodejs";
 
@@ -25,9 +26,16 @@ type ReminderBatchSummary = {
   failed: number;
 };
 
+type ScheduledSendBatchSummary = {
+  total: number;
+  sent: number;
+  failed: number;
+};
+
 type ReminderCronStage =
   | "authorize"
   | "prepare_windows"
+  | "scheduled_sends"
   | "before_due_3_days"
   | "after_due_7_days"
   | "after_due_14_days"
@@ -277,6 +285,85 @@ async function processReminderBatch(
   };
 }
 
+async function processScheduledSendBatch(
+  request: Request,
+  now: Date
+): Promise<ScheduledSendBatchSummary> {
+  const candidates = await prisma.invoice.findMany({
+    where: {
+      status: InvoiceStatus.draft,
+      scheduledSendAt: {
+        not: null,
+        lte: now,
+      },
+    },
+    orderBy: {
+      scheduledSendAt: "asc",
+    },
+    take: 25,
+    select: {
+      id: true,
+      businessId: true,
+      invoiceNumber: true,
+    },
+  });
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const candidate of candidates) {
+    try {
+      await deliverInvoiceEmail({
+        invoiceId: candidate.id,
+        businessId: candidate.businessId,
+        requestUrl: request.url,
+        actor: "System",
+      });
+      sent += 1;
+    } catch (error) {
+      if (isEmailConfigurationError(error)) {
+        throw error;
+      }
+
+      const failureMessage =
+        error instanceof Error ? error.message : "Scheduled send failed.";
+
+      await prisma.invoice.update({
+        where: { id: candidate.id },
+        data: { scheduledSendFailure: failureMessage },
+      });
+
+      try {
+        await logInvoiceEvent({
+          invoiceId: candidate.id,
+          type: "scheduled_send_failed",
+          actor: "System",
+          details: failureMessage,
+        });
+      } catch (eventError) {
+        console.error("[invoice-reminders] Scheduled send failed and event logging failed", {
+          invoiceId: candidate.id,
+          invoiceNumber: candidate.invoiceNumber,
+          eventError,
+        });
+      }
+
+      failed += 1;
+      console.error("[invoice-reminders] Scheduled invoice send failed", {
+        invoiceId: candidate.id,
+        invoiceNumber: candidate.invoiceNumber,
+        error,
+      });
+    }
+  }
+
+  return {
+    total: candidates.length,
+    sent,
+    failed,
+  };
+}
+
 async function runReminderJob(request: Request) {
   let stage: ReminderCronStage = "authorize";
 
@@ -295,6 +382,9 @@ async function runReminderJob(request: Request) {
     const overdue14End = addDays(overdue14Start, 1);
     const overdue30Start = addDays(todayStart, -30);
     const overdue30End = addDays(overdue30Start, 1);
+
+    stage = "scheduled_sends";
+    const scheduledSends = await processScheduledSendBatch(request, now);
 
     stage = "before_due_3_days";
     const dueSoon = await processReminderBatch(
@@ -335,7 +425,8 @@ async function runReminderJob(request: Request) {
       overdue,
       overdue14,
       overdue30,
-      sent: dueSoon.sent + overdue.sent + overdue14.sent + overdue30.sent,
+      scheduledSends,
+      sent: scheduledSends.sent + dueSoon.sent + overdue.sent + overdue14.sent + overdue30.sent,
     });
   } catch (error) {
     if (isCronAuthorizationError(error)) {
@@ -347,7 +438,7 @@ async function runReminderJob(request: Request) {
         stage,
         error,
       });
-      return apiError("Email provider not configured for reminder emails.", 500, {
+      return apiError("Email provider not configured for scheduled invoice emails or reminders.", 500, {
         details: { stage, errorName: getErrorName(error) },
       });
     }

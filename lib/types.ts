@@ -139,6 +139,8 @@ export interface InvoiceSummary {
   discountType: DiscountType;
   discountValue: number;
   publicToken: string | null;
+  scheduledSendAt: string | null;
+  scheduledSendFailure: string | null;
 }
 
 export interface InvoicePaymentRecord {

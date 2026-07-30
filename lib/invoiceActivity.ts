@@ -10,7 +10,10 @@ export type InvoiceEventType =
   | "paid"
   | "cancelled"
   | "reopened"
-  | "duplicated";
+  | "duplicated"
+  | "scheduled_send"
+  | "scheduled_send_cancelled"
+  | "scheduled_send_failed";
 
 export type InvoiceEventEntry = {
   id: string;

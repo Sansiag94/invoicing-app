@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FocusEvent, ReactNode, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createPortal } from "react-dom";
-import { BellRing, CheckCircle2, ChevronDown, ChevronUp, CircleOff, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { BellRing, CalendarClock, CheckCircle2, ChevronDown, ChevronUp, CircleOff, Copy, FilePenLine, GripVertical, MoreHorizontal, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import BillingPlanChip from "@/components/billing/BillingPlanChip";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import { arrayMove } from "@/lib/arrayMove";
@@ -147,6 +147,11 @@ function renderInvoiceStatusBadges(invoice: InvoiceRow) {
   return (
     <div className="flex flex-wrap gap-1.5">
       <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+      {invoice.status === "draft" && invoice.scheduledSendAt ? (
+        <Badge variant={invoice.scheduledSendFailure ? "danger" : "default"}>
+          {invoice.scheduledSendFailure ? "schedule failed" : "scheduled"}
+        </Badge>
+      ) : null}
       {isPartiallyPaidInvoice(invoice) ? <Badge variant="warning">partial</Badge> : null}
     </div>
   );
@@ -157,6 +162,10 @@ function getInvoiceActionMenuHeight(invoice: InvoiceRow): number {
 
   if (invoice.status === "sent" || invoice.status === "overdue") {
     actionCount += 1;
+  }
+
+  if (invoice.status === "draft") {
+    actionCount += invoice.scheduledSendAt ? 2 : 1;
   }
 
   return ACTION_MENU_VERTICAL_PADDING + actionCount * ACTION_MENU_ROW_HEIGHT;
@@ -181,6 +190,13 @@ function formatShortDate(value: string): string {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function toDateInputValue(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
 }
 
 function buildInvoiceNotesTemplate(client: ClientSummary | null, senderName: string): string {
@@ -314,9 +330,12 @@ function InvoicePageContent() {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
+  const [isSchedulingId, setIsSchedulingId] = useState<string | null>(null);
   const [isSendingReminderId, setIsSendingReminderId] = useState<string | null>(null);
   const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<InvoiceRow | null>(null);
+  const [scheduleTarget, setScheduleTarget] = useState<InvoiceRow | null>(null);
+  const [scheduleDate, setScheduleDate] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   const [billingStatus, setBillingStatus] = useState<BillingStatus | null>(initialInvoicePageRef.current?.billing ?? null);
   const [billingLimitDetails, setBillingLimitDetails] = useState<BillingLimitDetails | null>(null);
@@ -941,6 +960,81 @@ function InvoicePageContent() {
     void sendInvoiceNow(invoiceId);
   };
 
+  const openScheduleDialog = (invoice: InvoiceRow) => {
+    setScheduleTarget(invoice);
+    setScheduleDate(toDateInputValue(invoice.scheduledSendAt) || getTodayDateInputValue());
+  };
+
+  const handleScheduleInvoice = async () => {
+    if (!scheduleTarget || !scheduleDate) return;
+
+    setIsSchedulingId(scheduleTarget.id);
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${scheduleTarget.id}/schedule-send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ scheduledSendDate: scheduleDate }),
+      });
+      const result = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Unable to schedule invoice",
+          description: result.error ?? "Unable to schedule invoice",
+          variant: "error",
+        });
+        return;
+      }
+
+      setScheduleTarget(null);
+      setScheduleDate("");
+      setSuccessMessage(result.message ?? "Invoice scheduled.");
+      await fetchInvoices();
+    } catch (error) {
+      console.error("Error scheduling invoice:", error);
+      toast({
+        title: "Unable to schedule invoice",
+        description: "Unable to schedule invoice",
+        variant: "error",
+      });
+    } finally {
+      setIsSchedulingId(null);
+    }
+  };
+
+  const handleClearScheduledInvoice = async (invoiceId: string) => {
+    setIsSchedulingId(invoiceId);
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoiceId}/schedule-send`, {
+        method: "DELETE",
+      });
+      const result = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Unable to clear scheduled send",
+          description: result.error ?? "Unable to clear scheduled send",
+          variant: "error",
+        });
+        return;
+      }
+
+      setSuccessMessage(result.message ?? "Scheduled send cancelled.");
+      await fetchInvoices();
+    } catch (error) {
+      console.error("Error clearing scheduled invoice:", error);
+      toast({
+        title: "Unable to clear scheduled send",
+        description: "Unable to clear scheduled send",
+        variant: "error",
+      });
+    } finally {
+      setIsSchedulingId(null);
+    }
+  };
+
   const handleOpenEdit = (invoice: InvoiceRow) => {
     if (invoice.status === "draft") {
       router.push(`/invoices/${invoice.id}?mode=edit`);
@@ -1412,6 +1506,36 @@ function InvoicePageContent() {
             >
               <CircleOff className="h-4 w-4" />
               Cancel Invoice
+            </button>
+          ) : null}
+          {invoice.status === "draft" ? (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+              disabled={isSchedulingId === invoice.id}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
+                openScheduleDialog(invoice);
+              }}
+            >
+              <CalendarClock className="h-4 w-4" />
+              {invoice.scheduledSendAt ? "Reschedule Send" : "Schedule Send"}
+            </button>
+          ) : null}
+          {invoice.status === "draft" && invoice.scheduledSendAt ? (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+              disabled={isSchedulingId === invoice.id}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
+                void handleClearScheduledInvoice(invoice.id);
+              }}
+            >
+              <CalendarClock className="h-4 w-4" />
+              {isSchedulingId === invoice.id ? "Updating..." : "Clear Schedule"}
             </button>
           ) : null}
           <button
@@ -2096,7 +2220,17 @@ function InvoicePageContent() {
                     <TableCell>{invoice.invoiceNumber}</TableCell>
                     <TableCell>{getInvoiceClientName(invoice)}</TableCell>
                     <TableCell>{renderInvoiceAmount(invoice)}</TableCell>
-                    <TableCell>{renderInvoiceStatusBadges(invoice)}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1.5">
+                        {renderInvoiceStatusBadges(invoice)}
+                        {invoice.status === "draft" && invoice.scheduledSendAt ? (
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Sends {formatShortDate(invoice.scheduledSendAt)}
+                            {invoice.scheduledSendFailure ? ` - ${invoice.scheduledSendFailure}` : ""}
+                          </p>
+                        ) : null}
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div className="grid grid-cols-[8.5rem_7rem] gap-2">
                         {invoice.status === "draft" || invoice.status === "paid" ? (
@@ -2179,6 +2313,13 @@ function InvoicePageContent() {
                     {renderInvoiceStatusBadges(invoice)}
                   </div>
 
+                  {invoice.status === "draft" && invoice.scheduledSendAt ? (
+                    <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                      Sends {formatShortDate(invoice.scheduledSendAt)}
+                      {invoice.scheduledSendFailure ? ` - ${invoice.scheduledSendFailure}` : ""}
+                    </div>
+                  ) : null}
+
                   <div className="grid grid-cols-2 gap-2">
                     {invoice.status === "draft" || invoice.status === "paid" ? (
                       <Button
@@ -2242,6 +2383,36 @@ function InvoicePageContent() {
             </Button>
             <Button variant="destructive" onClick={handleDeleteInvoice} disabled={isDeleting}>
               {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(scheduleTarget)} onOpenChange={(open) => !open && setScheduleTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Schedule Invoice Send</DialogTitle>
+            <DialogDescription>
+              Send invoice <strong>{scheduleTarget?.invoiceNumber}</strong> automatically on this
+              date. The official invoice number is assigned when the email is sent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="scheduled-send-date">Send date</Label>
+            <Input
+              id="scheduled-send-date"
+              type="date"
+              min={getTodayDateInputValue()}
+              value={scheduleDate}
+              onChange={(event) => setScheduleDate(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setScheduleTarget(null)} disabled={isSchedulingId !== null}>
+              Cancel
+            </Button>
+            <Button onClick={handleScheduleInvoice} disabled={!scheduleDate || isSchedulingId !== null}>
+              {isSchedulingId ? "Scheduling..." : "Schedule Send"}
             </Button>
           </DialogFooter>
         </DialogContent>

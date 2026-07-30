@@ -118,6 +118,8 @@ model Invoice {
   notes         String?
   paymentNote   String?
   publicToken   String?
+  scheduledSendAt DateTime?
+  scheduledSendFailure String?
   stripeCheckoutSessionId String?
   stripeCheckoutSessionExpiresAt DateTime?
   createdAt     DateTime      @default(now())
@@ -136,6 +138,7 @@ model Invoice {
   @@index([businessId, createdAt])
   @@index([businessId, status, dueDate])
   @@index([businessId, status, issueDate])
+  @@index([businessId, status, scheduledSendAt])
 }
 
 model LineItem {

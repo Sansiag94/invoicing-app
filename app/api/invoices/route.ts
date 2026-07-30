@@ -115,6 +115,8 @@ export async function GET(request: Request) {
         notes: true,
         paymentNote: true,
         publicToken: true,
+        scheduledSendAt: true,
+        scheduledSendFailure: true,
         createdAt: true,
         updatedAt: true,
         client: {

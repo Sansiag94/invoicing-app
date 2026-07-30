@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BellRing, CheckCircle2, CircleOff, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, CalendarClock, CheckCircle2, CircleOff, Copy, Download, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
 import { getBillingLimitDetails } from "@/lib/billingClient";
@@ -13,6 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { getTodayDateInputValue } from "@/lib/invoiceDates";
 import {
   Dialog,
   DialogContent,
@@ -32,6 +35,13 @@ function extractPdfFilename(contentDisposition: string | null): string | null {
 
   const basicMatch = contentDisposition.match(/filename="?([^"]+)"?/i);
   return basicMatch?.[1] ?? null;
+}
+
+function toDateInputValue(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
 }
 
 export default function InvoicePreviewPage() {
@@ -54,9 +64,12 @@ export default function InvoicePreviewPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [scheduledSendDate, setScheduledSendDate] = useState("");
+  const [isSchedulingSend, setIsSchedulingSend] = useState(false);
   const activePdfUrlRef = useRef<string | null>(null);
   const hasOpenedMobilePreviewRef = useRef(false);
   const { toast } = useToast();
@@ -323,6 +336,98 @@ export default function InvoicePreviewPage() {
     void sendInvoiceNow();
   };
 
+  const openScheduleDialog = () => {
+    if (!invoice) return;
+    setScheduledSendDate(toDateInputValue(invoice.scheduledSendAt) || getTodayDateInputValue());
+    setShowScheduleDialog(true);
+  };
+
+  const scheduleInvoiceSend = async () => {
+    if (!invoice || !scheduledSendDate) return;
+
+    setIsSchedulingSend(true);
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/schedule-send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ scheduledSendDate }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        message?: string;
+        scheduledSendAt?: string;
+        scheduledSendFailure?: string | null;
+      };
+
+      if (!response.ok) {
+        toast({
+          title: "Unable to schedule invoice",
+          description: result.error ?? "Unable to schedule invoice",
+          variant: "error",
+        });
+        return;
+      }
+
+      setShowScheduleDialog(false);
+      setSuccessMessage(result.message ?? "Invoice scheduled.");
+      setInvoice((current) =>
+        current
+          ? {
+              ...current,
+              scheduledSendAt: result.scheduledSendAt ?? `${scheduledSendDate}T00:00:00.000Z`,
+              scheduledSendFailure: result.scheduledSendFailure ?? null,
+            }
+          : current
+      );
+    } catch (error) {
+      console.error("Error scheduling invoice:", error);
+      toast({
+        title: "Unable to schedule invoice",
+        description: "Unable to schedule invoice",
+        variant: "error",
+      });
+    } finally {
+      setIsSchedulingSend(false);
+    }
+  };
+
+  const clearScheduledInvoiceSend = async () => {
+    if (!invoice) return;
+
+    setIsSchedulingSend(true);
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/schedule-send`, {
+        method: "DELETE",
+      });
+      const result = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Unable to clear scheduled send",
+          description: result.error ?? "Unable to clear scheduled send",
+          variant: "error",
+        });
+        return;
+      }
+
+      setSuccessMessage(result.message ?? "Scheduled send cancelled.");
+      setInvoice((current) =>
+        current ? { ...current, scheduledSendAt: null, scheduledSendFailure: null } : current
+      );
+    } catch (error) {
+      console.error("Error clearing scheduled invoice:", error);
+      toast({
+        title: "Unable to clear scheduled send",
+        description: "Unable to clear scheduled send",
+        variant: "error",
+      });
+    } finally {
+      setIsSchedulingSend(false);
+    }
+  };
+
   const handleAttachmentsChange = (attachments: InvoiceAttachmentRecord[]) => {
     setInvoice((current) => (current ? { ...current, attachments } : current));
   };
@@ -539,6 +644,17 @@ export default function InvoicePreviewPage() {
               </Button>
             )
           ) : null}
+          {invoice?.status === "draft" ? (
+            <Button
+              variant="outline"
+              onClick={openScheduleDialog}
+              disabled={isSchedulingSend || isSending || isLoading || isDuplicating}
+              className="w-full sm:w-auto"
+            >
+              <CalendarClock className="h-4 w-4" />
+              {invoice.scheduledSendAt ? "Reschedule Send" : "Schedule Send"}
+            </Button>
+          ) : null}
           {invoice?.status === "paid" ? (
             <Button
               variant="outline"
@@ -625,6 +741,23 @@ export default function InvoicePreviewPage() {
           {successMessage}
         </div>
       ) : null}
+      {invoice?.status === "draft" && invoice.scheduledSendAt ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+          <span>
+            Scheduled to send on {new Date(invoice.scheduledSendAt).toLocaleDateString()}.
+            {invoice.scheduledSendFailure ? ` Last attempt failed: ${invoice.scheduledSendFailure}` : ""}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void clearScheduledInvoiceSend()}
+            disabled={isSchedulingSend}
+          >
+            Clear Schedule
+          </Button>
+        </div>
+      ) : null}
       {invoice?.status === "cancelled" ? (
         <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
           This invoice is cancelled. The PDF stays available for your records, but no payment is
@@ -707,6 +840,36 @@ export default function InvoicePreviewPage() {
           void sendInvoiceNow();
         }}
       />
+
+      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Schedule Invoice Send</DialogTitle>
+            <DialogDescription>
+              Send invoice <strong>{invoice?.invoiceNumber}</strong> automatically on this date.
+              The official invoice number is assigned when the email is sent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="scheduled-send-date">Send date</Label>
+            <Input
+              id="scheduled-send-date"
+              type="date"
+              min={getTodayDateInputValue()}
+              value={scheduledSendDate}
+              onChange={(event) => setScheduledSendDate(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowScheduleDialog(false)} disabled={isSchedulingSend}>
+              Cancel
+            </Button>
+            <Button onClick={scheduleInvoiceSend} disabled={!scheduledSendDate || isSchedulingSend}>
+              {isSchedulingSend ? "Scheduling..." : "Schedule Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={showReminderConfirmDialog}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FocusEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Banknote, BellRing, CheckCircle2, CircleOff, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Banknote, BellRing, CalendarClock, CheckCircle2, CircleOff, Copy, Download, Eye, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
 import { arrayMove } from "@/lib/arrayMove";
@@ -88,6 +88,12 @@ function formatEventLabel(type: string): string {
       return "Reopened";
     case "duplicated":
       return "Duplicated";
+    case "scheduled_send":
+      return "Scheduled send";
+    case "scheduled_send_cancelled":
+      return "Scheduled send cancelled";
+    case "scheduled_send_failed":
+      return "Scheduled send failed";
     default:
       return type;
   }
@@ -122,6 +128,7 @@ export default function InvoiceDetailPage() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
   const [showRecordPaymentDialog, setShowRecordPaymentDialog] = useState(false);
@@ -140,6 +147,8 @@ export default function InvoiceDetailPage() {
   const [saveNotesAsClientDefault, setSaveNotesAsClientDefault] = useState(false);
   const [paymentNote, setPaymentNote] = useState("");
   const [recordPaymentAmount, setRecordPaymentAmount] = useState("");
+  const [scheduledSendDate, setScheduledSendDate] = useState("");
+  const [isSchedulingSend, setIsSchedulingSend] = useState(false);
   const [recordPaymentProvider, setRecordPaymentProvider] = useState("bank_transfer");
   const [recordPaymentPaidAt, setRecordPaymentPaidAt] = useState(getTodayDateInputValue());
   const [recordPaymentNote, setRecordPaymentNote] = useState("");
@@ -434,6 +443,85 @@ export default function InvoiceDetailPage() {
     }
 
     void sendInvoiceNow();
+  };
+
+  const openScheduleDialog = () => {
+    if (!invoice) return;
+    setScheduledSendDate(
+      invoice.scheduledSendAt ? toDateInputValue(invoice.scheduledSendAt) : getTodayDateInputValue()
+    );
+    setShowScheduleDialog(true);
+  };
+
+  const scheduleInvoiceSend = async () => {
+    if (!invoice || !scheduledSendDate) return;
+
+    setIsSchedulingSend(true);
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/schedule-send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ scheduledSendDate }),
+      });
+      const result = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Unable to schedule invoice",
+          description: result.error ?? "Unable to schedule invoice",
+          variant: "error",
+        });
+        return;
+      }
+
+      setShowScheduleDialog(false);
+      setSuccessMessage(result.message ?? "Invoice scheduled.");
+      await fetchInvoice(invoice.id);
+    } catch (error) {
+      console.error("Error scheduling invoice:", error);
+      toast({
+        title: "Unable to schedule invoice",
+        description: "Unable to schedule invoice",
+        variant: "error",
+      });
+    } finally {
+      setIsSchedulingSend(false);
+    }
+  };
+
+  const clearScheduledInvoiceSend = async () => {
+    if (!invoice) return;
+
+    setIsSchedulingSend(true);
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/schedule-send`, {
+        method: "DELETE",
+      });
+      const result = (await response.json()) as { error?: string; message?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Unable to clear scheduled send",
+          description: result.error ?? "Unable to clear scheduled send",
+          variant: "error",
+        });
+        return;
+      }
+
+      setSuccessMessage(result.message ?? "Scheduled send cancelled.");
+      await fetchInvoice(invoice.id);
+    } catch (error) {
+      console.error("Error clearing scheduled invoice:", error);
+      toast({
+        title: "Unable to clear scheduled send",
+        description: "Unable to clear scheduled send",
+        variant: "error",
+      });
+    } finally {
+      setIsSchedulingSend(false);
+    }
   };
 
   const handleAttachmentsChange = (attachments: InvoiceAttachmentRecord[]) => {
@@ -1002,6 +1090,17 @@ export default function InvoiceDetailPage() {
               </Button>
             )
           ) : null}
+          {!isEditing && invoice.status === "draft" ? (
+            <Button
+              variant="outline"
+              onClick={openScheduleDialog}
+              disabled={isSchedulingSend || isSending || isDuplicating}
+              className="w-full sm:w-auto"
+            >
+              <CalendarClock className="h-4 w-4" />
+              {invoice.scheduledSendAt ? "Reschedule Send" : "Schedule Send"}
+            </Button>
+          ) : null}
           {!isEditing ? (
             invoice.status === "paid" ? (
               <Button
@@ -1115,6 +1214,23 @@ export default function InvoiceDetailPage() {
       {successMessage ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
+        </div>
+      ) : null}
+      {invoice.status === "draft" && invoice.scheduledSendAt ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+          <span>
+            Scheduled to send on {new Date(invoice.scheduledSendAt).toLocaleDateString()}.
+            {invoice.scheduledSendFailure ? ` Last attempt failed: ${invoice.scheduledSendFailure}` : ""}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void clearScheduledInvoiceSend()}
+            disabled={isSchedulingSend}
+          >
+            Clear Schedule
+          </Button>
         </div>
       ) : null}
       {invoice.status === "cancelled" ? (
@@ -1851,6 +1967,36 @@ export default function InvoiceDetailPage() {
           void sendInvoiceNow();
         }}
       />
+
+      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Schedule Invoice Send</DialogTitle>
+            <DialogDescription>
+              Send invoice <strong>{invoice.invoiceNumber}</strong> automatically on this date.
+              The official invoice number is assigned when the email is sent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="scheduled-send-date">Send date</Label>
+            <Input
+              id="scheduled-send-date"
+              type="date"
+              min={getTodayDateInputValue()}
+              value={scheduledSendDate}
+              onChange={(event) => setScheduledSendDate(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowScheduleDialog(false)} disabled={isSchedulingSend}>
+              Cancel
+            </Button>
+            <Button onClick={scheduleInvoiceSend} disabled={!scheduledSendDate || isSchedulingSend}>
+              {isSchedulingSend ? "Scheduling..." : "Schedule Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={showReminderConfirmDialog}
