@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { SECURITY_HEADERS } from "@/lib/securityHeaders";
+import { getSecurityHeaders } from "@/lib/securityHeaders";
 
 export function proxy(request: NextRequest) {
   const response = NextResponse.next();
+  const securityHeaders = getSecurityHeaders(request.nextUrl.pathname);
 
-  for (const [header, value] of Object.entries(SECURITY_HEADERS)) {
+  for (const [header, value] of Object.entries(securityHeaders)) {
     if (
       header === "Strict-Transport-Security" &&
       (request.nextUrl.protocol !== "https:" || request.nextUrl.hostname === "localhost")
@@ -22,4 +23,3 @@ export function proxy(request: NextRequest) {
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
-
