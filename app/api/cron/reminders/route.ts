@@ -291,7 +291,9 @@ async function processScheduledSendBatch(
 ): Promise<ScheduledSendBatchSummary> {
   const candidates = await prisma.invoice.findMany({
     where: {
-      status: InvoiceStatus.draft,
+      status: {
+        in: [InvoiceStatus.draft, InvoiceStatus.issued],
+      },
       scheduledSendAt: {
         not: null,
         lte: now,

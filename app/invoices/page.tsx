@@ -66,6 +66,11 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
   return "default";
 }
 
+function formatInvoiceStatus(status: string): string {
+  if (status === "issued") return "created";
+  return status;
+}
+
 function parseNumber(value: string): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -150,8 +155,8 @@ function renderInvoiceAmount(invoice: InvoiceRow) {
 function renderInvoiceStatusBadges(invoice: InvoiceRow) {
   return (
     <div className="flex flex-wrap gap-1.5">
-      <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
-      {invoice.status === "draft" && invoice.scheduledSendAt ? (
+      <Badge variant={statusVariant(invoice.status)}>{formatInvoiceStatus(invoice.status)}</Badge>
+      {(invoice.status === "draft" || invoice.status === "issued") && invoice.scheduledSendAt ? (
         <Badge variant={invoice.scheduledSendFailure ? "danger" : "default"}>
           {invoice.scheduledSendFailure ? "schedule failed" : "scheduled"}
         </Badge>
@@ -164,22 +169,27 @@ function renderInvoiceStatusBadges(invoice: InvoiceRow) {
 function getInvoiceActionMenuHeight(invoice: InvoiceRow): number {
   let actionCount = 2;
 
-  if (invoice.status === "paid" || invoice.status === "cancelled" || invoice.status === "sent" || invoice.status === "overdue") {
+  if (
+    invoice.status === "issued" ||
+    invoice.status === "paid" ||
+    invoice.status === "cancelled" ||
+    invoice.status === "sent" ||
+    invoice.status === "overdue"
+  ) {
     actionCount += 1;
   }
 
-  if (invoice.status === "sent" || invoice.status === "overdue") {
+  if (invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue") {
     actionCount += 1;
   }
 
   if (invoice.status === "draft") {
     actionCount += 2;
-    if (hasInvoiceClientEmail(invoice)) {
-      actionCount += 1;
-    }
-    if (invoice.scheduledSendAt) {
-      actionCount += 1;
-    }
+  }
+
+  if (invoice.status === "draft" || invoice.status === "issued") {
+    if (hasInvoiceClientEmail(invoice)) actionCount += 1;
+    if (invoice.scheduledSendAt) actionCount += 1;
   }
 
   return ACTION_MENU_VERTICAL_PADDING + actionCount * ACTION_MENU_ROW_HEIGHT;
@@ -378,6 +388,7 @@ function InvoicePageContent() {
     if (statusFilter === "paid") return "Paid";
     if (statusFilter === "overdue") return "Overdue";
     if (statusFilter === "draft") return "Draft";
+    if (statusFilter === "issued") return "Created";
     if (statusFilter === "sent") return "Sent";
     if (statusFilter === "cancelled") return "Cancelled";
     if (statusFilter === "open") return "Open";
@@ -396,14 +407,15 @@ function InvoicePageContent() {
       if (statusFilter === "paid") return status === "paid";
       if (statusFilter === "overdue") return status === "overdue";
       if (statusFilter === "draft") return status === "draft";
+      if (statusFilter === "issued") return status === "issued";
       if (statusFilter === "sent") return status === "sent";
       if (statusFilter === "cancelled") return status === "cancelled";
-      if (statusFilter === "open") return status === "draft" || status === "sent";
+      if (statusFilter === "open") return status === "draft" || status === "issued" || status === "sent";
       if (statusFilter === "unpaid") {
-        return status === "draft" || status === "sent" || status === "overdue";
+        return status === "draft" || status === "issued" || status === "sent" || status === "overdue";
       }
-      if (statusFilter === "needs-action") return status === "draft" || status === "overdue";
-      if (statusFilter === "awaiting-payment") return status === "sent" || status === "overdue";
+      if (statusFilter === "needs-action") return status === "draft" || status === "issued" || status === "overdue";
+      if (statusFilter === "awaiting-payment") return status === "issued" || status === "sent" || status === "overdue";
       return true;
     };
 
@@ -1544,7 +1556,7 @@ function InvoicePageContent() {
               <RotateCcw className="h-4 w-4" />
               {isUpdatingStatusId === invoice.id ? "Updating..." : "Reopen Invoice"}
             </button>
-          ) : invoice.status === "sent" || invoice.status === "overdue" ? (
+          ) : invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue" ? (
             <button
               type="button"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/40 dark:hover:text-emerald-200")}
@@ -1559,7 +1571,7 @@ function InvoicePageContent() {
               {isUpdatingStatusId === invoice.id ? "Updating..." : "Mark Paid"}
             </button>
           ) : null}
-          {invoice.status === "sent" || invoice.status === "overdue" ? (
+          {invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue" ? (
             <button
               type="button"
               className={cn(
@@ -1592,7 +1604,7 @@ function InvoicePageContent() {
               Cancel Invoice
             </button>
           ) : null}
-          {invoice.status === "draft" && hasInvoiceClientEmail(invoice) ? (
+          {(invoice.status === "draft" || invoice.status === "issued") && hasInvoiceClientEmail(invoice) ? (
             <button
               type="button"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
@@ -1607,7 +1619,7 @@ function InvoicePageContent() {
               {invoice.scheduledSendAt ? "Reschedule Send" : "Schedule Send"}
             </button>
           ) : null}
-          {invoice.status === "draft" && invoice.scheduledSendAt ? (
+          {(invoice.status === "draft" || invoice.status === "issued") && invoice.scheduledSendAt ? (
             <button
               type="button"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
@@ -2324,7 +2336,7 @@ function InvoicePageContent() {
                     <TableCell>
                       <div className="space-y-1.5">
                         {renderInvoiceStatusBadges(invoice)}
-                        {invoice.status === "draft" && invoice.scheduledSendAt ? (
+                        {(invoice.status === "draft" || invoice.status === "issued") && invoice.scheduledSendAt ? (
                           <p className="text-xs text-slate-500 dark:text-slate-400">
                             Sends {formatShortDate(invoice.scheduledSendAt)}
                             {invoice.scheduledSendFailure ? ` - ${invoice.scheduledSendFailure}` : ""}
@@ -2347,6 +2359,20 @@ function InvoicePageContent() {
                           >
                             <FileCheck2 className="h-4 w-4" />
                             {isIssuingId === invoice.id ? "Creating..." : "Create"}
+                          </Button>
+                        ) : invoice.status === "issued" && hasInvoiceClientEmail(invoice) ? (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="w-[8.5rem] justify-start"
+                            disabled={isSendingId === invoice.id}
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleSendInvoice(invoice.id);
+                            }}
+                          >
+                            <Send className="h-4 w-4" />
+                            {isSendingId === invoice.id ? "Sending..." : "Send"}
                           </Button>
                         ) : invoice.status === "paid" ? (
                           <Button
@@ -2428,7 +2454,7 @@ function InvoicePageContent() {
                     {renderInvoiceStatusBadges(invoice)}
                   </div>
 
-                  {invoice.status === "draft" && invoice.scheduledSendAt ? (
+                  {(invoice.status === "draft" || invoice.status === "issued") && invoice.scheduledSendAt ? (
                     <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
                       Sends {formatShortDate(invoice.scheduledSendAt)}
                       {invoice.scheduledSendFailure ? ` - ${invoice.scheduledSendFailure}` : ""}
@@ -2449,6 +2475,20 @@ function InvoicePageContent() {
                       >
                         <FileCheck2 className="h-4 w-4" />
                         {isIssuingId === invoice.id ? "Creating..." : "Create Invoice"}
+                      </Button>
+                    ) : invoice.status === "issued" && hasInvoiceClientEmail(invoice) ? (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled={isSendingId === invoice.id}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleSendInvoice(invoice.id);
+                        }}
+                        className="col-span-2"
+                      >
+                        <Send className="h-4 w-4" />
+                        {isSendingId === invoice.id ? "Sending..." : "Send Invoice"}
                       </Button>
                     ) : invoice.status === "paid" ? (
                       <Button
@@ -2485,7 +2525,7 @@ function InvoicePageContent() {
                     ) : (
                       <div className="col-span-2">{renderActionMenu(invoice, "w-full", "w-full")}</div>
                     )}
-                    {invoice.status === "draft" || invoice.status === "sent" || invoice.status === "overdue" ? (
+                    {invoice.status === "draft" || invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue" ? (
                       <div className="col-span-2">{renderActionMenu(invoice, "w-full", "w-full")}</div>
                     ) : null}
                   </div>
@@ -2523,7 +2563,10 @@ function InvoicePageContent() {
             <DialogTitle>Schedule Invoice Send</DialogTitle>
             <DialogDescription>
               Send invoice <strong>{scheduleTarget?.invoiceNumber}</strong> automatically on this
-              date. The official invoice number is assigned when the email is sent.
+              date.
+              {scheduleTarget?.status === "draft"
+                ? " The official invoice number will be assigned when the email is sent."
+                : " This invoice already has its official number; only the email send is scheduled."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

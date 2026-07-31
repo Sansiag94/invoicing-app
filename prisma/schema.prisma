@@ -307,6 +307,7 @@ model MonthlyReport {
 
 enum InvoiceStatus {
   draft
+  issued
   sent
   paid
   overdue

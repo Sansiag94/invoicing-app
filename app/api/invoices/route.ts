@@ -74,9 +74,8 @@ function asDate(value: unknown): Date | null {
 
 function normalizeStatus(value: unknown): InvoiceStatus {
   if (typeof value !== "string") return InvoiceStatus.draft;
-  return Object.values(InvoiceStatus).includes(value as InvoiceStatus)
-    ? (value as InvoiceStatus)
-    : InvoiceStatus.draft;
+  if (value === InvoiceStatus.issued) return InvoiceStatus.issued;
+  return InvoiceStatus.draft;
 }
 
 export async function GET(request: Request) {
@@ -289,8 +288,12 @@ export async function POST(request: Request) {
     );
 
     const normalizedStatus = normalizeStatus(body.status);
-    if (normalizedStatus === InvoiceStatus.cancelled) {
-      return apiError("Invoices cannot be created as cancelled", 400);
+    if (
+      typeof body.status === "string" &&
+      body.status !== InvoiceStatus.draft &&
+      body.status !== InvoiceStatus.issued
+    ) {
+      return apiError("Invoices can only be created as a draft or created invoice.", 400);
     }
 
     if (normalizedStatus !== InvoiceStatus.draft) {
@@ -364,7 +367,7 @@ export async function POST(request: Request) {
 
     await logInvoiceEvent({
       invoiceId: invoice.id,
-      type: "created",
+      type: normalizedStatus === InvoiceStatus.draft ? "created" : "issued",
       actor: user.email ?? "User",
       details:
         normalizedStatus === InvoiceStatus.draft

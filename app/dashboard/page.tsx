@@ -190,6 +190,11 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
   return "default";
 }
 
+function formatInvoiceStatus(status: string): string {
+  if (status === "issued") return "created";
+  return status;
+}
+
 const DASHBOARD_CACHE_KEY = "dashboard-overview";
 const DASHBOARD_RETRY_DELAY_MS = 900;
 
@@ -342,7 +347,7 @@ export default function DashboardPage() {
         <StatCard
           label="Unpaid pipeline"
           value={`${dashboard.currency} ${formatMoney(dashboard.prospectRevenue)}`}
-          helper={`${dashboard.unpaidInvoices} draft, sent, or overdue invoice${dashboard.unpaidInvoices === 1 ? "" : "s"}`}
+          helper={`${dashboard.unpaidInvoices} draft, created, sent, or overdue invoice${dashboard.unpaidInvoices === 1 ? "" : "s"}`}
           icon={<Clock3 className="h-5 w-5" />}
           tone="warning"
           href="/invoices?status=unpaid"
@@ -403,7 +408,7 @@ export default function DashboardPage() {
               {dashboard.currency} {formatMoney(dashboard.prospectRevenue)}
             </p>
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              Draft, sent, and overdue invoices not yet paid
+              Draft, created, sent, and overdue invoices not yet paid
             </p>
           </div>
           <div className="flex flex-col justify-between rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 dark:border-slate-800 dark:bg-slate-950/60">
@@ -495,7 +500,7 @@ export default function DashboardPage() {
                         {invoice.currency} {formatMoney(invoice.totalAmount)}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                        <Badge variant={statusVariant(invoice.status)}>{formatInvoiceStatus(invoice.status)}</Badge>
                       </TableCell>
                     </TableRow>
                   ))
@@ -534,7 +539,7 @@ export default function DashboardPage() {
                         {invoice.currency} {formatMoney(invoice.totalAmount)}
                       </p>
                     </div>
-                    <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                    <Badge variant={statusVariant(invoice.status)}>{formatInvoiceStatus(invoice.status)}</Badge>
                   </div>
                 </Link>
               ))

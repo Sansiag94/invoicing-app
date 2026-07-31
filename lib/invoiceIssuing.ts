@@ -6,7 +6,6 @@ import {
   formatSequentialInvoiceNumber,
   isDraftInvoiceNumber,
 } from "@/lib/invoice";
-import { getOpenInvoiceStatus } from "@/lib/invoiceStatus";
 import { getInvoiceVatConfigurationError } from "@/lib/vat";
 
 export class InvoiceIssueError extends Error {
@@ -76,7 +75,6 @@ export async function issueDraftInvoice(input: {
   await assertBusinessCanIssueInvoice(invoice.businessId);
 
   const issuedAt = invoice.issuedAt ?? new Date();
-  const nextStatus = getOpenInvoiceStatus(invoice.dueDate);
 
   const updated = await prisma.$transaction(async (tx) => {
     let officialInvoiceNumber = invoiceNumber;
@@ -103,7 +101,7 @@ export async function issueDraftInvoice(input: {
       where: { id: invoice.id },
       data: {
         invoiceNumber: officialInvoiceNumber,
-        status: nextStatus,
+        status: "issued",
         issuedAt,
         scheduledSendAt: null,
         scheduledSendFailure: null,

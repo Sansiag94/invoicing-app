@@ -78,8 +78,8 @@ export async function POST(
       return apiError("Invoice not found", 404);
     }
 
-    if (invoice.status !== InvoiceStatus.draft) {
-      return apiError("Only draft invoices can be scheduled for sending.", 400);
+    if (invoice.status !== InvoiceStatus.draft && invoice.status !== InvoiceStatus.issued) {
+      return apiError("Only draft or created invoices can be scheduled for sending.", 400);
     }
 
     if (!invoice.client.email?.trim()) {

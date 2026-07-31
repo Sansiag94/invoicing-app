@@ -370,7 +370,7 @@ export default function InvoicePreviewPage() {
         return;
       }
 
-      setSuccessMessage(result?.message ?? "Invoice issued. You can download or print it now.");
+      setSuccessMessage(result?.message ?? "Invoice created. You can download, print, send, or schedule it now.");
       window.location.reload();
     } catch (error) {
       console.error("Error issuing invoice:", error);
@@ -688,6 +688,16 @@ export default function InvoicePreviewPage() {
                 <FileCheck2 className="h-4 w-4" />
                 {isIssuing ? "Creating..." : "Create Invoice"}
               </Button>
+            ) : invoice?.status === "issued" && invoice.client.email?.trim() ? (
+              <Button
+                variant="default"
+                onClick={handleSendInvoice}
+                disabled={isSending || isIssuing || isLoading || isDuplicating}
+                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
+              >
+                <Send className="h-4 w-4" />
+                {isSending ? "Sending..." : "Send Invoice"}
+              </Button>
             ) : invoice?.status === "paid" ? (
               <Button
                 variant="default"
@@ -698,7 +708,7 @@ export default function InvoicePreviewPage() {
                 <Send className="h-4 w-4" />
                 {isSending ? "Sending..." : invoice?.status === "paid" ? "Send Paid Invoice" : "Send"}
               </Button>
-            ) : (
+            ) : invoice?.status === "sent" || invoice?.status === "overdue" ? (
               <Button
                 variant="outline"
                 onClick={handleSendReminder}
@@ -708,7 +718,7 @@ export default function InvoicePreviewPage() {
                 <BellRing className="h-4 w-4" />
                 {isSendingReminder ? "Sending..." : "Send Reminder"}
               </Button>
-            )
+            ) : null
           ) : null}
           {invoice?.status === "draft" && invoice.client.email?.trim() ? (
             <Button
@@ -721,7 +731,7 @@ export default function InvoicePreviewPage() {
               {isSending ? "Sending..." : "Send Invoice"}
             </Button>
           ) : null}
-          {invoice?.status === "draft" && invoice.client.email?.trim() ? (
+          {(invoice?.status === "draft" || invoice?.status === "issued") && invoice.client.email?.trim() ? (
             <Button
               variant="outline"
               onClick={openScheduleDialog}
@@ -752,7 +762,7 @@ export default function InvoicePreviewPage() {
               <RotateCcw className="h-4 w-4" />
               {isUpdatingStatus ? "Updating..." : "Reopen Invoice"}
             </Button>
-          ) : invoice?.status === "sent" || invoice?.status === "overdue" ? (
+          ) : invoice?.status === "issued" || invoice?.status === "sent" || invoice?.status === "overdue" ? (
             <Button
               variant="outline"
               onClick={() => void handleManualStatusChange("paid")}
@@ -763,7 +773,7 @@ export default function InvoicePreviewPage() {
               {isUpdatingStatus ? "Updating..." : "Mark Paid"}
             </Button>
           ) : null}
-          {invoice?.status === "sent" || invoice?.status === "overdue" ? (
+          {invoice?.status === "issued" || invoice?.status === "sent" || invoice?.status === "overdue" ? (
             <Button
               variant="outline"
               onClick={() => setShowCancelConfirmDialog(true)}
@@ -822,7 +832,7 @@ export default function InvoicePreviewPage() {
           {successMessage}
         </div>
       ) : null}
-      {invoice?.status === "draft" && invoice.scheduledSendAt ? (
+      {(invoice?.status === "draft" || invoice?.status === "issued") && invoice.scheduledSendAt ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
           <span>
             Scheduled to send on {new Date(invoice.scheduledSendAt).toLocaleDateString()}.
@@ -946,7 +956,9 @@ export default function InvoicePreviewPage() {
             <DialogTitle>Schedule Invoice Send</DialogTitle>
             <DialogDescription>
               Send invoice <strong>{invoice?.invoiceNumber}</strong> automatically on this date.
-              The official invoice number is assigned when the email is sent.
+              {invoice?.status === "draft"
+                ? " The official invoice number will be assigned when the email is sent."
+                : " This invoice already has its official number; only the email send is scheduled."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

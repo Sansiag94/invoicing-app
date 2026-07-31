@@ -86,7 +86,7 @@ export async function GET(request: Request) {
         where: {
           businessId: business.id,
           status: {
-            in: ["draft", "sent", "overdue"],
+            in: ["draft", "issued", "sent", "overdue"],
           },
         },
         select: {
@@ -104,7 +104,7 @@ export async function GET(request: Request) {
         where: {
           businessId: business.id,
           status: {
-            in: ["draft", "sent"],
+            in: ["draft", "issued", "sent"],
           },
         },
       }),
@@ -112,7 +112,7 @@ export async function GET(request: Request) {
         where: {
           businessId: business.id,
           status: {
-            in: ["draft", "sent", "overdue"],
+            in: ["draft", "issued", "sent", "overdue"],
           },
         },
       }),

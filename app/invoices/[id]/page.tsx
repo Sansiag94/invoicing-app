@@ -54,6 +54,11 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
   return "default";
 }
 
+function formatInvoiceStatus(status: string): string {
+  if (status === "issued") return "created";
+  return status;
+}
+
 function formatDateTime(value: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
@@ -71,7 +76,7 @@ function formatEventLabel(type: string): string {
     case "edited":
       return "Edited";
     case "issued":
-      return "Issued";
+      return "Created";
     case "sent":
       return "Sent";
     case "reminder_sent":
@@ -485,14 +490,14 @@ export default function InvoiceDetailPage() {
         current
           ? {
               ...current,
-              status: result.status ?? "sent",
+              status: result.status ?? "issued",
               invoiceNumber: result.invoiceNumber ?? current.invoiceNumber,
               scheduledSendAt: null,
               scheduledSendFailure: null,
             }
           : current
       );
-      setSuccessMessage(result?.message ?? "Invoice issued. You can download or print it now.");
+      setSuccessMessage(result?.message ?? "Invoice created. You can download, print, send, or schedule it now.");
       await fetchInvoice(invoice.id);
     } catch (error) {
       console.error("Error issuing invoice:", error);
@@ -1092,8 +1097,11 @@ export default function InvoiceDetailPage() {
     },
     {
       label: "Sent",
-      description: invoice.status === "draft" ? "Not sent yet" : "Client-facing invoice",
-      active: invoice.status !== "draft",
+      description:
+        invoice.status === "sent" || invoice.status === "overdue" || invoice.status === "paid"
+          ? "Client-facing invoice"
+          : "Not sent yet",
+      active: invoice.status === "sent" || invoice.status === "overdue" || invoice.status === "paid",
     },
     {
       label: "Due",
@@ -1147,6 +1155,16 @@ export default function InvoiceDetailPage() {
                 <FileCheck2 className="h-4 w-4" />
                 {isIssuing ? "Creating..." : "Create Invoice"}
               </Button>
+            ) : invoice.status === "issued" && invoice.client.email?.trim() ? (
+              <Button
+                variant="default"
+                onClick={handleSendInvoice}
+                disabled={isSending || isIssuing || isDuplicating}
+                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
+              >
+                <Send className="h-4 w-4" />
+                {isSending ? "Sending..." : "Send Invoice"}
+              </Button>
             ) : invoice.status === "paid" ? (
               <Button
                 variant="default"
@@ -1157,7 +1175,7 @@ export default function InvoiceDetailPage() {
                 <Send className="h-4 w-4" />
                 {isSending ? "Sending..." : invoice.status === "paid" ? "Send Paid Invoice" : "Send"}
               </Button>
-            ) : (
+            ) : invoice.status === "sent" || invoice.status === "overdue" ? (
               <Button
                 variant="outline"
                 onClick={handleSendReminder}
@@ -1167,9 +1185,9 @@ export default function InvoiceDetailPage() {
                 <BellRing className="h-4 w-4" />
                 {isSendingReminder ? "Sending..." : "Send Reminder"}
               </Button>
-            )
+            ) : null
           ) : null}
-          {!isEditing && invoice.status === "draft" && invoice.client.email?.trim() ? (
+          {!isEditing && (invoice.status === "draft" || invoice.status === "issued") && invoice.client.email?.trim() ? (
             <Button
               variant="outline"
               onClick={openScheduleDialog}
@@ -1212,9 +1230,9 @@ export default function InvoiceDetailPage() {
                 <RotateCcw className="h-4 w-4" />
                 {isUpdatingStatus ? "Updating..." : "Reopen Invoice"}
               </Button>
-            ) : invoice.status === "sent" || invoice.status === "overdue" ? (
+            ) : invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue" ? (
               <>
-                {invoice.status === "sent" || invoice.status === "overdue" ? (
+                {invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue" ? (
                   <Button
                     variant="outline"
                     onClick={openRecordPaymentDialog}
@@ -1237,7 +1255,7 @@ export default function InvoiceDetailPage() {
               </>
             ) : null
           ) : null}
-          {!isEditing && (invoice.status === "sent" || invoice.status === "overdue") ? (
+          {!isEditing && (invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue") ? (
             <Button
               variant="outline"
               onClick={() => setShowCancelConfirmDialog(true)}
@@ -1308,7 +1326,7 @@ export default function InvoiceDetailPage() {
           {successMessage}
         </div>
       ) : null}
-      {invoice.status === "draft" && invoice.scheduledSendAt ? (
+      {(invoice.status === "draft" || invoice.status === "issued") && invoice.scheduledSendAt ? (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
           <span>
             Scheduled to send on {new Date(invoice.scheduledSendAt).toLocaleDateString()}.
@@ -1439,7 +1457,7 @@ export default function InvoiceDetailPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Invoice Summary</CardTitle>
           <Badge variant={hasPartialPayment ? "warning" : statusVariant(invoice.status)}>
-            {hasPartialPayment ? "partially paid" : invoice.status}
+            {hasPartialPayment ? "partially paid" : formatInvoiceStatus(invoice.status)}
           </Badge>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 text-sm md:grid-cols-3">
@@ -2084,7 +2102,9 @@ export default function InvoiceDetailPage() {
             <DialogTitle>Schedule Invoice Send</DialogTitle>
             <DialogDescription>
               Send invoice <strong>{invoice.invoiceNumber}</strong> automatically on this date.
-              The official invoice number is assigned when the email is sent.
+              {invoice.status === "draft"
+                ? " The official invoice number will be assigned when the email is sent."
+                : " This invoice already has its official number; only the email send is scheduled."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">

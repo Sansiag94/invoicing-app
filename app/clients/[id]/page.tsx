@@ -31,6 +31,11 @@ function statusVariant(status: string): "default" | "success" | "warning" | "dan
   return "default";
 }
 
+function formatInvoiceStatus(status: string): string {
+  if (status === "issued") return "created";
+  return status;
+}
+
 function getTodayDateInputValue(baseDate = new Date()): string {
   const year = baseDate.getFullYear();
   const month = String(baseDate.getMonth() + 1).padStart(2, "0");
@@ -1227,7 +1232,9 @@ export default function ClientDetailPage() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                          <Badge variant={statusVariant(invoice.status)}>
+                            {formatInvoiceStatus(invoice.status)}
+                          </Badge>
                         </TableCell>
                         <TableCell>
                           {invoice.currency} {invoice.totalAmount.toFixed(2)}
@@ -1252,7 +1259,9 @@ export default function ClientDetailPage() {
                           {new Date(invoice.issueDate).toLocaleDateString()}
                         </p>
                       </div>
-                      <Badge variant={statusVariant(invoice.status)}>{invoice.status}</Badge>
+                      <Badge variant={statusVariant(invoice.status)}>
+                        {formatInvoiceStatus(invoice.status)}
+                      </Badge>
                     </div>
                     <p className="mt-3 text-base font-semibold text-slate-900">
                       {invoice.currency} {invoice.totalAmount.toFixed(2)}

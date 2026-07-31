@@ -1,6 +1,6 @@
 import prisma from "@/lib/prisma";
 
-export const OPEN_INVOICE_STATUSES = ["draft", "sent", "overdue"] as const;
+export const OPEN_INVOICE_STATUSES = ["draft", "issued", "sent", "overdue"] as const;
 export const COLLECTIBLE_INVOICE_STATUSES = ["sent", "overdue"] as const;
 
 export function startOfLocalDay(date = new Date()): Date {

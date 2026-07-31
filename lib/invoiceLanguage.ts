@@ -2,7 +2,7 @@ export type InvoiceLanguage = "en" | "de" | "es" | "fr" | "it";
 
 export type QrBillLanguage = "DE" | "EN" | "FR" | "IT" | "RM";
 
-type InvoiceStatusValue = "draft" | "sent" | "paid" | "overdue" | "cancelled";
+type InvoiceStatusValue = "draft" | "issued" | "sent" | "paid" | "overdue" | "cancelled";
 
 type InvoiceStrings = {
   invoice: string;
@@ -127,6 +127,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       "Online card payment is not enabled for this business. Please use the payment details shown on the invoice.",
     status: {
       draft: "Draft",
+      issued: "Created",
       sent: "Sent",
       paid: "Paid",
       overdue: "Overdue",
@@ -180,6 +181,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       "Online-Kartenzahlung ist für dieses Unternehmen nicht aktiviert. Bitte verwenden Sie die Zahlungsangaben auf der Rechnung.",
     status: {
       draft: "Entwurf",
+      issued: "Erstellt",
       sent: "Gesendet",
       paid: "Bezahlt",
       overdue: "Überfällig",
@@ -233,6 +235,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       "El pago con tarjeta en linea no esta habilitado para esta empresa. Utilice los datos de pago que aparecen en la factura.",
     status: {
       draft: "Borrador",
+      issued: "Creada",
       sent: "Enviada",
       paid: "Pagada",
       overdue: "Vencida",
@@ -286,6 +289,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       "Le paiement par carte en ligne n'est pas active pour cette entreprise. Veuillez utiliser les informations de paiement indiquees sur la facture.",
     status: {
       draft: "Brouillon",
+      issued: "Creee",
       sent: "Envoyee",
       paid: "Payee",
       overdue: "En retard",
@@ -339,6 +343,7 @@ const INVOICE_STRINGS: Record<InvoiceLanguage, InvoiceStrings> = {
       "Il pagamento con carta online non e abilitato per questa azienda. Usa i dati di pagamento indicati sulla fattura.",
     status: {
       draft: "Bozza",
+      issued: "Creata",
       sent: "Inviata",
       paid: "Pagata",
       overdue: "Scaduta",

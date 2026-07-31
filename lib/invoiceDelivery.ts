@@ -16,7 +16,7 @@ import {
 import InvoiceDocument from "@/lib/InvoiceDocument";
 import { buildInvoicePdfFilename } from "@/lib/pdfFilename";
 import { logInvoiceEvent } from "@/lib/invoiceActivity";
-import { getInvoiceAmountDue } from "@/lib/invoiceStatus";
+import { getInvoiceAmountDue, getOpenInvoiceStatus } from "@/lib/invoiceStatus";
 import { assertBusinessCanIssueInvoice } from "@/lib/billing";
 import { getSupabaseAdminClient } from "@/lib/supabase-admin";
 import { getInvoiceVatConfigurationError } from "@/lib/vat";
@@ -311,11 +311,13 @@ export async function deliverInvoiceEmail(input: {
     extraAttachments: [...defaultAttachments, ...invoiceAttachments],
   });
 
-  if (existingInvoice.status === "draft") {
+  const sentStatus = getOpenInvoiceStatus(existingInvoice.dueDate);
+
+  if (existingInvoice.status === "draft" || existingInvoice.status === "issued") {
     await prisma.invoice.update({
       where: { id: existingInvoice.id },
       data: {
-        status: "sent",
+        status: sentStatus,
         issuedAt: existingInvoice.issuedAt ?? new Date(),
         scheduledSendAt: null,
         scheduledSendFailure: null,
@@ -346,7 +348,10 @@ export async function deliverInvoiceEmail(input: {
 
   return {
     message: existingInvoice.status === "paid" ? "Paid invoice sent" : "Invoice sent",
-    status: existingInvoice.status === "draft" ? "sent" : existingInvoice.status,
+    status:
+      existingInvoice.status === "draft" || existingInvoice.status === "issued"
+        ? sentStatus
+        : existingInvoice.status,
     invoiceNumber: officialInvoiceNumber,
     clientEmail,
   };

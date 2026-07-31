@@ -1,6 +1,6 @@
 import type { InvoiceLanguage } from "@/lib/invoiceLanguage";
 
-export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
+export type InvoiceStatus = "draft" | "issued" | "sent" | "paid" | "overdue" | "cancelled";
 export type InvoiceCurrency = "CHF" | "EUR";
 export type DiscountType = "none" | "percentage" | "fixed";
 export type AppLanguage = "en" | "de" | "es" | "fr" | "it";
