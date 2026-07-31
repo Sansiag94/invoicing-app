@@ -87,10 +87,17 @@ function InvoicePreviewContent() {
       return;
     }
 
+    const result = await response.json();
+
     toast({
-      title: "Invoice created successfully",
+      title: "Draft saved",
+      description: "Review the preview before creating the final invoice.",
       variant: "success",
     });
+    if (result?.id) {
+      router.push(`/invoices/${result.id}/preview`);
+      return;
+    }
     router.push("/invoices");
   };
 

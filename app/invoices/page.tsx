@@ -2562,15 +2562,14 @@ function InvoicePageContent() {
           <DialogHeader>
             <DialogTitle>Schedule Invoice Send</DialogTitle>
             <DialogDescription>
-              Send invoice <strong>{scheduleTarget?.invoiceNumber}</strong> automatically on this
-              date.
+              Choose when the final invoice should be emailed to the client.
               {scheduleTarget?.status === "draft"
-                ? " The official invoice number will be assigned when the email is sent."
-                : " This invoice already has its official number; only the email send is scheduled."}
+                ? " If this is still a draft on the selected date, Sierra Invoices will create the official invoice first, then send it."
+                : " This invoice already has its official number, so only the email send is scheduled."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="scheduled-send-date">Send date</Label>
+            <Label htmlFor="scheduled-send-date">Send final invoice on</Label>
             <Input
               id="scheduled-send-date"
               type="date"
@@ -2578,6 +2577,9 @@ function InvoicePageContent() {
               value={scheduleDate}
               onChange={(event) => setScheduleDate(event.target.value)}
             />
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              On the selected date, the final invoice will be sent to the client.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setScheduleTarget(null)} disabled={isSchedulingId !== null}>

@@ -1199,15 +1199,19 @@ export default function InvoiceDetailPage() {
             </Button>
           ) : null}
           {!isEditing && invoice.status === "draft" && invoice.client.email?.trim() ? (
-            <Button
-              variant="outline"
-              onClick={handleSendInvoice}
-              disabled={isSending || isIssuing || isDuplicating}
+            <span
               className="w-full sm:w-auto"
+              title="Create the invoice first to send the final version to the client."
             >
-              <Send className="h-4 w-4" />
-              {isSending ? "Sending..." : "Send Invoice"}
-            </Button>
+              <Button
+                variant="outline"
+                disabled
+                className="pointer-events-none w-full sm:w-auto"
+              >
+                <Send className="h-4 w-4" />
+                Send Invoice
+              </Button>
+            </span>
           ) : null}
           {!isEditing ? (
             invoice.status === "paid" ? (
@@ -2101,14 +2105,14 @@ export default function InvoiceDetailPage() {
           <DialogHeader>
             <DialogTitle>Schedule Invoice Send</DialogTitle>
             <DialogDescription>
-              Send invoice <strong>{invoice.invoiceNumber}</strong> automatically on this date.
+              Choose when the final invoice should be emailed to the client.
               {invoice.status === "draft"
-                ? " The official invoice number will be assigned when the email is sent."
-                : " This invoice already has its official number; only the email send is scheduled."}
+                ? " If this is still a draft on the selected date, Sierra Invoices will create the official invoice first, then send it."
+                : " This invoice already has its official number, so only the email send is scheduled."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="scheduled-send-date">Send date</Label>
+            <Label htmlFor="scheduled-send-date">Send final invoice on</Label>
             <Input
               id="scheduled-send-date"
               type="date"
@@ -2116,6 +2120,9 @@ export default function InvoiceDetailPage() {
               value={scheduledSendDate}
               onChange={(event) => setScheduledSendDate(event.target.value)}
             />
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              On the selected date, the final invoice will be sent to the client.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowScheduleDialog(false)} disabled={isSchedulingSend}>
