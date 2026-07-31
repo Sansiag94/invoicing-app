@@ -183,6 +183,10 @@ function getInvoiceActionMenuHeight(invoice: InvoiceRow): number {
     actionCount += 1;
   }
 
+  if (invoice.status !== "draft" && invoice.status !== "cancelled") {
+    actionCount += 1;
+  }
+
   if (invoice.status === "draft") {
     actionCount += 2;
   }
@@ -354,6 +358,7 @@ function InvoicePageContent() {
   const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [isSendingId, setIsSendingId] = useState<string | null>(null);
+  const [isSendingTestId, setIsSendingTestId] = useState<string | null>(null);
   const [isIssuingId, setIsIssuingId] = useState<string | null>(null);
   const [isSchedulingId, setIsSchedulingId] = useState<string | null>(null);
   const [isSendingReminderId, setIsSendingReminderId] = useState<string | null>(null);
@@ -388,6 +393,7 @@ function InvoicePageContent() {
     if (statusFilter === "paid") return "Paid";
     if (statusFilter === "overdue") return "Overdue";
     if (statusFilter === "draft") return "Draft";
+    if (statusFilter === "created-not-sent") return "Created, not sent";
     if (statusFilter === "issued") return "Created";
     if (statusFilter === "sent") return "Sent";
     if (statusFilter === "cancelled") return "Cancelled";
@@ -407,6 +413,7 @@ function InvoicePageContent() {
       if (statusFilter === "paid") return status === "paid";
       if (statusFilter === "overdue") return status === "overdue";
       if (statusFilter === "draft") return status === "draft";
+      if (statusFilter === "created-not-sent") return status === "issued";
       if (statusFilter === "issued") return status === "issued";
       if (statusFilter === "sent") return status === "sent";
       if (statusFilter === "cancelled") return status === "cancelled";
@@ -964,6 +971,37 @@ function InvoicePageContent() {
     }
   };
 
+  const sendTestInvoiceEmail = async (invoiceId: string) => {
+    setIsSendingTestId(invoiceId);
+
+    try {
+      const response = await authenticatedFetch(`/api/invoices/${invoiceId}/send-test`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as { error?: string; message?: string; clientEmail?: string };
+
+      if (!response.ok) {
+        toast({
+          title: "Failed to send test email",
+          description: result.error ?? "Failed to send test email",
+          variant: "error",
+        });
+        return;
+      }
+
+      setSuccessMessage(`Test email sent to ${result.clientEmail ?? "your account email"}.`);
+    } catch (error) {
+      console.error("Error sending test invoice email:", error);
+      toast({
+        title: "Failed to send test email",
+        description: "Failed to send test email",
+        variant: "error",
+      });
+    } finally {
+      setIsSendingTestId(null);
+    }
+  };
+
   const issueInvoiceNow = async (invoiceId: string) => {
     setIsIssuingId(invoiceId);
 
@@ -1028,18 +1066,10 @@ function InvoicePageContent() {
     const invoice = invoices.find((entry) => entry.id === invoiceId);
 
     if (invoice?.status === "draft") {
-      setConfirmDialog({
-        title: "Send Invoice",
-        description: (
-          <>
-            This is still a draft. Sending it will first create the official invoice number, then email the final invoice to the client.
-          </>
-        ),
-        confirmLabel: "Create & Send",
-        onConfirm: () => {
-          setConfirmDialog(null);
-          void sendInvoiceNow(invoiceId);
-        },
+      toast({
+        title: "Create invoice before sending",
+        description: "Drafts need an official invoice number before the final version can be emailed.",
+        variant: "error",
       });
       return;
     }
@@ -1340,6 +1370,31 @@ function InvoicePageContent() {
       return;
     }
 
+    if (action === "send") {
+      const hasDrafts = selectedInvoices.some((invoice) => invoice.status === "draft");
+      const hasSendableInvoices = selectedInvoices.some(
+        (invoice) => invoice.status === "issued" || invoice.status === "paid"
+      );
+
+      if (hasDrafts) {
+        toast({
+          title: "Create invoices before sending",
+          description: "Drafts need an official invoice number before they can be emailed.",
+          variant: "error",
+        });
+        return;
+      }
+
+      if (!hasSendableInvoices) {
+        toast({
+          title: "No sendable invoices selected",
+          description: "Select created or paid invoices to send by email.",
+          variant: "error",
+        });
+        return;
+      }
+    }
+
     if (action === "delete" && !skipConfirmation) {
       setConfirmDialog({
         title: "Delete Drafts",
@@ -1358,7 +1413,7 @@ function InvoicePageContent() {
 
     try {
       for (const invoice of selectedInvoices) {
-        if (action === "send" && (invoice.status === "draft" || invoice.status === "paid")) {
+        if (action === "send" && (invoice.status === "issued" || invoice.status === "paid")) {
           const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send`, { method: "POST" });
           const result = (await response.json()) as { error?: string; code?: string; details?: unknown };
 
@@ -1632,6 +1687,21 @@ function InvoicePageContent() {
             >
               <CalendarClock className="h-4 w-4" />
               {isSchedulingId === invoice.id ? "Updating..." : "Clear Schedule"}
+            </button>
+          ) : null}
+          {invoice.status !== "draft" && invoice.status !== "cancelled" ? (
+            <button
+              type="button"
+              className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "w-full justify-start")}
+              disabled={isSendingTestId === invoice.id}
+              onClick={() => {
+                setOpenActionsInvoiceId(null);
+                setActionsMenuPosition(null);
+                void sendTestInvoiceEmail(invoice.id);
+              }}
+            >
+              <Send className="h-4 w-4" />
+              {isSendingTestId === invoice.id ? "Sending..." : "Send Test to Me"}
             </button>
           ) : null}
           {invoice.status === "draft" ? (
@@ -2214,6 +2284,9 @@ function InvoicePageContent() {
             ) : null}
           </div>
           <div className="hidden md:flex flex-wrap gap-2">
+            <Button asChild size="sm" variant={statusFilter === "created-not-sent" ? "default" : "outline"}>
+              <Link href="/invoices?status=created-not-sent">Created, not sent</Link>
+            </Button>
             <Button asChild size="sm" variant={statusFilter === "needs-action" ? "default" : "outline"}>
               <Link href="/invoices?status=needs-action">Needs Action</Link>
             </Button>
@@ -2336,6 +2409,16 @@ function InvoicePageContent() {
                     <TableCell>
                       <div className="space-y-1.5">
                         {renderInvoiceStatusBadges(invoice)}
+                        {invoice.status === "issued" && !invoice.scheduledSendAt ? (
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            Not emailed yet
+                          </p>
+                        ) : null}
+                        {invoice.status === "issued" && !hasInvoiceClientEmail(invoice) ? (
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            No email saved
+                          </p>
+                        ) : null}
                         {(invoice.status === "draft" || invoice.status === "issued") && invoice.scheduledSendAt ? (
                           <p className="text-xs text-slate-500 dark:text-slate-400">
                             Sends {formatShortDate(invoice.scheduledSendAt)}
@@ -2458,6 +2541,13 @@ function InvoicePageContent() {
                     <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
                       Sends {formatShortDate(invoice.scheduledSendAt)}
                       {invoice.scheduledSendFailure ? ` - ${invoice.scheduledSendFailure}` : ""}
+                    </div>
+                  ) : null}
+                  {invoice.status === "issued" && !invoice.scheduledSendAt ? (
+                    <div className="mb-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                      {hasInvoiceClientEmail(invoice)
+                        ? "Created, not emailed yet."
+                        : "No email saved. Download or deliver manually."}
                     </div>
                   ) : null}
 

@@ -105,11 +105,11 @@ export async function POST(
       invoiceId: invoice.id,
       type: "scheduled_send",
       actor: user.email ?? "User",
-      details: `Invoice scheduled to send on ${formatScheduleDate(scheduledSendAt)}`,
+      details: `Final invoice scheduled to send on ${formatScheduleDate(scheduledSendAt)}`,
     });
 
     return NextResponse.json({
-      message: `Invoice scheduled to send on ${formatScheduleDate(scheduledSendAt)}.`,
+      message: `Final invoice scheduled to send on ${formatScheduleDate(scheduledSendAt)}.`,
       scheduledSendAt: updatedInvoice.scheduledSendAt,
       scheduledSendFailure: updatedInvoice.scheduledSendFailure,
     });
@@ -164,10 +164,10 @@ export async function DELETE(
       invoiceId: invoice.id,
       type: "scheduled_send_cancelled",
       actor: user.email ?? "User",
-      details: "Scheduled invoice send cancelled",
+      details: "Scheduled invoice send cleared",
     });
 
-    return NextResponse.json({ message: "Scheduled send cancelled." });
+    return NextResponse.json({ message: "Scheduled send cleared." });
   } catch (error) {
     if (isAuthenticationError(error)) {
       return apiError(error.message, 401);

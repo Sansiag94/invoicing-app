@@ -14,7 +14,8 @@ export type InvoiceEventType =
   | "duplicated"
   | "scheduled_send"
   | "scheduled_send_cancelled"
-  | "scheduled_send_failed";
+  | "scheduled_send_failed"
+  | "test_email_sent";
 
 export type InvoiceEventEntry = {
   id: string;

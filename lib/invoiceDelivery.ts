@@ -1,6 +1,7 @@
 import React from "react";
 import crypto from "crypto";
 import { pdf } from "@react-pdf/renderer";
+import { InvoiceStatus } from "@prisma/client";
 import prisma from "@/lib/prisma";
 import {
   buildPublicInvoiceLink,
@@ -142,7 +143,12 @@ export async function deliverInvoiceEmail(input: {
   businessId: string;
   requestUrl: string;
   actor: string;
+  allowDraftFinalization?: boolean;
+  markAsSent?: boolean;
+  overrideRecipientEmail?: string;
+  overrideRecipientName?: string | null;
 }) {
+  const markAsSent = input.markAsSent ?? true;
   const existingInvoice = await prisma.invoice.findFirst({
     where: { id: input.invoiceId, businessId: input.businessId },
     include: {
@@ -171,8 +177,10 @@ export async function deliverInvoiceEmail(input: {
     throw new InvoiceDeliveryError("Invoice number is missing", 500);
   }
 
-  const clientEmail = existingInvoice.client.email?.trim();
-  if (!clientEmail) {
+  const clientEmail = existingInvoice.client.email?.trim() || null;
+  const recipientEmail = input.overrideRecipientEmail?.trim() || clientEmail;
+
+  if (markAsSent && !clientEmail) {
     console.warn("[invoice-send] Client email missing", { invoiceId: existingInvoice.id });
     throw new InvoiceDeliveryError(
       "This client has no email address. Add an email to the client before sending invoices by email.",
@@ -180,8 +188,19 @@ export async function deliverInvoiceEmail(input: {
     );
   }
 
+  if (!recipientEmail) {
+    throw new InvoiceDeliveryError("No recipient email address is available.", 400);
+  }
+
   if (existingInvoice.status === "cancelled") {
     throw new InvoiceDeliveryError("Cancelled invoices cannot be sent. Reopen the invoice first.", 400);
+  }
+
+  if (existingInvoice.status === "draft" && !input.allowDraftFinalization) {
+    throw new InvoiceDeliveryError(
+      "Create the invoice before sending the final version to the client.",
+      409
+    );
   }
 
   const vatConfigurationError = getInvoiceVatConfigurationError(
@@ -197,27 +216,37 @@ export async function deliverInvoiceEmail(input: {
   }
 
   let officialInvoiceNumber = invoiceNumber;
-  if (isDraftInvoiceNumber(invoiceNumber)) {
+  const wasDraftBeforeFinalization = existingInvoice.status === InvoiceStatus.draft;
+  if (wasDraftBeforeFinalization || isDraftInvoiceNumber(invoiceNumber)) {
+    const issuedAt = existingInvoice.issuedAt ?? new Date();
     const numberedInvoice = await prisma.$transaction(async (tx) => {
-      const updatedBusiness = await tx.business.update({
-        where: { id: existingInvoice.businessId },
-        data: { invoiceCounter: { increment: 1 } },
-        select: { invoiceCounter: true },
-      });
+      let nextInvoiceNumber = invoiceNumber;
 
-      const nextInvoiceNumber = formatSequentialInvoiceNumber(
-        deriveOfficialInvoicePrefix(
-          existingInvoice.client.companyName,
-          existingInvoice.client.contactName,
-          existingInvoice.client.email
-        ),
-        existingInvoice.issueDate,
-        updatedBusiness.invoiceCounter
-      );
+      if (isDraftInvoiceNumber(invoiceNumber)) {
+        const updatedBusiness = await tx.business.update({
+          where: { id: existingInvoice.businessId },
+          data: { invoiceCounter: { increment: 1 } },
+          select: { invoiceCounter: true },
+        });
+
+        nextInvoiceNumber = formatSequentialInvoiceNumber(
+          deriveOfficialInvoicePrefix(
+            existingInvoice.client.companyName,
+            existingInvoice.client.contactName,
+            existingInvoice.client.email
+          ),
+          existingInvoice.issueDate,
+          updatedBusiness.invoiceCounter
+        );
+      }
 
       await tx.invoice.update({
         where: { id: existingInvoice.id },
-        data: { invoiceNumber: nextInvoiceNumber },
+        data: {
+          invoiceNumber: nextInvoiceNumber,
+          status: InvoiceStatus.issued,
+          issuedAt,
+        },
       });
 
       return nextInvoiceNumber;
@@ -225,6 +254,17 @@ export async function deliverInvoiceEmail(input: {
 
     officialInvoiceNumber = numberedInvoice;
     existingInvoice.invoiceNumber = numberedInvoice;
+    existingInvoice.status = InvoiceStatus.issued;
+    existingInvoice.issuedAt = issuedAt;
+
+    await logInvoiceEvent({
+      invoiceId: existingInvoice.id,
+      type: "issued",
+      actor: input.actor,
+      details: input.allowDraftFinalization
+        ? `Invoice ${officialInvoiceNumber} created before scheduled send`
+        : `Invoice ${officialInvoiceNumber} created before email send`,
+    });
   }
 
   let publicToken = existingInvoice.publicToken;
@@ -259,7 +299,10 @@ export async function deliverInvoiceEmail(input: {
     computedTotals.totalAmount > 0 ? computedTotals.totalAmount : existingInvoice.totalAmount;
   const amountDueForEmail = getInvoiceAmountDue(existingInvoice.status, totalAmountForEmail);
   const clientDisplayName =
-    existingInvoice.client.contactName || existingInvoice.client.companyName || clientEmail;
+    existingInvoice.client.contactName || existingInvoice.client.companyName || recipientEmail;
+  const recipientName = input.overrideRecipientEmail
+    ? input.overrideRecipientName?.trim() || input.actor || clientDisplayName
+    : clientDisplayName;
   const emailBusinessName = getInvoiceSenderName({
     ...existingInvoice.business,
     ...senderPreferences,
@@ -283,9 +326,9 @@ export async function deliverInvoiceEmail(input: {
   ]);
 
   await sendInvoiceEmail({
-    to: clientEmail,
+    to: recipientEmail,
     businessName: emailBusinessName,
-    recipientName: clientDisplayName,
+    recipientName,
     invoiceNumber: officialInvoiceNumber,
     totalAmount: totalAmountForEmail,
     amountDue: amountDueForEmail,
@@ -313,46 +356,64 @@ export async function deliverInvoiceEmail(input: {
 
   const sentStatus = getOpenInvoiceStatus(existingInvoice.dueDate);
 
-  if (existingInvoice.status === "draft" || existingInvoice.status === "issued") {
-    await prisma.invoice.update({
-      where: { id: existingInvoice.id },
-      data: {
-        status: sentStatus,
-        issuedAt: existingInvoice.issuedAt ?? new Date(),
-        scheduledSendAt: null,
-        scheduledSendFailure: null,
-      },
+  if (markAsSent) {
+    if (existingInvoice.status === "draft" || existingInvoice.status === "issued") {
+      await prisma.invoice.update({
+        where: { id: existingInvoice.id },
+        data: {
+          status: sentStatus,
+          issuedAt: existingInvoice.issuedAt ?? new Date(),
+          scheduledSendAt: null,
+          scheduledSendFailure: null,
+        },
+      });
+    } else {
+      await prisma.invoice.update({
+        where: { id: existingInvoice.id },
+        data: {
+          scheduledSendAt: null,
+          scheduledSendFailure: null,
+        },
+      });
+    }
+
+    await logInvoiceEvent({
+      invoiceId: existingInvoice.id,
+      type: "sent",
+      actor: input.actor,
+      details: `Invoice ${officialInvoiceNumber} emailed to ${clientEmail}`,
     });
   } else {
-    await prisma.invoice.update({
-      where: { id: existingInvoice.id },
-      data: {
-        scheduledSendAt: null,
-        scheduledSendFailure: null,
-      },
+    await logInvoiceEvent({
+      invoiceId: existingInvoice.id,
+      type: "test_email_sent",
+      actor: input.actor,
+      details: `Test email for invoice ${officialInvoiceNumber} sent to ${recipientEmail}`,
     });
   }
 
-  await logInvoiceEvent({
-    invoiceId: existingInvoice.id,
-    type: "sent",
-    actor: input.actor,
-    details: `Invoice ${officialInvoiceNumber} emailed to ${clientEmail}`,
-  });
-
-  console.log("[invoice-send] Invoice email sent and status updated", {
+  console.log(
+    markAsSent
+      ? "[invoice-send] Invoice email sent and status updated"
+      : "[invoice-send] Test invoice email sent",
+    {
     invoiceId: existingInvoice.id,
     invoiceNumber: officialInvoiceNumber,
-    clientEmail,
-  });
+    recipientEmail,
+    }
+  );
 
   return {
-    message: existingInvoice.status === "paid" ? "Paid invoice sent" : "Invoice sent",
+    message: markAsSent
+      ? existingInvoice.status === "paid"
+        ? "Paid invoice sent"
+        : "Invoice sent"
+      : "Test email sent",
     status:
-      existingInvoice.status === "draft" || existingInvoice.status === "issued"
+      markAsSent && (existingInvoice.status === "draft" || existingInvoice.status === "issued")
         ? sentStatus
         : existingInvoice.status,
     invoiceNumber: officialInvoiceNumber,
-    clientEmail,
+    clientEmail: recipientEmail,
   };
 }

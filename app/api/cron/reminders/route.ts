@@ -320,6 +320,7 @@ async function processScheduledSendBatch(
         businessId: candidate.businessId,
         requestUrl: request.url,
         actor: "System",
+        allowDraftFinalization: true,
       });
       sent += 1;
     } catch (error) {

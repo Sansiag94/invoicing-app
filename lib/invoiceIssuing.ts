@@ -121,7 +121,7 @@ export async function issueDraftInvoice(input: {
   });
 
   return {
-    message: "Invoice created. You can download, print, or send it now.",
+    message: "Invoice created. Next: send it now, schedule it, or download the PDF.",
     status: updated.status,
     invoiceNumber: updated.invoiceNumber,
   };

@@ -98,9 +98,11 @@ function formatEventLabel(type: string): string {
     case "scheduled_send":
       return "Scheduled send";
     case "scheduled_send_cancelled":
-      return "Scheduled send cancelled";
+      return "Schedule cleared";
     case "scheduled_send_failed":
       return "Scheduled send failed";
+    case "test_email_sent":
+      return "Test email sent";
     default:
       return type;
   }
@@ -126,6 +128,7 @@ export default function InvoiceDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const [isIssuing, setIsIssuing] = useState(false);
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
@@ -135,7 +138,6 @@ export default function InvoiceDetailPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
-  const [showSendConfirmDialog, setShowSendConfirmDialog] = useState(false);
   const [showIssueConfirmDialog, setShowIssueConfirmDialog] = useState(false);
   const [showScheduleDialog, setShowScheduleDialog] = useState(false);
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
@@ -441,13 +443,56 @@ export default function InvoiceDetailPage() {
     }
   };
 
+  const sendTestInvoiceEmail = async () => {
+    if (!invoice) {
+      return;
+    }
+
+    try {
+      setIsSendingTest(true);
+      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/send-test`, {
+        method: "POST",
+      });
+      const result = (await response.json()) as {
+        message?: string;
+        clientEmail?: string;
+        error?: string;
+      };
+
+      if (!response.ok) {
+        toast({
+          title: "Failed to send test email",
+          description: result?.error ?? "Failed to send test email",
+          variant: "error",
+        });
+        return;
+      }
+
+      setSuccessMessage(`Test email sent to ${result.clientEmail ?? "your account email"}.`);
+      await fetchInvoice(invoice.id);
+    } catch (error) {
+      console.error("Error sending test invoice email:", error);
+      toast({
+        title: "Failed to send test email",
+        description: "Failed to send test email",
+        variant: "error",
+      });
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
   const handleSendInvoice = () => {
     if (!invoice) {
       return;
     }
 
     if (invoice.status === "draft") {
-      setShowSendConfirmDialog(true);
+      toast({
+        title: "Create invoice before sending",
+        description: "Drafts need an official invoice number before the final version can be emailed.",
+        variant: "error",
+      });
       return;
     }
 
@@ -497,7 +542,7 @@ export default function InvoiceDetailPage() {
             }
           : current
       );
-      setSuccessMessage(result?.message ?? "Invoice created. You can download, print, send, or schedule it now.");
+      setSuccessMessage(result?.message ?? "Invoice created. Next: send it now, schedule it, or download the PDF.");
       await fetchInvoice(invoice.id);
     } catch (error) {
       console.error("Error issuing invoice:", error);
@@ -1191,11 +1236,22 @@ export default function InvoiceDetailPage() {
             <Button
               variant="outline"
               onClick={openScheduleDialog}
-              disabled={isSchedulingSend || isSending || isIssuing || isDuplicating}
+              disabled={isSchedulingSend || isSending || isSendingTest || isIssuing || isDuplicating}
               className="w-full sm:w-auto"
             >
               <CalendarClock className="h-4 w-4" />
               {invoice.scheduledSendAt ? "Reschedule Send" : "Schedule Send"}
+            </Button>
+          ) : null}
+          {!isEditing && invoice.status !== "draft" && invoice.status !== "cancelled" ? (
+            <Button
+              variant="outline"
+              onClick={() => void sendTestInvoiceEmail()}
+              disabled={isSendingTest || isSending || isIssuing || isDuplicating}
+              className="w-full sm:w-auto"
+            >
+              <Send className="h-4 w-4" />
+              {isSendingTest ? "Sending..." : "Send Test to Me"}
             </Button>
           ) : null}
           {!isEditing && invoice.status === "draft" && invoice.client.email?.trim() ? (
@@ -1345,6 +1401,16 @@ export default function InvoiceDetailPage() {
           >
             Clear Schedule
           </Button>
+        </div>
+      ) : null}
+      {invoice.status === "issued" && !invoice.scheduledSendAt ? (
+        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+          Official invoice number assigned. This invoice has not been emailed to the client yet.
+        </div>
+      ) : null}
+      {(invoice.status === "draft" || invoice.status === "issued") && !invoice.client.email?.trim() ? (
+        <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+          No client email saved. You can download or deliver this invoice manually; add an email to enable sending, scheduling, and reminders.
         </div>
       ) : null}
       {invoice.status === "cancelled" ? (
@@ -2064,23 +2130,6 @@ export default function InvoiceDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <ConfirmDialog
-        open={showSendConfirmDialog}
-        onOpenChange={setShowSendConfirmDialog}
-        title="Send Invoice"
-        description={
-          <>
-            This is still a draft. Sending it will first create the official invoice number, then email the final invoice to the client.
-          </>
-        }
-        confirmLabel="Create & Send"
-        isConfirming={isSending}
-        onConfirm={() => {
-          setShowSendConfirmDialog(false);
-          void sendInvoiceNow();
-        }}
-      />
 
       <ConfirmDialog
         open={showIssueConfirmDialog}
