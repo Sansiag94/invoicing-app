@@ -116,7 +116,7 @@ function buildPaymentNoteLines(value: string): string[] {
   return value
     .replace(/\r\n/g, "\n")
     .split("\n")
-    .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 72)));
+    .flatMap((line) => (line.trim().length === 0 ? [""] : wrapTextLines(line, 92)));
 }
 
 function measureMessageHeight(lines: string[]): number {

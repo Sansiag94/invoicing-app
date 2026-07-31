@@ -1885,14 +1885,16 @@ function InvoicePageContent() {
 
                 <div className="space-y-2">
                   <Label htmlFor="paymentNote">Payment Note</Label>
-                  <Input
+                  <Textarea
                     id="paymentNote"
+                    rows={4}
                     value={paymentNote}
                     onChange={(event) => {
                       setPaymentNote(event.target.value);
                       setPaymentNoteManuallyEdited(true);
                     }}
-                    placeholder="Optional short payment note, e.g. payment via TWINT possible at +41..."
+                    className="min-h-[112px] resize-y"
+                    placeholder="Optional payment instructions shown on the invoice"
                   />
                 </div>
 

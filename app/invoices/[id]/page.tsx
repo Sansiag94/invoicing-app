@@ -1663,11 +1663,13 @@ export default function InvoiceDetailPage() {
               </div>
               <div className="space-y-2 md:col-span-3">
                 <Label htmlFor="paymentNote">Payment Note</Label>
-                <Input
+                <Textarea
                   id="paymentNote"
+                  rows={4}
                   value={paymentNote}
                   onChange={(event) => setPaymentNote(event.target.value)}
-                  placeholder="Optional short payment note, e.g. payment via TWINT possible at +41..."
+                  className="min-h-[112px] resize-y"
+                  placeholder="Optional payment instructions shown on the invoice"
                 />
               </div>
             </>
@@ -1679,7 +1681,7 @@ export default function InvoiceDetailPage() {
               </div>
               <div className="md:col-span-3">
                 <p className="text-xs uppercase tracking-wide text-slate-500">Payment Note</p>
-                <p className="font-medium whitespace-pre-line text-slate-900">{invoice.paymentNote || "-"}</p>
+                <p className="font-medium whitespace-pre-wrap break-words text-slate-900">{invoice.paymentNote || "-"}</p>
               </div>
             </>
           )}

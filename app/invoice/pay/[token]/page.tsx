@@ -788,14 +788,8 @@ export default function PublicInvoicePage() {
         </section>
 
         {effectivePaymentNote ? (
-          <section className="mt-4 max-w-[120mm] rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-[1.35] text-slate-700">
-            {paymentNoteLines.length > 0 ? (
-              <div className="space-y-1 whitespace-pre-line">
-                {paymentNoteLines.map((line) => (
-                  <p key={line}>{line}</p>
-                ))}
-              </div>
-            ) : null}
+          <section className="mt-4 w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-[10px] leading-[1.45] whitespace-pre-wrap break-words text-slate-700">
+            {effectivePaymentNote}
           </section>
         ) : null}
 
