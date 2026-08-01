@@ -74,7 +74,6 @@ export default function InvoicePreviewPage() {
   const [scheduledSendDate, setScheduledSendDate] = useState("");
   const [isSchedulingSend, setIsSchedulingSend] = useState(false);
   const activePdfUrlRef = useRef<string | null>(null);
-  const hasOpenedMobilePreviewRef = useRef(false);
   const { toast } = useToast();
   const billingReturnPath = id ? `/invoices/${id}/preview` : "/invoices";
 
@@ -245,15 +244,6 @@ export default function InvoicePreviewPage() {
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (!isMobile || !pdfUrl || hasOpenedMobilePreviewRef.current) {
-      return;
-    }
-
-    hasOpenedMobilePreviewRef.current = true;
-    window.location.assign(pdfUrl);
-  }, [isMobile, pdfUrl]);
 
   const handleDownloadPdf = () => {
     if (!pdfUrl) {
@@ -950,7 +940,7 @@ export default function InvoicePreviewPage() {
           ) : isMobile ? (
             <div className="space-y-4 px-6 py-8">
               <p className="text-sm text-slate-600">
-                Mobile browsers open invoices more reliably in the native PDF viewer.
+                Use the PDF preview when you want to inspect the invoice. The invoice actions stay available on this page.
               </p>
               <div className="flex flex-col gap-3">
                 <Button onClick={handleOpenPdfPreview}>
