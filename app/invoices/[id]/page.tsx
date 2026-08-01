@@ -1334,7 +1334,7 @@ export default function InvoiceDetailPage() {
             <Button asChild variant="outline" className="w-full sm:w-auto">
               <Link href={`/invoices/${invoice.id}/preview`}>
                 <Eye className="h-4 w-4" />
-                Preview Invoice
+                {isDraft ? "Preview Draft" : "Preview Invoice"}
               </Link>
             </Button>
           ) : null}
