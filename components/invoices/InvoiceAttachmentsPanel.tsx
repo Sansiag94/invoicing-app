@@ -159,9 +159,9 @@ export default function InvoiceAttachmentsPanel({
             <Paperclip className="h-4 w-4" />
           </div>
           <div>
-            <p className="font-semibold text-slate-900">Email attachments</p>
+            <p className="font-semibold text-slate-900">Extra files for this invoice email</p>
             <p className="text-sm text-slate-500">
-              Optional files sent with this invoice email only. They do not affect totals.
+              Attach receipts, photos, reports, terms, contracts, or other documents for this client. These files are emailed with this invoice only and do not change totals.
             </p>
           </div>
         </div>
@@ -183,7 +183,7 @@ export default function InvoiceAttachmentsPanel({
             className="w-full sm:w-auto"
           >
             <Upload className="h-4 w-4" />
-            {isUploading ? "Uploading..." : "Add file"}
+            {isUploading ? "Uploading..." : "Add extra file"}
           </Button>
         </div>
       </div>
@@ -191,7 +191,7 @@ export default function InvoiceAttachmentsPanel({
       <div className="mt-4 space-y-2">
         {attachments.length === 0 ? (
           <div className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-500">
-            No extra files attached.
+            No extra files attached for this invoice email.
           </div>
         ) : (
           attachments.map((attachment) => (
