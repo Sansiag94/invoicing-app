@@ -138,7 +138,6 @@ export default function SettingsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const logosBucket = process.env.NEXT_PUBLIC_SUPABASE_LOGOS_BUCKET?.trim() || "business-logos";
   const previewAddressLines = [
     street.trim(),
     [postalCode.trim(), city.trim()].filter(Boolean).join(" "),
@@ -724,8 +723,7 @@ export default function SettingsPage() {
       if (!uploadResponse.ok || !uploadResult.logoUrl) {
         toast({
           title: "Logo upload failed",
-          description:
-            uploadResult.error ?? `Failed to upload logo to bucket "${logosBucket}".`,
+          description: uploadResult.error ?? "The logo could not be uploaded. Please try again.",
           variant: "error",
         });
         return;
@@ -1020,9 +1018,6 @@ export default function SettingsPage() {
                   Remove logo
                 </Button>
               </div>
-              <p className="text-xs leading-5 text-slate-500 dark:text-slate-400">
-                Stored in <strong>{logosBucket}</strong>. Keep the bucket public so invoices can render the logo.
-              </p>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -1381,43 +1376,45 @@ export default function SettingsPage() {
                 Let invoices prefill a TWINT payment note with your own phone number.
               </p>
             </CardHeader>
-            <CardContent className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_18rem] lg:items-start">
-              <div className="space-y-4">
-                <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 h-4 w-4 rounded border-slate-300"
-                    checked={acceptsTwintPayments}
-                    onChange={(event) => setAcceptsTwintPayments(event.target.checked)}
-                  />
-                  <span>
-                    <span className="block font-medium text-slate-900 dark:text-slate-100">Accept TWINT payments</span>
-                    <span className="mt-1 block text-slate-500 dark:text-slate-400">
-                      New invoices can prefill a payment note with your TWINT phone number.
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.85fr)] lg:items-stretch">
+                <div className="space-y-4">
+                  <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                      checked={acceptsTwintPayments}
+                      onChange={(event) => setAcceptsTwintPayments(event.target.checked)}
+                    />
+                    <span>
+                      <span className="block font-medium text-slate-900 dark:text-slate-100">Accept TWINT payments</span>
+                      <span className="mt-1 block text-slate-500 dark:text-slate-400">
+                        New invoices can prefill a payment note with your TWINT phone number.
+                      </span>
                     </span>
-                  </span>
-                </label>
+                  </label>
 
-                <div className="space-y-2">
-                  <Label htmlFor="twintPhoneNumber">TWINT phone number</Label>
-                  <Input
-                    id="twintPhoneNumber"
-                    value={twintPhoneNumber}
-                    onChange={(event) => setTwintPhoneNumber(event.target.value)}
-                    placeholder="+41 79 123 45 67"
-                    disabled={!acceptsTwintPayments}
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="twintPhoneNumber">TWINT phone number</Label>
+                    <Input
+                      id="twintPhoneNumber"
+                      value={twintPhoneNumber}
+                      onChange={(event) => setTwintPhoneNumber(event.target.value)}
+                      placeholder="+41 79 123 45 67"
+                      disabled={!acceptsTwintPayments}
+                    />
+                  </div>
                 </div>
-              </div>
 
-              <div className="space-y-4">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60">
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Invoice note preview</p>
                   <p className="mt-2 text-sm text-slate-700 dark:text-slate-200">
                     {twintPreviewMessage ?? "TWINT is currently disabled for new invoices."}
                   </p>
                 </div>
+              </div>
 
+              <div className="flex justify-end">
                 <Button onClick={handleSave} disabled={isSaving || isUploadingLogo} className="w-full sm:w-auto">
                   <Save className="h-4 w-4" />
                   {isSaving ? "Saving..." : "Save payment settings"}
