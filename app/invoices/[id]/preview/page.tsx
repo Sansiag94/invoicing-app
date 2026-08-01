@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BellRing, CalendarClock, CheckCircle2, CircleOff, Copy, Download, FileCheck2, PencilLine, RotateCcw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, BellRing, CalendarClock, CheckCircle2, CircleOff, Copy, Download, FileCheck2, PencilLine, RotateCcw, Send } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
+import InvoiceDraftMoreMenu from "@/components/invoices/InvoiceDraftMoreMenu";
 import { getBillingLimitDetails } from "@/lib/billingClient";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
 import { BillingLimitDetails, InvoiceAttachmentRecord, InvoiceDetails } from "@/lib/types";
@@ -702,6 +703,9 @@ export default function InvoicePreviewPage() {
     );
   }
 
+  const isDraft = invoice?.status === "draft";
+  const draftSendHintId = "draft-send-hint-preview";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -713,7 +717,14 @@ export default function InvoicePreviewPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Invoice Preview</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-3xl font-bold">Invoice Preview</h1>
+              {isDraft ? (
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-200">
+                  Draft
+                </span>
+              ) : null}
+            </div>
             <p className="text-sm text-slate-500">Rendered from the actual invoice PDF.</p>
           </div>
         </div>
@@ -728,7 +739,7 @@ export default function InvoicePreviewPage() {
                 className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <FileCheck2 className="h-4 w-4" />
-                {isIssuing ? "Creating..." : "Create Invoice"}
+                {isIssuing ? "Creating..." : "Create Final Invoice"}
               </Button>
             ) : invoice?.status === "issued" && invoice.client.email?.trim() ? (
               <Button
@@ -762,14 +773,12 @@ export default function InvoicePreviewPage() {
               </Button>
             ) : null
           ) : null}
-          {invoice?.status === "draft" && invoice.client.email?.trim() ? (
-            <span
-              className="w-full sm:w-auto"
-              title="Create the invoice first to send the final version to the client."
-            >
+          {isDraft && invoice?.client.email?.trim() ? (
+            <span className="w-full sm:w-auto">
               <Button
                 variant="outline"
                 disabled
+                aria-describedby={draftSendHintId}
                 className="pointer-events-none w-full sm:w-auto"
               >
                 <Send className="h-4 w-4" />
@@ -785,7 +794,7 @@ export default function InvoicePreviewPage() {
               className="w-full sm:w-auto"
             >
               <CalendarClock className="h-4 w-4" />
-              {invoice.scheduledSendAt ? "Reschedule Send" : "Schedule Send"}
+              {invoice.scheduledSendAt ? "Reschedule Final Send" : "Schedule Final Send"}
             </Button>
           ) : null}
           {invoice?.status !== "draft" && invoice?.status !== "cancelled" ? (
@@ -843,7 +852,7 @@ export default function InvoicePreviewPage() {
           ) : null}
           <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading || isIssuing} className="w-full sm:w-auto">
             {invoice?.status === "draft" ? <FileCheck2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-            {invoice?.status === "draft" ? "Download Draft PDF" : "Download PDF"}
+            {isDraft ? "Download Draft PDF" : "Download PDF"}
           </Button>
           <Button
             variant="outline"
@@ -857,7 +866,7 @@ export default function InvoicePreviewPage() {
             className="w-full sm:w-auto"
           >
             <PencilLine className="h-4 w-4" />
-            {invoice?.status === "draft" ? "Edit Invoice" : "Reopen & Edit"}
+            {isDraft ? "Edit Draft" : "Reopen & Edit"}
           </Button>
           {invoice?.status !== "draft" ? (
             <Button
@@ -870,16 +879,16 @@ export default function InvoicePreviewPage() {
               {isDuplicating ? "Duplicating..." : "Duplicate"}
             </Button>
           ) : null}
-          {invoice?.status === "draft" ? (
-            <Button
-              variant="outline"
-              onClick={() => setShowDeleteDialog(true)}
+          {isDraft ? (
+            <InvoiceDraftMoreMenu
               disabled={isDeleting || isLoading || isDuplicating}
-              className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40 dark:hover:text-red-100 sm:min-w-[10rem] sm:w-auto"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete Draft
-            </Button>
+              onDeleteDraft={() => setShowDeleteDialog(true)}
+            />
+          ) : null}
+          {isDraft && invoice?.client.email?.trim() ? (
+            <p id={draftSendHintId} className="col-span-2 text-xs leading-5 text-slate-500 dark:text-slate-400 xl:basis-full xl:text-right">
+              Create the final invoice before sending it to the client.
+            </p>
           ) : null}
         </div>
       </div>
@@ -985,14 +994,14 @@ export default function InvoicePreviewPage() {
       <ConfirmDialog
         open={showIssueConfirmDialog}
         onOpenChange={setShowIssueConfirmDialog}
-        title="Create Invoice"
+        title="Create Final Invoice"
         description={
           <>
             Create the final invoice from draft <strong>{invoice?.invoiceNumber}</strong>?
             This assigns the official invoice number and reloads the preview with the final PDF.
           </>
         }
-        confirmLabel="Create Invoice"
+        confirmLabel="Create Final Invoice"
         isConfirming={isIssuing}
         onConfirm={() => {
           setShowIssueConfirmDialog(false);
@@ -1003,7 +1012,7 @@ export default function InvoicePreviewPage() {
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Schedule Invoice Send</DialogTitle>
+            <DialogTitle>Schedule Final Send</DialogTitle>
             <DialogDescription>
               Choose when the final invoice should be emailed to the client.
               {invoice?.status === "draft"
@@ -1029,7 +1038,7 @@ export default function InvoicePreviewPage() {
               Cancel
             </Button>
             <Button onClick={scheduleInvoiceSend} disabled={!scheduledSendDate || isSchedulingSend}>
-              {isSchedulingSend ? "Scheduling..." : "Schedule Send"}
+              {isSchedulingSend ? "Scheduling..." : "Schedule Final Send"}
             </Button>
           </DialogFooter>
         </DialogContent>

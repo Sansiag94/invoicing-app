@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Banknote, BellRing, CalendarClock, CheckCircle2, CircleOff, Copy, Download, Eye, FileCheck2, GripVertical, PencilLine, Plus, RotateCcw, Send, Trash2 } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
 import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
+import InvoiceDraftMoreMenu from "@/components/invoices/InvoiceDraftMoreMenu";
 import { arrayMove } from "@/lib/arrayMove";
 import { getBillingLimitDetails } from "@/lib/billingClient";
 import { calculateInvoiceTotals, calculateLineNetAmount, getInvoiceVatLabel } from "@/lib/invoice";
@@ -1170,6 +1171,8 @@ export default function InvoiceDetailPage() {
     },
   ];
   const latestViewedEvent = invoice.events.find((event) => event.type === "viewed") ?? null;
+  const isDraft = invoice.status === "draft";
+  const draftSendHintId = "draft-send-hint-detail";
 
   return (
     <div className="space-y-6">
@@ -1182,7 +1185,10 @@ export default function InvoiceDetailPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold">Invoice {invoice.invoiceNumber}</h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-3xl font-bold">Invoice {invoice.invoiceNumber}</h1>
+              {isDraft ? <Badge variant="warning">Draft</Badge> : null}
+            </div>
             <p className="text-sm text-slate-500">
               Client: {invoice.client.companyName || invoice.client.contactName || invoice.client.email}
             </p>
@@ -1198,7 +1204,7 @@ export default function InvoiceDetailPage() {
                 className="col-span-2 w-full sm:col-span-1 sm:w-auto"
               >
                 <FileCheck2 className="h-4 w-4" />
-                {isIssuing ? "Creating..." : "Create Invoice"}
+                {isIssuing ? "Creating..." : "Create Final Invoice"}
               </Button>
             ) : invoice.status === "issued" && invoice.client.email?.trim() ? (
               <Button
@@ -1232,6 +1238,19 @@ export default function InvoiceDetailPage() {
               </Button>
             ) : null
           ) : null}
+          {!isEditing && isDraft && invoice.client.email?.trim() ? (
+            <span className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                disabled
+                aria-describedby={draftSendHintId}
+                className="pointer-events-none w-full sm:w-auto"
+              >
+                <Send className="h-4 w-4" />
+                Send Invoice
+              </Button>
+            </span>
+          ) : null}
           {!isEditing && (invoice.status === "draft" || invoice.status === "issued") && invoice.client.email?.trim() ? (
             <Button
               variant="outline"
@@ -1240,7 +1259,7 @@ export default function InvoiceDetailPage() {
               className="w-full sm:w-auto"
             >
               <CalendarClock className="h-4 w-4" />
-              {invoice.scheduledSendAt ? "Reschedule Send" : "Schedule Send"}
+              {invoice.scheduledSendAt ? "Reschedule Final Send" : "Schedule Final Send"}
             </Button>
           ) : null}
           {!isEditing && invoice.status !== "draft" && invoice.status !== "cancelled" ? (
@@ -1253,21 +1272,6 @@ export default function InvoiceDetailPage() {
               <Send className="h-4 w-4" />
               {isSendingTest ? "Sending..." : "Send Test to Me"}
             </Button>
-          ) : null}
-          {!isEditing && invoice.status === "draft" && invoice.client.email?.trim() ? (
-            <span
-              className="w-full sm:w-auto"
-              title="Create the invoice first to send the final version to the client."
-            >
-              <Button
-                variant="outline"
-                disabled
-                className="pointer-events-none w-full sm:w-auto"
-              >
-                <Send className="h-4 w-4" />
-                Send Invoice
-              </Button>
-            </span>
           ) : null}
           {!isEditing ? (
             invoice.status === "paid" ? (
@@ -1337,7 +1341,7 @@ export default function InvoiceDetailPage() {
           {!isEditing ? (
             <Button variant="outline" onClick={handleOpenEdit} className="w-full sm:w-auto">
               <PencilLine className="h-4 w-4" />
-              {invoice.status === "draft" ? "Edit Invoice" : "Reopen & Edit"}
+              {isDraft ? "Edit Draft" : "Reopen & Edit"}
             </Button>
           ) : (
             <>
@@ -1351,8 +1355,8 @@ export default function InvoiceDetailPage() {
           )}
 
           <Button variant="outline" onClick={handleDownloadPdf} disabled={isSaving || isDeleting || isIssuing} className="w-full sm:w-auto">
-            {invoice.status === "draft" ? <FileCheck2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
-            {invoice.status === "draft" ? "Download Draft PDF" : "Download PDF"}
+            {isDraft ? <FileCheck2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+            {isDraft ? "Download Draft PDF" : "Download PDF"}
           </Button>
           {!isEditing ? (
             <>
@@ -1365,18 +1369,18 @@ export default function InvoiceDetailPage() {
                 <Copy className="h-4 w-4" />
                 {isDuplicating ? "Duplicating..." : "Duplicate"}
               </Button>
-              {invoice.status === "draft" ? (
-                <Button
-                  variant="outline"
-                  onClick={() => setShowDeleteDialog(true)}
+              {isDraft ? (
+                <InvoiceDraftMoreMenu
                   disabled={isDeleting || isDuplicating}
-                  className="w-full border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 dark:border-red-800 dark:text-red-200 dark:hover:bg-red-950/40 dark:hover:text-red-100 sm:min-w-[10rem] sm:w-auto"
-                >
-                  <Trash2 className="h-4 w-4" />
-                  Delete Draft
-                </Button>
+                  onDeleteDraft={() => setShowDeleteDialog(true)}
+                />
               ) : null}
             </>
+          ) : null}
+          {!isEditing && isDraft && invoice.client.email?.trim() ? (
+            <p id={draftSendHintId} className="col-span-2 text-xs leading-5 text-slate-500 dark:text-slate-400 xl:basis-full xl:text-right">
+              Create the final invoice before sending it to the client.
+            </p>
           ) : null}
         </div>
       </div>
@@ -2136,14 +2140,14 @@ export default function InvoiceDetailPage() {
       <ConfirmDialog
         open={showIssueConfirmDialog}
         onOpenChange={setShowIssueConfirmDialog}
-        title="Create Invoice"
+        title="Create Final Invoice"
         description={
           <>
             Create the final invoice from draft <strong>{invoice.invoiceNumber}</strong>?
             This assigns the official invoice number and keeps it in your invoice history.
           </>
         }
-        confirmLabel="Create Invoice"
+        confirmLabel="Create Final Invoice"
         isConfirming={isIssuing}
         onConfirm={() => {
           setShowIssueConfirmDialog(false);
@@ -2154,7 +2158,7 @@ export default function InvoiceDetailPage() {
       <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Schedule Invoice Send</DialogTitle>
+            <DialogTitle>Schedule Final Send</DialogTitle>
             <DialogDescription>
               Choose when the final invoice should be emailed to the client.
               {invoice.status === "draft"
@@ -2180,7 +2184,7 @@ export default function InvoiceDetailPage() {
               Cancel
             </Button>
             <Button onClick={scheduleInvoiceSend} disabled={!scheduledSendDate || isSchedulingSend}>
-              {isSchedulingSend ? "Scheduling..." : "Schedule Send"}
+              {isSchedulingSend ? "Scheduling..." : "Schedule Final Send"}
             </Button>
           </DialogFooter>
         </DialogContent>
