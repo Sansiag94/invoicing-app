@@ -3,28 +3,15 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BellRing, CalendarClock, CheckCircle2, CircleOff, Copy, Download, FileCheck2, PencilLine, RotateCcw, Send } from "lucide-react";
+import { ArrowLeft, Download, FileCheck2, PencilLine } from "lucide-react";
 import UpgradeDialog from "@/components/billing/UpgradeDialog";
-import InvoiceAttachmentsPanel from "@/components/invoices/InvoiceAttachmentsPanel";
-import InvoiceDraftMoreMenu from "@/components/invoices/InvoiceDraftMoreMenu";
 import { getBillingLimitDetails } from "@/lib/billingClient";
 import { authenticatedFetch } from "@/utils/authenticatedFetch";
-import { BillingLimitDetails, InvoiceAttachmentRecord, InvoiceDetails } from "@/lib/types";
+import { BillingLimitDetails, InvoiceDetails } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ConfirmDialog from "@/components/ui/confirm-dialog";
 import { useToast } from "@/components/ui/toast";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { getTodayDateInputValue } from "@/lib/invoiceDates";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 
 function extractPdfFilename(contentDisposition: string | null): string | null {
   if (!contentDisposition) return null;
@@ -38,13 +25,6 @@ function extractPdfFilename(contentDisposition: string | null): string | null {
   return basicMatch?.[1] ?? null;
 }
 
-function toDateInputValue(value: string | Date | null | undefined): string {
-  if (!value) return "";
-  const date = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 10);
-}
-
 export default function InvoicePreviewPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -55,24 +35,11 @@ export default function InvoicePreviewPage() {
   const [invoice, setInvoice] = useState<InvoiceDetails | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [isSendingTest, setIsSendingTest] = useState(false);
   const [isIssuing, setIsIssuing] = useState(false);
-  const [isSendingReminder, setIsSendingReminder] = useState(false);
-  const [isDuplicating, setIsDuplicating] = useState(false);
-  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [billingLimitDetails, setBillingLimitDetails] = useState<BillingLimitDetails | null>(null);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showReopenEditDialog, setShowReopenEditDialog] = useState(false);
   const [showIssueConfirmDialog, setShowIssueConfirmDialog] = useState(false);
-  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
-  const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
-  const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [scheduledSendDate, setScheduledSendDate] = useState("");
-  const [isSchedulingSend, setIsSchedulingSend] = useState(false);
   const activePdfUrlRef = useRef<string | null>(null);
   const { toast } = useToast();
   const billingReturnPath = id ? `/invoices/${id}/preview` : "/invoices";
@@ -266,111 +233,6 @@ export default function InvoicePreviewPage() {
     window.location.assign(pdfUrl);
   };
 
-  const sendInvoiceNow = async () => {
-    if (!id) {
-      return;
-    }
-
-    try {
-      setIsSending(true);
-      const response = await authenticatedFetch(`/api/invoices/${id}/send`, {
-        method: "POST",
-      });
-      const result = (await response.json()) as {
-        message?: string;
-        status?: InvoiceDetails["status"];
-        invoiceNumber?: string;
-        error?: string;
-        code?: string;
-        details?: unknown;
-      };
-
-      if (!response.ok) {
-        if (handleBillingLimitResponse(result)) {
-          return;
-        }
-
-        toast({
-          title: "Failed to send invoice",
-          description: result?.error ?? "Failed to send invoice",
-          variant: "error",
-        });
-        return;
-      }
-
-      setInvoice((current) =>
-        current
-          ? {
-              ...current,
-              status: result.status ?? (current.status === "paid" ? "paid" : "sent"),
-              invoiceNumber: result.invoiceNumber ?? current.invoiceNumber,
-            }
-          : current
-      );
-      router.push("/invoices");
-    } catch (error) {
-      console.error("Error sending invoice:", error);
-      toast({
-        title: "Failed to send invoice",
-        description: "Failed to send invoice",
-        variant: "error",
-      });
-    } finally {
-      setIsSending(false);
-    }
-  };
-
-  const sendTestInvoiceEmail = async () => {
-    if (!id) {
-      return;
-    }
-
-    try {
-      setIsSendingTest(true);
-      const response = await authenticatedFetch(`/api/invoices/${id}/send-test`, {
-        method: "POST",
-      });
-      const result = (await response.json()) as {
-        message?: string;
-        clientEmail?: string;
-        error?: string;
-      };
-
-      if (!response.ok) {
-        toast({
-          title: "Failed to send test email",
-          description: result?.error ?? "Failed to send test email",
-          variant: "error",
-        });
-        return;
-      }
-
-      setSuccessMessage(`Test email sent to ${result.clientEmail ?? "your account email"}.`);
-    } catch (error) {
-      console.error("Error sending test invoice email:", error);
-      toast({
-        title: "Failed to send test email",
-        description: "Failed to send test email",
-        variant: "error",
-      });
-    } finally {
-      setIsSendingTest(false);
-    }
-  };
-
-  const handleSendInvoice = () => {
-    if (invoice?.status === "draft") {
-      toast({
-        title: "Create invoice before sending",
-        description: "Drafts need an official invoice number before the final version can be emailed.",
-        variant: "error",
-      });
-      return;
-    }
-
-    void sendInvoiceNow();
-  };
-
   const issueInvoiceNow = async () => {
     if (!id) {
       return;
@@ -403,7 +265,7 @@ export default function InvoicePreviewPage() {
         return;
       }
 
-      setSuccessMessage(result?.message ?? "Invoice created. Next: send it now, schedule it, or download the PDF.");
+      setSuccessMessage(result?.message ?? "Final invoice created. Return to the invoice page to send, schedule, or add payment details.");
       window.location.reload();
     } catch (error) {
       console.error("Error issuing invoice:", error);
@@ -425,266 +287,6 @@ export default function InvoicePreviewPage() {
     setShowIssueConfirmDialog(true);
   };
 
-  const openScheduleDialog = () => {
-    if (!invoice) return;
-    setScheduledSendDate(toDateInputValue(invoice.scheduledSendAt) || getTodayDateInputValue());
-    setShowScheduleDialog(true);
-  };
-
-  const scheduleInvoiceSend = async () => {
-    if (!invoice || !scheduledSendDate) return;
-
-    setIsSchedulingSend(true);
-    try {
-      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/schedule-send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ scheduledSendDate }),
-      });
-      const result = (await response.json()) as {
-        error?: string;
-        message?: string;
-        scheduledSendAt?: string;
-        scheduledSendFailure?: string | null;
-      };
-
-      if (!response.ok) {
-        toast({
-          title: "Unable to schedule invoice",
-          description: result.error ?? "Unable to schedule invoice",
-          variant: "error",
-        });
-        return;
-      }
-
-      setShowScheduleDialog(false);
-      setSuccessMessage(result.message ?? "Invoice scheduled.");
-      setInvoice((current) =>
-        current
-          ? {
-              ...current,
-              scheduledSendAt: result.scheduledSendAt ?? `${scheduledSendDate}T00:00:00.000Z`,
-              scheduledSendFailure: result.scheduledSendFailure ?? null,
-            }
-          : current
-      );
-    } catch (error) {
-      console.error("Error scheduling invoice:", error);
-      toast({
-        title: "Unable to schedule invoice",
-        description: "Unable to schedule invoice",
-        variant: "error",
-      });
-    } finally {
-      setIsSchedulingSend(false);
-    }
-  };
-
-  const clearScheduledInvoiceSend = async () => {
-    if (!invoice) return;
-
-    setIsSchedulingSend(true);
-    try {
-      const response = await authenticatedFetch(`/api/invoices/${invoice.id}/schedule-send`, {
-        method: "DELETE",
-      });
-      const result = (await response.json()) as { error?: string; message?: string };
-
-      if (!response.ok) {
-        toast({
-          title: "Unable to clear scheduled send",
-          description: result.error ?? "Unable to clear scheduled send",
-          variant: "error",
-        });
-        return;
-      }
-
-      setSuccessMessage(result.message ?? "Scheduled send cancelled.");
-      setInvoice((current) =>
-        current ? { ...current, scheduledSendAt: null, scheduledSendFailure: null } : current
-      );
-    } catch (error) {
-      console.error("Error clearing scheduled invoice:", error);
-      toast({
-        title: "Unable to clear scheduled send",
-        description: "Unable to clear scheduled send",
-        variant: "error",
-      });
-    } finally {
-      setIsSchedulingSend(false);
-    }
-  };
-
-  const handleAttachmentsChange = (attachments: InvoiceAttachmentRecord[]) => {
-    setInvoice((current) => (current ? { ...current, attachments } : current));
-  };
-
-  const handleManualStatusChange = async (nextStatus: "paid" | "unpaid" | "cancelled") => {
-    if (!id || isUpdatingStatus) {
-      return;
-    }
-
-    try {
-      setIsUpdatingStatus(true);
-      const response = await authenticatedFetch(`/api/invoices/${id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      const result = (await response.json()) as (InvoiceDetails & {
-        error?: string;
-        code?: string;
-        details?: unknown;
-      });
-
-      if (!response.ok) {
-        if (handleBillingLimitResponse(result)) {
-          return;
-        }
-
-        toast({
-          title: "Failed to update invoice status",
-          description: result?.error ?? "Failed to update invoice status",
-          variant: "error",
-        });
-        return;
-      }
-
-      setInvoice(result);
-      setSuccessMessage(
-        nextStatus === "paid"
-          ? "Invoice marked as paid."
-          : nextStatus === "cancelled"
-            ? "Invoice cancelled. No payment is due."
-            : "Invoice reopened as unpaid."
-      );
-    } catch (error) {
-      console.error("Error updating invoice status:", error);
-      toast({
-        title: "Failed to update invoice status",
-        description: "Failed to update invoice status",
-        variant: "error",
-      });
-    } finally {
-      setIsUpdatingStatus(false);
-    }
-  };
-
-  const sendReminderNow = async () => {
-    if (!id || isSendingReminder) {
-      return;
-    }
-
-    try {
-      setIsSendingReminder(true);
-      const response = await authenticatedFetch(`/api/invoices/${id}/reminder`, {
-        method: "POST",
-      });
-      const result = (await response.json()) as { error?: string; message?: string };
-
-      if (!response.ok) {
-        toast({
-          title: "Failed to send reminder",
-          description: result?.error ?? "Failed to send reminder",
-          variant: "error",
-        });
-        return;
-      }
-
-      setSuccessMessage(result?.message ?? "Reminder sent.");
-    } catch (error) {
-      console.error("Error sending reminder:", error);
-      toast({
-        title: "Failed to send reminder",
-        description: "Failed to send reminder",
-        variant: "error",
-      });
-    } finally {
-      setIsSendingReminder(false);
-    }
-  };
-
-  const handleSendReminder = () => {
-    if (!id || isSendingReminder) {
-      return;
-    }
-
-    setShowReminderConfirmDialog(true);
-  };
-
-  const handleDuplicateInvoice = async () => {
-    if (!id || isDuplicating) {
-      return;
-    }
-
-    try {
-      setIsDuplicating(true);
-      const response = await authenticatedFetch(`/api/invoices/${id}/duplicate`, {
-        method: "POST",
-      });
-      const result = (await response.json()) as { id?: string; error?: string };
-
-      if (!response.ok || !result?.id) {
-        toast({
-          title: "Failed to duplicate invoice",
-          description: result?.error ?? "Failed to duplicate invoice",
-          variant: "error",
-        });
-        return;
-      }
-
-      router.push(`/invoices/${result.id}/preview`);
-    } catch (error) {
-      console.error("Error duplicating invoice:", error);
-      toast({
-        title: "Failed to duplicate invoice",
-        description: "Failed to duplicate invoice",
-        variant: "error",
-      });
-    } finally {
-      setIsDuplicating(false);
-    }
-  };
-
-  const handleDeleteInvoice = async () => {
-    if (!id || isDeleting) {
-      return;
-    }
-
-    try {
-      setIsDeleting(true);
-      const response = await authenticatedFetch(`/api/invoices/${id}`, {
-        method: "DELETE",
-      });
-      const result = (await response.json()) as { error?: string };
-
-      if (!response.ok) {
-        toast({
-          title: "Failed to delete invoice",
-          description: result?.error ?? "Failed to delete invoice",
-          variant: "error",
-        });
-        return;
-      }
-
-      setShowDeleteDialog(false);
-      router.push("/invoices");
-    } catch (error) {
-      console.error("Error deleting invoice:", error);
-      toast({
-        title: "Failed to delete invoice",
-        description: "Failed to delete invoice",
-        variant: "error",
-      });
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
   if (!id) {
     return (
       <Card>
@@ -694,191 +296,61 @@ export default function InvoicePreviewPage() {
   }
 
   const isDraft = invoice?.status === "draft";
-  const draftSendHintId = "draft-send-hint-preview";
+  const previewTitle = invoice ? (isDraft ? "Draft Preview" : "Invoice Preview") : "Invoice Preview";
+  const previewDescription = invoice
+    ? isDraft
+      ? "Review the draft PDF before creating the final invoice."
+      : "Review the final invoice PDF."
+    : "Loading invoice preview...";
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
           <Button asChild variant="outline" size="sm">
-            <Link href="/invoices">
+            <Link href={`/invoices/${id}`}>
               <ArrowLeft className="h-4 w-4" />
-              Back to invoices
+              Back to invoice
             </Link>
           </Button>
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-3xl font-bold">Invoice Preview</h1>
+              <h1 className="text-3xl font-bold">{previewTitle}</h1>
               {isDraft ? (
                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/35 dark:text-amber-200">
                   Draft
                 </span>
               ) : null}
             </div>
-            <p className="text-sm text-slate-500">Rendered from the actual invoice PDF.</p>
+            <p className="text-sm text-slate-500">{previewDescription}</p>
           </div>
         </div>
 
         <div className="grid w-full grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white/90 p-2 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 sm:w-auto sm:grid-cols-2 xl:flex xl:flex-wrap xl:items-center xl:justify-end">
-          {invoice?.status !== "cancelled" ? (
-            invoice?.status === "draft" ? (
-              <Button
-                variant="default"
-                onClick={handleIssueInvoice}
-                disabled={isIssuing || isSending || isLoading || isDuplicating}
-                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
-              >
-                <FileCheck2 className="h-4 w-4" />
-                {isIssuing ? "Creating..." : "Create Final Invoice"}
-              </Button>
-            ) : invoice?.status === "issued" && invoice.client.email?.trim() ? (
-              <Button
-                variant="default"
-                onClick={handleSendInvoice}
-                disabled={isSending || isIssuing || isLoading || isDuplicating}
-                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
-              >
-                <Send className="h-4 w-4" />
-                {isSending ? "Sending..." : "Send Invoice"}
-              </Button>
-            ) : invoice?.status === "paid" ? (
-              <Button
-                variant="default"
-                onClick={handleSendInvoice}
-                disabled={isSending || isIssuing || isLoading || isDuplicating}
-                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
-              >
-                <Send className="h-4 w-4" />
-                {isSending ? "Sending..." : invoice?.status === "paid" ? "Send Paid Invoice" : "Send"}
-              </Button>
-            ) : invoice?.status === "sent" || invoice?.status === "overdue" ? (
-              <Button
-                variant="outline"
-                onClick={handleSendReminder}
-                disabled={isSendingReminder || isLoading || isDuplicating}
-                className="col-span-2 w-full sm:col-span-1 sm:w-auto"
-              >
-                <BellRing className="h-4 w-4" />
-                {isSendingReminder ? "Sending..." : "Send Reminder"}
-              </Button>
-            ) : null
-          ) : null}
-          {isDraft && invoice?.client.email?.trim() ? (
-            <span className="w-full sm:w-auto">
-              <Button
-                variant="outline"
-                disabled
-                aria-describedby={draftSendHintId}
-                className="pointer-events-none w-full sm:w-auto"
-              >
-                <Send className="h-4 w-4" />
-                Send Invoice
-              </Button>
-            </span>
-          ) : null}
-          {(invoice?.status === "draft" || invoice?.status === "issued") && invoice.client.email?.trim() ? (
+          {isDraft ? (
             <Button
-              variant="outline"
-              onClick={openScheduleDialog}
-              disabled={isSchedulingSend || isSending || isSendingTest || isIssuing || isLoading || isDuplicating}
-              className="w-full sm:w-auto"
+              variant="default"
+              onClick={handleIssueInvoice}
+              disabled={isIssuing || isLoading}
+              className="col-span-2 w-full sm:col-span-1 sm:w-auto"
             >
-              <CalendarClock className="h-4 w-4" />
-              {invoice.scheduledSendAt ? "Reschedule Final Send" : "Schedule Final Send"}
-            </Button>
-          ) : null}
-          {invoice?.status !== "draft" && invoice?.status !== "cancelled" ? (
-            <Button
-              variant="outline"
-              onClick={() => void sendTestInvoiceEmail()}
-              disabled={isSendingTest || isSending || isIssuing || isLoading || isDuplicating}
-              className="w-full sm:w-auto"
-            >
-              <Send className="h-4 w-4" />
-              {isSendingTest ? "Sending..." : "Send Test to Me"}
-            </Button>
-          ) : null}
-          {invoice?.status === "paid" ? (
-            <Button
-              variant="outline"
-              onClick={() => void handleManualStatusChange("unpaid")}
-              disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
-              className="w-full sm:w-auto"
-            >
-              <RotateCcw className="h-4 w-4" />
-              {isUpdatingStatus ? "Updating..." : "Mark Unpaid"}
-            </Button>
-          ) : invoice?.status === "cancelled" ? (
-            <Button
-              variant="outline"
-              onClick={() => void handleManualStatusChange("unpaid")}
-              disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
-              className="w-full sm:w-auto"
-            >
-              <RotateCcw className="h-4 w-4" />
-              {isUpdatingStatus ? "Updating..." : "Reopen Invoice"}
-            </Button>
-          ) : invoice?.status === "issued" || invoice?.status === "sent" || invoice?.status === "overdue" ? (
-            <Button
-              variant="outline"
-              onClick={() => void handleManualStatusChange("paid")}
-              disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
-              className="w-full sm:w-auto"
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              {isUpdatingStatus ? "Updating..." : "Mark Paid"}
-            </Button>
-          ) : null}
-          {invoice?.status === "issued" || invoice?.status === "sent" || invoice?.status === "overdue" ? (
-            <Button
-              variant="outline"
-              onClick={() => setShowCancelConfirmDialog(true)}
-              disabled={isUpdatingStatus || isLoading || isSending || isDuplicating || isDeleting}
-              className="w-full sm:w-auto"
-            >
-              <CircleOff className="h-4 w-4" />
-              Cancel Invoice
+              <FileCheck2 className="h-4 w-4" />
+              {isIssuing ? "Creating..." : "Create Final Invoice"}
             </Button>
           ) : null}
           <Button variant="outline" onClick={handleDownloadPdf} disabled={!pdfUrl || isLoading || isIssuing} className="w-full sm:w-auto">
-            {invoice?.status === "draft" ? <FileCheck2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+            <Download className="h-4 w-4" />
             {isDraft ? "Download Draft PDF" : "Download PDF"}
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => {
-              if (invoice?.status && invoice.status !== "draft") {
-                setShowReopenEditDialog(true);
-                return;
-              }
-              router.push(`/invoices/${id}?mode=edit`);
-            }}
-            className="w-full sm:w-auto"
-          >
-            <PencilLine className="h-4 w-4" />
-            {isDraft ? "Edit Draft" : "Reopen & Edit"}
-          </Button>
-          {invoice?.status !== "draft" ? (
+          {isDraft ? (
             <Button
               variant="outline"
-              onClick={handleDuplicateInvoice}
-              disabled={isDuplicating || isLoading || isDeleting}
-              className="w-full sm:min-w-[10rem] sm:w-auto"
+              onClick={() => router.push(`/invoices/${id}?mode=edit`)}
+              className="w-full sm:w-auto"
             >
-              <Copy className="h-4 w-4" />
-              {isDuplicating ? "Duplicating..." : "Duplicate"}
+              <PencilLine className="h-4 w-4" />
+              Edit Draft
             </Button>
-          ) : null}
-          {isDraft ? (
-            <InvoiceDraftMoreMenu
-              disabled={isDeleting || isLoading || isDuplicating}
-              onDeleteDraft={() => setShowDeleteDialog(true)}
-            />
-          ) : null}
-          {isDraft && invoice?.client.email?.trim() ? (
-            <p id={draftSendHintId} className="col-span-2 text-xs leading-5 text-slate-500 dark:text-slate-400 xl:basis-full xl:text-right">
-              Create the final invoice before sending it to the client.
-            </p>
           ) : null}
         </div>
       </div>
@@ -887,48 +359,6 @@ export default function InvoicePreviewPage() {
         <div className="rounded-md border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-sm text-emerald-800 dark:border-emerald-900/70 dark:bg-emerald-950/35 dark:text-emerald-100">
           {successMessage}
         </div>
-      ) : null}
-      {(invoice?.status === "draft" || invoice?.status === "issued") && invoice.scheduledSendAt ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
-          <span>
-            Scheduled to send on {new Date(invoice.scheduledSendAt).toLocaleDateString()}.
-            {invoice.scheduledSendFailure ? ` Last attempt failed: ${invoice.scheduledSendFailure}` : ""}
-          </span>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => void clearScheduledInvoiceSend()}
-            disabled={isSchedulingSend}
-          >
-            Clear Schedule
-          </Button>
-        </div>
-      ) : null}
-      {invoice?.status === "issued" && !invoice.scheduledSendAt ? (
-        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
-          Official invoice number assigned. This invoice has not been emailed to the client yet.
-        </div>
-      ) : null}
-      {(invoice?.status === "draft" || invoice?.status === "issued") && !invoice.client.email?.trim() ? (
-        <div className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
-          No client email saved. You can download or deliver this invoice manually; add an email to enable sending, scheduling, and reminders.
-        </div>
-      ) : null}
-      {invoice?.status === "cancelled" ? (
-        <div className="rounded-md border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-700">
-          This invoice is cancelled. The PDF stays available for your records, but no payment is
-          due and online collection is turned off until you reopen it.
-        </div>
-      ) : null}
-
-      {invoice ? (
-        <InvoiceAttachmentsPanel
-          invoiceId={invoice.id}
-          attachments={invoice.attachments ?? []}
-          onAttachmentsChange={handleAttachmentsChange}
-          disabled={isSending || isLoading || isDuplicating || isDeleting}
-        />
       ) : null}
 
       <Card className="overflow-hidden">
@@ -940,14 +370,14 @@ export default function InvoicePreviewPage() {
           ) : isMobile ? (
             <div className="space-y-4 px-6 py-8">
               <p className="text-sm text-slate-600">
-                Use the PDF preview when you want to inspect the invoice. The invoice actions stay available on this page.
+                Open the PDF to inspect the document. Return to the invoice page for sending, scheduling, attachments, and payments.
               </p>
               <div className="flex flex-col gap-3">
                 <Button onClick={handleOpenPdfPreview}>
                   Open PDF Preview
                 </Button>
                 <Button variant="outline" onClick={handleDownloadPdf} disabled={isIssuing}>
-                  {invoice?.status === "draft" ? <FileCheck2 className="h-4 w-4" /> : <Download className="h-4 w-4" />}
+                  <Download className="h-4 w-4" />
                   {invoice?.status === "draft" ? "Download Draft PDF" : "Download PDF"}
                 </Button>
               </div>
@@ -961,25 +391,6 @@ export default function InvoicePreviewPage() {
           )}
         </CardContent>
       </Card>
-
-      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Draft</DialogTitle>
-            <DialogDescription>
-              Delete this draft invoice? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteInvoice} disabled={isDeleting}>
-              {isDeleting ? "Deleting..." : "Delete Draft"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <ConfirmDialog
         open={showIssueConfirmDialog}
@@ -998,105 +409,6 @@ export default function InvoicePreviewPage() {
           void issueInvoiceNow();
         }}
       />
-
-      <Dialog open={showScheduleDialog} onOpenChange={setShowScheduleDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Schedule Final Send</DialogTitle>
-            <DialogDescription>
-              Choose when the final invoice should be emailed to the client.
-              {invoice?.status === "draft"
-                ? " If this is still a draft on the selected date, Sierra Invoices will create the official invoice first, then send it."
-                : " This invoice already has its official number, so only the email send is scheduled."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="scheduled-send-date">Send final invoice on</Label>
-            <Input
-              id="scheduled-send-date"
-              type="date"
-              min={getTodayDateInputValue()}
-              value={scheduledSendDate}
-              onChange={(event) => setScheduledSendDate(event.target.value)}
-            />
-            <p className="text-sm text-slate-500 dark:text-slate-400">
-              On the selected date, the final invoice will be sent to the client.
-            </p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowScheduleDialog(false)} disabled={isSchedulingSend}>
-              Cancel
-            </Button>
-            <Button onClick={scheduleInvoiceSend} disabled={!scheduledSendDate || isSchedulingSend}>
-              {isSchedulingSend ? "Scheduling..." : "Schedule Final Send"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <ConfirmDialog
-        open={showReminderConfirmDialog}
-        onOpenChange={setShowReminderConfirmDialog}
-        title="Send Reminder"
-        description={
-          <>
-            Send a reminder for invoice <strong>{invoice?.invoiceNumber}</strong> now?
-          </>
-        }
-        confirmLabel="Send Reminder"
-        isConfirming={isSendingReminder}
-        onConfirm={() => {
-          setShowReminderConfirmDialog(false);
-          void sendReminderNow();
-        }}
-      />
-
-      <ConfirmDialog
-        open={showCancelConfirmDialog}
-        onOpenChange={setShowCancelConfirmDialog}
-        title="Cancel Invoice"
-        description={
-          <>
-            Cancel this invoice? It will stay on record, reminders and payment collection will
-            stop, and the amount due will be treated as{" "}
-            <strong>
-              {invoice?.currency ?? "CHF"} 0.00
-            </strong>
-            .
-          </>
-        }
-        confirmLabel="Cancel Invoice"
-        confirmVariant="destructive"
-        isConfirming={isUpdatingStatus}
-        onConfirm={() => {
-          setShowCancelConfirmDialog(false);
-          void handleManualStatusChange("cancelled");
-        }}
-      />
-
-      <Dialog open={showReopenEditDialog} onOpenChange={setShowReopenEditDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reopen Invoice for Editing</DialogTitle>
-            <DialogDescription>
-              This invoice is no longer a draft. Reopen it only if you need to update the billed details before sharing a new version.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReopenEditDialog(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                setShowReopenEditDialog(false);
-                router.push(`/invoices/${id}?mode=edit`);
-              }}
-            >
-              Reopen & Edit
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <UpgradeDialog
         open={Boolean(billingLimitDetails)}
