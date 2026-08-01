@@ -144,10 +144,15 @@ export default function InvoiceDetailPage() {
   const [showReminderConfirmDialog, setShowReminderConfirmDialog] = useState(false);
   const [showCancelConfirmDialog, setShowCancelConfirmDialog] = useState(false);
   const [showRecordPaymentDialog, setShowRecordPaymentDialog] = useState(false);
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
   const [billingLimitDetails, setBillingLimitDetails] = useState<BillingLimitDetails | null>(null);
   const [isOpeningBilling, setIsOpeningBilling] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [previewLoadError, setPreviewLoadError] = useState<string | null>(null);
+  const [previewUsesNativeViewer, setPreviewUsesNativeViewer] = useState(false);
   const { toast } = useToast();
 
   const [issueDate, setIssueDate] = useState("");
@@ -353,6 +358,97 @@ export default function InvoiceDetailPage() {
   useEffect(() => {
     setIsEditing(shouldStartEditing);
   }, [shouldStartEditing]);
+
+  useEffect(() => {
+    return () => {
+      if (previewPdfUrl) {
+        window.URL.revokeObjectURL(previewPdfUrl);
+      }
+    };
+  }, [previewPdfUrl]);
+
+  const createPdfObjectUrl = async () => {
+    if (!invoice) {
+      return null;
+    }
+
+    const response = await authenticatedFetch(`/api/invoices/${invoice.id}/pdf`);
+    if (!response.ok) {
+      const result = (await response.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(result?.error ?? "Failed to load invoice preview");
+    }
+
+    const pdfBlob = await response.blob();
+    return window.URL.createObjectURL(pdfBlob);
+  };
+
+  const replacePreviewPdfUrl = (nextUrl: string | null) => {
+    setPreviewPdfUrl((currentUrl) => {
+      if (currentUrl && currentUrl !== nextUrl) {
+        window.URL.revokeObjectURL(currentUrl);
+      }
+
+      return nextUrl;
+    });
+  };
+
+  const closePreviewDialog = () => {
+    setShowPreviewDialog(false);
+    setPreviewLoadError(null);
+    setPreviewUsesNativeViewer(false);
+    replacePreviewPdfUrl(null);
+  };
+
+  const handleOpenPdfPreview = async () => {
+    if (!invoice || isPreviewLoading) {
+      return;
+    }
+
+    const isSmallScreen = window.matchMedia("(max-width: 767px)").matches;
+    const previewWindow = isSmallScreen ? window.open("about:blank", "_blank") : null;
+
+    if (previewWindow) {
+      previewWindow.document.title = "Loading invoice preview";
+      previewWindow.document.body.innerHTML =
+        '<p style="font-family: system-ui, sans-serif; padding: 24px;">Loading invoice preview...</p>';
+    }
+
+    try {
+      setIsPreviewLoading(true);
+      setPreviewLoadError(null);
+      setPreviewUsesNativeViewer(isSmallScreen);
+
+      const nextUrl = await createPdfObjectUrl();
+      if (!nextUrl) {
+        return;
+      }
+
+      replacePreviewPdfUrl(nextUrl);
+
+      if (isSmallScreen && previewWindow) {
+        previewWindow.opener = null;
+        previewWindow.location.href = nextUrl;
+        return;
+      }
+
+      setShowPreviewDialog(true);
+    } catch (error) {
+      console.error("Error loading invoice preview:", error);
+      if (previewWindow) {
+        previewWindow.close();
+      }
+      const message = error instanceof Error ? error.message : "Failed to load invoice preview";
+      setPreviewLoadError(message);
+      setShowPreviewDialog(true);
+      toast({
+        title: "Failed to load preview",
+        description: message,
+        variant: "error",
+      });
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
 
   const handleDownloadPdf = async () => {
     if (!invoice) {
@@ -669,7 +765,7 @@ export default function InvoiceDetailPage() {
         return;
       }
 
-      router.push(`/invoices/${result.id}/preview`);
+      router.push(`/invoices/${result.id}`);
     } catch (error) {
       console.error("Error duplicating invoice:", error);
       toast({
@@ -1055,7 +1151,7 @@ export default function InvoiceDetailPage() {
       setInvoice(result);
       loadInvoiceIntoForm(result);
       setIsEditing(false);
-      router.replace(`/invoices/${id}/preview`);
+      router.replace(`/invoices/${id}`);
       setSuccessMessage("Invoice updated successfully.");
     } catch (error) {
       console.error("Error updating invoice:", error);
@@ -1331,11 +1427,15 @@ export default function InvoiceDetailPage() {
             </Button>
           ) : null}
           {!isEditing ? (
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href={`/invoices/${invoice.id}/preview`}>
-                <Eye className="h-4 w-4" />
-                {isDraft ? "Preview Draft" : "Preview Invoice"}
-              </Link>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void handleOpenPdfPreview()}
+              disabled={isPreviewLoading || isSaving || isDeleting}
+              className="w-full sm:w-auto"
+            >
+              <Eye className="h-4 w-4" />
+              {isPreviewLoading ? "Loading Preview..." : isDraft ? "Preview Draft" : "Preview Invoice"}
             </Button>
           ) : null}
           {!isEditing ? (
@@ -2185,6 +2285,71 @@ export default function InvoiceDetailPage() {
             </Button>
             <Button onClick={scheduleInvoiceSend} disabled={!scheduledSendDate || isSchedulingSend}>
               {isSchedulingSend ? "Scheduling..." : "Schedule Final Send"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={showPreviewDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            closePreviewDialog();
+            return;
+          }
+
+          setShowPreviewDialog(true);
+        }}
+      >
+        <DialogContent className="flex h-[92vh] max-w-[min(96vw,1120px)] flex-col gap-0 overflow-hidden p-0">
+          <DialogHeader className="border-b border-slate-200 px-5 py-4 pr-12 dark:border-slate-800">
+            <DialogTitle>{isDraft ? "Draft Preview" : "Invoice Preview"}</DialogTitle>
+            <DialogDescription>
+              {isDraft
+                ? "Review the draft PDF here. The invoice actions remain available after closing this preview."
+                : "Review the final invoice PDF here. Close the preview to continue with invoice actions."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 bg-slate-950">
+            {previewLoadError ? (
+              <div className="flex h-full items-center justify-center bg-white p-6 text-sm text-red-700 dark:bg-slate-950 dark:text-red-200">
+                {previewLoadError}
+              </div>
+            ) : previewUsesNativeViewer ? (
+              <div className="flex h-full flex-col items-center justify-center gap-4 bg-white p-6 text-center dark:bg-slate-950">
+                <p className="max-w-md text-sm text-slate-600 dark:text-slate-300">
+                  The PDF opened in your device viewer. Close this window to keep working on the invoice.
+                </p>
+                {previewPdfUrl ? (
+                  <Button asChild variant="outline">
+                    <a href={previewPdfUrl} target="_blank" rel="noreferrer">
+                      <Eye className="h-4 w-4" />
+                      Open PDF again
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
+            ) : previewPdfUrl ? (
+              <iframe
+                title="Invoice PDF preview"
+                src={`${previewPdfUrl}#toolbar=0&navpanes=0&scrollbar=1`}
+                className="h-full w-full bg-white"
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center bg-white p-6 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+                Loading invoice preview...
+              </div>
+            )}
+          </div>
+          <DialogFooter className="mt-0 border-t border-slate-200 bg-white px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
+            {previewPdfUrl ? (
+              <Button type="button" variant="outline" onClick={handleDownloadPdf}>
+                <Download className="h-4 w-4" />
+                {isDraft ? "Download Draft PDF" : "Download PDF"}
+              </Button>
+            ) : null}
+            <Button type="button" onClick={closePreviewDialog}>
+              Close Preview
             </Button>
           </DialogFooter>
         </DialogContent>
